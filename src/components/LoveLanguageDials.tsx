@@ -25,11 +25,9 @@ export const LoveLanguageDials = ({ values, onChange }: LoveLanguageDialsProps) 
     const newValues = { ...values, [key]: newValue };
     const otherKeys = Object.keys(values).filter(k => k !== key) as (keyof LoveLanguageValues)[];
     
-    // Amount to distribute among others (opposite of diff)
-    let toDistribute = -diff;
-    
-    if (toDistribute > 0) {
-      // Slider decreased, increase others evenly
+    if (diff < 0) {
+      // Slider decreased, distribute increase to others evenly
+      const toDistribute = Math.abs(diff);
       const perSlider = Math.floor(toDistribute / otherKeys.length);
       let remainder = toDistribute % otherKeys.length;
       
@@ -39,22 +37,29 @@ export const LoveLanguageDials = ({ values, onChange }: LoveLanguageDialsProps) 
         if (extra) remainder--;
       });
     } else {
-      // Slider increased, decrease others evenly
-      toDistribute = Math.abs(toDistribute);
-      let availableKeys = otherKeys.filter(k => newValues[k] > 0);
+      // Slider increased, distribute decrease to others evenly
+      let toDistribute = diff;
       
-      while (toDistribute > 0 && availableKeys.length > 0) {
+      // Keep trying to distribute until we're done
+      while (toDistribute > 0) {
+        const availableKeys = otherKeys.filter(k => newValues[k] > 0);
+        if (availableKeys.length === 0) break;
+        
         const perSlider = Math.floor(toDistribute / availableKeys.length);
-        const extraCount = toDistribute % availableKeys.length;
+        const baseDecrease = Math.max(1, perSlider);
+        let distributed = 0;
         
-        availableKeys.forEach((k, idx) => {
-          const decrease = perSlider + (idx < extraCount ? 1 : 0);
-          const actualDecrease = Math.min(decrease, newValues[k], toDistribute);
-          newValues[k] = newValues[k] - actualDecrease;
-          toDistribute -= actualDecrease;
-        });
+        for (const k of availableKeys) {
+          const decrease = Math.min(baseDecrease, newValues[k], toDistribute);
+          newValues[k] = newValues[k] - decrease;
+          distributed += decrease;
+          toDistribute -= decrease;
+          
+          if (toDistribute === 0) break;
+        }
         
-        availableKeys = availableKeys.filter(k => newValues[k] > 0);
+        // Safety check to prevent infinite loop
+        if (distributed === 0) break;
       }
     }
     
