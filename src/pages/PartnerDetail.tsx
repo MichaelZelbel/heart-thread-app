@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Heart, ArrowLeft, Save } from "lucide-react";
 import { toast } from "sonner";
-import { LoveLanguageDials } from "@/components/LoveLanguageDials";
+import { LoveLanguageHeartRatings } from "@/components/LoveLanguageHeartRatings";
 
 interface LoveLanguages {
   physical: number;
@@ -30,11 +30,11 @@ const PartnerDetail = () => {
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
   const [loveLanguages, setLoveLanguages] = useState<LoveLanguages>({
-    physical: 20,
-    words: 20,
-    quality: 20,
-    acts: 20,
-    gifts: 20,
+    physical: 3,
+    words: 3,
+    quality: 3,
+    acts: 3,
+    gifts: 3,
   });
 
   useEffect(() => {
@@ -69,11 +69,11 @@ const PartnerDetail = () => {
     setAddress(data.address || "");
     setNotes(data.notes || "");
     setLoveLanguages({
-      physical: data.love_language_physical || 20,
-      words: data.love_language_words || 20,
-      quality: data.love_language_quality || 20,
-      acts: data.love_language_acts || 20,
-      gifts: data.love_language_gifts || 20,
+      physical: data.love_language_physical || 3,
+      words: data.love_language_words || 3,
+      quality: data.love_language_quality || 3,
+      acts: data.love_language_acts || 3,
+      gifts: data.love_language_gifts || 3,
     });
     setLoading(false);
   };
@@ -109,7 +109,7 @@ const PartnerDetail = () => {
       return;
     }
 
-    toast.success("Changes saved successfully!");
+    toast.success("Saved. Your secret wingman took notes.");
   };
 
   if (loading) {
@@ -195,11 +195,8 @@ const PartnerDetail = () => {
           </Card>
 
           <Card className="shadow-soft">
-            <CardHeader>
-              <CardTitle>Love Languages</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <LoveLanguageDials
+            <CardContent className="pt-6">
+              <LoveLanguageHeartRatings
                 values={loveLanguages}
                 onChange={setLoveLanguages}
               />

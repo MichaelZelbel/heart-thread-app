@@ -113,3 +113,9 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .touch-target {
+    @apply min-w-[40px] min-h-[40px] flex items-center justify-center;
+  }
+}

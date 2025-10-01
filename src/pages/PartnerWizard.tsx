@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Heart, Save, Loader2 } from "lucide-react";
-import { LoveLanguageDials } from "@/components/LoveLanguageDials";
+import { LoveLanguageHeartRatings } from "@/components/LoveLanguageHeartRatings";
 
 const PartnerWizard = () => {
   const navigate = useNavigate();
@@ -23,11 +23,11 @@ const PartnerWizard = () => {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [loveLanguages, setLoveLanguages] = useState({
-    physical: 20,
-    words: 20,
-    quality: 20,
-    acts: 20,
-    gifts: 20,
+    physical: 3,
+    words: 3,
+    quality: 3,
+    acts: 3,
+    gifts: 3,
   });
   const [notes, setNotes] = useState("");
   const [chatHistory, setChatHistory] = useState("");
@@ -184,15 +184,10 @@ const PartnerWizard = () => {
             )}
 
             {currentStep === 2 && (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Adjust the dials to show how your partner receives love. All percentages must total 100%.
-                </p>
-                <LoveLanguageDials
-                  values={loveLanguages}
-                  onChange={setLoveLanguages}
-                />
-              </div>
+              <LoveLanguageHeartRatings
+                values={loveLanguages}
+                onChange={setLoveLanguages}
+              />
             )}
 
             {currentStep === 3 && (
