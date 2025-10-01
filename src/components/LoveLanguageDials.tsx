@@ -17,34 +17,48 @@ interface LoveLanguageDialsProps {
 
 export const LoveLanguageDials = ({ values, onChange }: LoveLanguageDialsProps) => {
   const handleChange = (key: keyof LoveLanguageValues, newValue: number) => {
-    const total = Object.values(values).reduce((sum, val) => sum + val, 0);
-    const remaining = 100 - newValue;
+    const oldValue = values[key];
+    const diff = newValue - oldValue;
+    
+    if (diff === 0) return;
+    
+    const newValues = { ...values, [key]: newValue };
     const otherKeys = Object.keys(values).filter(k => k !== key) as (keyof LoveLanguageValues)[];
     
-    // Calculate the difference
-    const diff = total - 100;
+    // Amount to distribute among others (opposite of diff)
+    let toDistribute = -diff;
     
-    if (diff === 0) {
-      // If already at 100, adjust others proportionally
-      const newValues = { ...values, [key]: newValue };
-      const otherTotal = remaining;
+    if (toDistribute > 0) {
+      // Slider decreased, increase others evenly
+      const perSlider = Math.floor(toDistribute / otherKeys.length);
+      let remainder = toDistribute % otherKeys.length;
       
-      otherKeys.forEach((otherKey) => {
-        const proportion = values[otherKey] / (total - values[key]);
-        newValues[otherKey] = Math.round(otherTotal * proportion);
+      otherKeys.forEach(k => {
+        const extra = remainder > 0 ? 1 : 0;
+        newValues[k] = values[k] + perSlider + extra;
+        if (extra) remainder--;
       });
-      
-      // Fix rounding errors
-      const finalTotal = Object.values(newValues).reduce((sum, val) => sum + val, 0);
-      if (finalTotal !== 100) {
-        const firstKey = otherKeys[0];
-        newValues[firstKey] = newValues[firstKey] + (100 - finalTotal);
-      }
-      
-      onChange(newValues);
     } else {
-      onChange({ ...values, [key]: newValue });
+      // Slider increased, decrease others evenly
+      toDistribute = Math.abs(toDistribute);
+      let availableKeys = otherKeys.filter(k => newValues[k] > 0);
+      
+      while (toDistribute > 0 && availableKeys.length > 0) {
+        const perSlider = Math.floor(toDistribute / availableKeys.length);
+        const extraCount = toDistribute % availableKeys.length;
+        
+        availableKeys.forEach((k, idx) => {
+          const decrease = perSlider + (idx < extraCount ? 1 : 0);
+          const actualDecrease = Math.min(decrease, newValues[k], toDistribute);
+          newValues[k] = newValues[k] - actualDecrease;
+          toDistribute -= actualDecrease;
+        });
+        
+        availableKeys = availableKeys.filter(k => newValues[k] > 0);
+      }
     }
+    
+    onChange(newValues);
   };
 
   const total = Object.values(values).reduce((sum, val) => sum + val, 0);
