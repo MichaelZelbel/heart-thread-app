@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Heart, ArrowLeft, Save } from "lucide-react";
 import { toast } from "sonner";
 import { LoveLanguageHeartRatings } from "@/components/LoveLanguageHeartRatings";
+import { ItemManager } from "@/components/ItemManager";
 
 interface LoveLanguages {
   physical: number;
@@ -217,6 +218,26 @@ const PartnerDetail = () => {
               />
             </CardContent>
           </Card>
+
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold">Likes & Dislikes</h2>
+            <div className="grid md:grid-cols-2 gap-6">
+              <ItemManager
+                partnerId={id!}
+                type="likes"
+                title="Likes"
+                subtitle="Little things that make them light up."
+                emptyState="Add the first like — e.g., 'Chocolate Cake' (Food)."
+              />
+              <ItemManager
+                partnerId={id!}
+                type="dislikes"
+                title="Dislikes"
+                subtitle="Things to avoid—because you care."
+                emptyState="Add a gentle no — e.g., 'Crowded clubs' (Places)."
+              />
+            </div>
+          </div>
         </div>
       </main>
     </div>
