@@ -193,6 +193,7 @@ export type Database = {
       partners: {
         Row: {
           address: string | null
+          birthdate: string | null
           chat_history: string | null
           created_at: string
           email: string | null
@@ -212,6 +213,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          birthdate?: string | null
           chat_history?: string | null
           created_at?: string
           email?: string | null
@@ -231,6 +233,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          birthdate?: string | null
           chat_history?: string | null
           created_at?: string
           email?: string | null

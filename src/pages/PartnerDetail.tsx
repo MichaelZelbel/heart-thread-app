@@ -10,6 +10,8 @@ import { Heart, ArrowLeft, Save } from "lucide-react";
 import { toast } from "sonner";
 import { LoveLanguageHeartRatings } from "@/components/LoveLanguageHeartRatings";
 import { ItemManager } from "@/components/ItemManager";
+import { BirthdatePicker } from "@/components/BirthdatePicker";
+import { EventManager } from "@/components/EventManager";
 
 interface LoveLanguages {
   physical: number;
@@ -30,6 +32,7 @@ const PartnerDetail = () => {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
+  const [birthdate, setBirthdate] = useState<Date | null>(null);
   const [loveLanguages, setLoveLanguages] = useState<LoveLanguages>({
     physical: 3,
     words: 3,
@@ -69,6 +72,7 @@ const PartnerDetail = () => {
     setPhone(data.phone || "");
     setAddress(data.address || "");
     setNotes(data.notes || "");
+    setBirthdate(data.birthdate ? new Date(data.birthdate) : null);
     setLoveLanguages({
       physical: data.love_language_physical || 3,
       words: data.love_language_words || 3,
@@ -87,6 +91,9 @@ const PartnerDetail = () => {
 
     setSaving(true);
 
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
     const { error } = await supabase
       .from("partners")
       .update({
@@ -95,6 +102,7 @@ const PartnerDetail = () => {
         phone: phone.trim() || null,
         address: address.trim() || null,
         notes: notes.trim() || null,
+        birthdate: birthdate ? birthdate.toISOString().split('T')[0] : null,
         love_language_physical: loveLanguages.physical,
         love_language_words: loveLanguages.words,
         love_language_quality: loveLanguages.quality,
@@ -102,6 +110,41 @@ const PartnerDetail = () => {
         love_language_gifts: loveLanguages.gifts,
       })
       .eq("id", id);
+
+    // Handle birthdate event (Birthday)
+    if (birthdate) {
+      const birthdateStr = birthdate.toISOString().split('T')[0];
+      
+      // Check if Birthday event exists
+      const { data: existingEvent } = await supabase
+        .from("events")
+        .select("id")
+        .eq("partner_id", id)
+        .eq("event_type", "Birthday")
+        .single();
+
+      if (existingEvent) {
+        // Update existing Birthday event
+        await supabase
+          .from("events")
+          .update({
+            event_date: birthdateStr,
+            title: `${name}'s Birthday`,
+          })
+          .eq("id", existingEvent.id);
+      } else {
+        // Create new Birthday event
+        await supabase
+          .from("events")
+          .insert({
+            user_id: session.user.id,
+            partner_id: id,
+            title: `${name}'s Birthday`,
+            event_date: birthdateStr,
+            event_type: "Birthday",
+          });
+      }
+    }
 
     setSaving(false);
 
@@ -192,6 +235,7 @@ const PartnerDetail = () => {
                   placeholder="123 Main St, City, State"
                 />
               </div>
+              <BirthdatePicker value={birthdate} onChange={setBirthdate} />
             </CardContent>
           </Card>
 
@@ -216,6 +260,12 @@ const PartnerDetail = () => {
                 rows={6}
                 className="resize-none"
               />
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-soft">
+            <CardContent className="pt-6">
+              <EventManager partnerId={id!} partnerName={name} />
             </CardContent>
           </Card>
 

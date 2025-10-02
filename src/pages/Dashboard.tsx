@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heart, Plus, Calendar, Sparkles, LogOut } from "lucide-react";
 import { toast } from "sonner";
+import { AllEventsCalendar } from "@/components/AllEventsCalendar";
 
 interface Profile {
   display_name: string;
@@ -179,6 +180,11 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* All Love Events Calendar */}
+        <section className="mb-8">
+          <AllEventsCalendar />
+        </section>
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="shadow-soft animate-fade-in">
