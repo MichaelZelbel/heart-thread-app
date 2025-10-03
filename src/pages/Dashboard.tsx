@@ -86,15 +86,16 @@ const Dashboard = () => {
     
     const { data: partnersData } = await supabase
       .from("partners")
-      .select("id, name")
+      .select("id, name, birthdate")
       .eq("user_id", userId);
     
-    if (!events) return;
+    if (!events && !partnersData) return;
     
     const partnerMap = new Map(partnersData?.map(p => [p.id, p.name]) || []);
     const occurrences: EventOccurrence[] = [];
     
-    events.forEach(event => {
+    // Process regular events
+    events?.forEach(event => {
       const eventDate = new Date(event.event_date + 'T00:00:00');
       
       if (event.is_recurring) {
@@ -128,6 +129,39 @@ const Dashboard = () => {
             originalDate: event.event_date,
             displayDate: event.event_date,
             partnerName: event.partner_id ? partnerMap.get(event.partner_id) : undefined,
+          });
+        }
+      }
+    });
+    
+    // Process birthdays from partners
+    partnersData?.forEach(partner => {
+      if (!partner.birthdate) return;
+      
+      const birthdate = new Date(partner.birthdate + 'T00:00:00');
+      const currentYear = today.getFullYear();
+      
+      for (let year = currentYear; year <= currentYear + 1; year++) {
+        const month = birthdate.getMonth();
+        const day = birthdate.getDate();
+        
+        let occurrenceDate = new Date(year, month, day);
+        
+        // Handle Feb 29 in non-leap years
+        if (month === 1 && day === 29 && !isLeapYear(year)) {
+          occurrenceDate = new Date(year, 1, 28);
+        }
+        
+        if (occurrenceDate >= today && occurrenceDate <= weekFromNow) {
+          occurrences.push({
+            id: `birthday-${partner.id}-${year}`,
+            title: `${partner.name}'s Birthday`,
+            event_date: partner.birthdate,
+            partner_id: partner.id,
+            is_recurring: true,
+            originalDate: partner.birthdate,
+            displayDate: occurrenceDate.toISOString().split('T')[0],
+            partnerName: partner.name,
           });
         }
       }
