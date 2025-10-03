@@ -75,10 +75,14 @@ const Dashboard = () => {
   };
 
   const loadUpcomingEvents = async (userId: string) => {
-    const today = new Date();
-    const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    // Use date-only window to avoid time-of-day exclusion
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfWindow = new Date(startOfToday);
+    endOfWindow.setDate(endOfWindow.getDate() + 7);
+    endOfWindow.setHours(23, 59, 59, 999);
     
-    // Get all events and partners
+    // Get all events and partners (partners include birthdates)
     const { data: events } = await supabase
       .from("events")
       .select("id, title, event_date, partner_id, is_recurring")
@@ -100,7 +104,7 @@ const Dashboard = () => {
       
       if (event.is_recurring) {
         // Generate occurrences for recurring events
-        const currentYear = today.getFullYear();
+        const currentYear = startOfToday.getFullYear();
         for (let year = currentYear; year <= currentYear + 1; year++) {
           const month = eventDate.getMonth();
           const day = eventDate.getDate();
@@ -112,7 +116,7 @@ const Dashboard = () => {
             occurrenceDate = new Date(year, 1, 28);
           }
           
-          if (occurrenceDate >= today && occurrenceDate <= weekFromNow) {
+          if (occurrenceDate >= startOfToday && occurrenceDate <= endOfWindow) {
             occurrences.push({
               ...event,
               originalDate: event.event_date,
@@ -123,7 +127,7 @@ const Dashboard = () => {
         }
       } else {
         // Non-recurring event
-        if (eventDate >= today && eventDate <= weekFromNow) {
+        if (eventDate >= startOfToday && eventDate <= endOfWindow) {
           occurrences.push({
             ...event,
             originalDate: event.event_date,
@@ -134,12 +138,12 @@ const Dashboard = () => {
       }
     });
     
-    // Process birthdays from partners
+    // Process birthdays from partners (always yearly recurring)
     partnersData?.forEach(partner => {
       if (!partner.birthdate) return;
       
       const birthdate = new Date(partner.birthdate + 'T00:00:00');
-      const currentYear = today.getFullYear();
+      const currentYear = startOfToday.getFullYear();
       
       for (let year = currentYear; year <= currentYear + 1; year++) {
         const month = birthdate.getMonth();
@@ -152,7 +156,7 @@ const Dashboard = () => {
           occurrenceDate = new Date(year, 1, 28);
         }
         
-        if (occurrenceDate >= today && occurrenceDate <= weekFromNow) {
+        if (occurrenceDate >= startOfToday && occurrenceDate <= endOfWindow) {
           occurrences.push({
             id: `birthday-${partner.id}-${year}`,
             title: `${partner.name}'s Birthday`,
