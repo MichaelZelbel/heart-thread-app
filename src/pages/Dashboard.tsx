@@ -59,7 +59,7 @@ const Dashboard = () => {
   const loadPartners = async (userId: string) => {
     const {
       data
-    } = await supabase.from("partners").select("id, name, photo_url").eq("user_id", userId).limit(5);
+    } = await supabase.from("partners").select("id, name, photo_url").eq("user_id", userId).eq("archived", false).limit(5);
     if (data) setPartners(data);
   };
   const loadUpcomingEvents = async (userId: string) => {
@@ -76,7 +76,7 @@ const Dashboard = () => {
     } = await supabase.from("events").select("id, title, event_date, partner_id, is_recurring").eq("user_id", userId);
     const {
       data: partnersData
-    } = await supabase.from("partners").select("id, name, birthdate").eq("user_id", userId);
+    } = await supabase.from("partners").select("id, name, birthdate").eq("user_id", userId).eq("archived", false);
     if (!events && !partnersData) return;
     const partnerMap = new Map(partnersData?.map(p => [p.id, p.name]) || []);
     const occurrences: EventOccurrence[] = [];
@@ -256,10 +256,15 @@ const Dashboard = () => {
                   <CardTitle>Your Partners</CardTitle>
                   <CardDescription>People who make your heart full</CardDescription>
                 </div>
-                <Button onClick={() => navigate("/partner/new")} size="sm">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Partner
-                </Button>
+                <div className="flex gap-2">
+                  <Button onClick={() => navigate("/partner/new")} size="sm">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Partner
+                  </Button>
+                  <Button onClick={() => navigate("/archive")} size="sm" variant="outline">
+                    Archive
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>

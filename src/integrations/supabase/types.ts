@@ -196,6 +196,7 @@ export type Database = {
       partners: {
         Row: {
           address: string | null
+          archived: boolean
           birthdate: string | null
           chat_history: string | null
           created_at: string
@@ -216,6 +217,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          archived?: boolean
           birthdate?: string | null
           chat_history?: string | null
           created_at?: string
@@ -236,6 +238,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          archived?: boolean
           birthdate?: string | null
           chat_history?: string | null
           created_at?: string

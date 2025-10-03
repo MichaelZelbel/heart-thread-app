@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Heart, ArrowLeft, Save } from "lucide-react";
+import { Heart, ArrowLeft, Save, Archive } from "lucide-react";
 import { toast } from "sonner";
 import { LoveLanguageHeartRatings } from "@/components/LoveLanguageHeartRatings";
 import { ItemManager } from "@/components/ItemManager";
@@ -158,6 +158,27 @@ const PartnerDetail = () => {
     toast.success("Saved. Your secret wingman took notes.");
   };
 
+  const handleArchive = async () => {
+    if (!id) return;
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const { error } = await supabase
+      .from("partners")
+      .update({ archived: true })
+      .eq("id", id)
+      .eq("user_id", session.user.id);
+
+    if (error) {
+      toast.error("Failed to archive partner");
+      return;
+    }
+
+    toast.success("Partner archived successfully");
+    navigate("/dashboard");
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-soft">
@@ -177,10 +198,16 @@ const PartnerDetail = () => {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            <Save className="w-4 h-4 mr-2" />
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleArchive} variant="outline">
+              <Archive className="w-4 h-4 mr-2" />
+              Archive
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              <Save className="w-4 h-4 mr-2" />
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
         </div>
       </nav>
 
