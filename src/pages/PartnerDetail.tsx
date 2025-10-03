@@ -142,6 +142,7 @@ const PartnerDetail = () => {
             title: `${name}'s Birthday`,
             event_date: birthdateStr,
             event_type: "Birthday",
+            is_recurring: true,
           });
       }
     }

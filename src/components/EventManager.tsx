@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import { Calendar, Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, addYears, isBefore, isAfter } from "date-fns";
 
 interface Event {
   id: string;
@@ -16,6 +17,7 @@ interface Event {
   event_date: string;
   event_type: string;
   description: string | null;
+  is_recurring: boolean;
 }
 
 interface EventManagerProps {
@@ -42,6 +44,7 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
   const [eventType, setEventType] = useState("Custom");
   const [eventDate, setEventDate] = useState("");
   const [description, setDescription] = useState("");
+  const [isRecurring, setIsRecurring] = useState(false);
 
   useEffect(() => {
     loadEvents();
@@ -80,6 +83,7 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
       description: description.trim() || null,
       partner_id: partnerId,
       user_id: session.user.id,
+      is_recurring: eventType === "Birthday" ? true : isRecurring,
     };
 
     if (editingEvent) {
@@ -130,6 +134,7 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
     setEventType("Custom");
     setEventDate("");
     setDescription("");
+    setIsRecurring(false);
     setEditingEvent(null);
   };
 
@@ -139,15 +144,53 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
     setEventType(event.event_type);
     setEventDate(event.event_date);
     setDescription(event.description || "");
+    setIsRecurring(event.is_recurring);
     setIsDialogOpen(true);
   };
 
-  const upcomingEvents = events.filter(e => {
-    const eventDate = new Date(e.event_date);
+  // Helper to generate recurring event occurrences
+  const getRecurringOccurrences = (event: Event) => {
+    if (!event.is_recurring) return [event];
+    
+    const now = new Date();
     const sixMonthsFromNow = new Date();
     sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
-    return eventDate >= new Date() && eventDate <= sixMonthsFromNow;
-  });
+    
+    const originalDate = new Date(event.event_date);
+    const occurrences = [];
+    
+    // Generate occurrences for the next 10 years
+    for (let yearOffset = 0; yearOffset < 10; yearOffset++) {
+      let occurrenceDate = addYears(originalDate, yearOffset);
+      
+      // Handle Feb 29 in non-leap years: show on Feb 28
+      if (originalDate.getMonth() === 1 && originalDate.getDate() === 29) {
+        const year = occurrenceDate.getFullYear();
+        const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+        if (!isLeapYear) {
+          occurrenceDate = new Date(year, 1, 28); // Feb 28
+        }
+      }
+      
+      occurrences.push({
+        ...event,
+        event_date: occurrenceDate.toISOString().split('T')[0],
+        displayYear: occurrenceDate.getFullYear(),
+      });
+    }
+    
+    return occurrences;
+  };
+
+  const upcomingEvents = events
+    .flatMap(getRecurringOccurrences)
+    .filter(e => {
+      const eventDate = new Date(e.event_date);
+      const sixMonthsFromNow = new Date();
+      sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+      return eventDate >= new Date() && eventDate <= sixMonthsFromNow;
+    })
+    .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime());
 
   if (loading) {
     return <div className="text-center text-muted-foreground">Loading events...</div>;
@@ -220,6 +263,21 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
                   rows={3}
                 />
               </div>
+              {eventType !== "Birthday" && (
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="recurring">Yearly Recurring</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Event repeats every year on this date
+                    </p>
+                  </div>
+                  <Switch
+                    id="recurring"
+                    checked={isRecurring}
+                    onCheckedChange={setIsRecurring}
+                  />
+                </div>
+              )}
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => {
                   setIsDialogOpen(false);
@@ -256,12 +314,17 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
                     key={event.id}
                     className="flex items-center justify-between p-3 bg-card border border-border rounded-lg"
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium">{event.title}</span>
                         <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
                           {event.event_type}
                         </span>
+                        {event.is_recurring && (
+                          <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
+                            Recurring
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {format(new Date(event.event_date), "MMMM d, yyyy")}
@@ -303,11 +366,16 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
                   className="flex items-center justify-between p-3 bg-card border border-border rounded-lg"
                 >
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium">{event.title}</span>
                       <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
                         {event.event_type}
                       </span>
+                      {event.is_recurring && (
+                        <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
+                          Recurring
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {format(new Date(event.event_date), "MMMM d, yyyy")}

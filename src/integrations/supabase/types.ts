@@ -21,6 +21,7 @@ export type Database = {
           event_date: string
           event_type: string | null
           id: string
+          is_recurring: boolean
           partner_id: string | null
           title: string
           updated_at: string
@@ -32,6 +33,7 @@ export type Database = {
           event_date: string
           event_type?: string | null
           id?: string
+          is_recurring?: boolean
           partner_id?: string | null
           title: string
           updated_at?: string
@@ -43,6 +45,7 @@ export type Database = {
           event_date?: string
           event_type?: string | null
           id?: string
+          is_recurring?: boolean
           partner_id?: string | null
           title?: string
           updated_at?: string

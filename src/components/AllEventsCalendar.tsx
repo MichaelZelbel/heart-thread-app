@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "lucide-react";
-import { format } from "date-fns";
+import { format, addYears } from "date-fns";
 
 interface Event {
   id: string;
@@ -10,6 +10,7 @@ interface Event {
   event_date: string;
   event_type: string;
   partner_id: string | null;
+  is_recurring: boolean;
 }
 
 interface Partner {
@@ -60,12 +61,49 @@ export const AllEventsCalendar = () => {
     return partner ? partner.name : "";
   };
 
-  const upcomingEvents = events.filter(e => {
-    const eventDate = new Date(e.event_date);
+  // Helper to generate recurring event occurrences
+  const getRecurringOccurrences = (event: Event) => {
+    if (!event.is_recurring) return [event];
+    
+    const now = new Date();
     const sixMonthsFromNow = new Date();
     sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
-    return eventDate >= new Date() && eventDate <= sixMonthsFromNow;
-  });
+    
+    const originalDate = new Date(event.event_date);
+    const occurrences = [];
+    
+    // Generate occurrences for the next 10 years
+    for (let yearOffset = 0; yearOffset < 10; yearOffset++) {
+      let occurrenceDate = addYears(originalDate, yearOffset);
+      
+      // Handle Feb 29 in non-leap years: show on Feb 28
+      if (originalDate.getMonth() === 1 && originalDate.getDate() === 29) {
+        const year = occurrenceDate.getFullYear();
+        const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+        if (!isLeapYear) {
+          occurrenceDate = new Date(year, 1, 28); // Feb 28
+        }
+      }
+      
+      occurrences.push({
+        ...event,
+        event_date: occurrenceDate.toISOString().split('T')[0],
+        displayYear: occurrenceDate.getFullYear(),
+      });
+    }
+    
+    return occurrences;
+  };
+
+  const upcomingEvents = events
+    .flatMap(getRecurringOccurrences)
+    .filter(e => {
+      const eventDate = new Date(e.event_date);
+      const sixMonthsFromNow = new Date();
+      sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+      return eventDate >= new Date() && eventDate <= sixMonthsFromNow;
+    })
+    .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime());
 
   const getPartnerColor = (partnerId: string | null) => {
     if (!partnerId) return "hsl(var(--primary))";
@@ -133,6 +171,11 @@ export const AllEventsCalendar = () => {
                       <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
                         {event.event_type}
                       </span>
+                      {event.is_recurring && (
+                        <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
+                          Recurring
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {format(new Date(event.event_date), "MMMM d, yyyy")}
