@@ -52,6 +52,13 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
     loadEvents();
   }, [partnerId]);
 
+  // Auto-populate title when event type changes (only for new events)
+  useEffect(() => {
+    if (!editingEvent && eventType !== "Custom") {
+      setTitle(eventType);
+    }
+  }, [eventType, editingEvent]);
+
   const loadEvents = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
@@ -75,12 +82,19 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
       return;
     }
 
+    // Parse and validate date (supports MM/DD or MM/DD/YYYY)
+    const parsedDate = parseFlexibleDate(eventDate);
+    if (!parsedDate) {
+      toast.error("Please enter a valid date (MM/DD or MM/DD/YYYY)");
+      return;
+    }
+
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
     const eventData = {
       title: title.trim(),
-      event_date: eventDate,
+      event_date: parsedDate,
       event_type: eventType,
       description: description.trim() || null,
       partner_id: partnerId,
@@ -144,10 +158,50 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
     setEditingEvent(event);
     setTitle(event.title);
     setEventType(event.event_type);
-    setEventDate(event.event_date);
+    setEventDate(formatDateForInput(event.event_date));
     setDescription(event.description || "");
     setIsRecurring(event.is_recurring);
     setIsDialogOpen(true);
+  };
+
+  // Helper to parse flexible date input (MM/DD or MM/DD/YYYY)
+  const parseFlexibleDate = (input: string): string | null => {
+    const trimmed = input.trim();
+    
+    // Try MM/DD/YYYY format
+    const fullMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (fullMatch) {
+      const [, month, day, year] = fullMatch;
+      const m = month.padStart(2, '0');
+      const d = day.padStart(2, '0');
+      return `${year}-${m}-${d}`;
+    }
+    
+    // Try MM/DD format (no year)
+    const shortMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})$/);
+    if (shortMatch) {
+      const [, month, day] = shortMatch;
+      const m = month.padStart(2, '0');
+      const d = day.padStart(2, '0');
+      // Use 1900 as sentinel year for dates without year
+      return `1900-${m}-${d}`;
+    }
+    
+    return null;
+  };
+
+  // Helper to format date for input field
+  const formatDateForInput = (dateStr: string): string => {
+    const date = parseYMDToLocalDate(dateStr);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    // If year is 1900 (sentinel), show only MM/DD
+    if (year === 1900) {
+      return `${month}/${day}`;
+    }
+    return `${month}/${day}/${year}`;
   };
 
   // Helper to generate recurring event occurrences
@@ -182,10 +236,23 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
         ...event,
         event_date: dateToYMDLocal(occurrenceDate),
         displayYear: occurrenceDate.getFullYear(),
+        hasYear: originalDate.getFullYear() !== 1900,
       });
     }
     
     return occurrences;
+  };
+
+  // Helper to format event date for display
+  const formatEventDate = (dateStr: string): string => {
+    const date = parseYMDToLocalDate(dateStr);
+    const year = date.getFullYear();
+    
+    // If year is 1900 (sentinel), show only month and day
+    if (year === 1900) {
+      return format(date, "MMMM d");
+    }
+    return format(date, "MMMM d, yyyy");
   };
 
   const upcomingEvents = events
@@ -220,12 +287,12 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
           <DialogTrigger asChild>
             <Button>
               <Plus className="w-4 h-4 mr-2" />
-              Add milestone
+              Add Event
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingEvent ? "Edit Event" : "Add Milestone"}</DialogTitle>
+              <DialogTitle>{editingEvent ? "Edit Event" : "Add Event"}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -256,10 +323,14 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
                 <Label htmlFor="date">Date *</Label>
                 <Input
                   id="date"
-                  type="date"
+                  type="text"
                   value={eventDate}
                   onChange={(e) => setEventDate(e.target.value)}
+                  placeholder="MM/DD or MM/DD/YYYY"
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Year is optional (e.g., 09/30 or 09/30/1999)
+                </p>
               </div>
               <div>
                 <Label htmlFor="description">Description</Label>
@@ -304,7 +375,7 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
         <div className="text-center py-12 bg-muted/30 rounded-lg">
           <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
           <p className="text-muted-foreground">
-            No events yet. Add your first milestone — like "Day we met" or "First kiss."
+            No events yet. Add your first event — like "Day we met" or "First kiss."
           </p>
         </div>
       ) : (
@@ -333,7 +404,7 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {format(parseYMDToLocalDate(event.event_date), "MMMM d, yyyy")}
+                        {formatEventDate(event.event_date)}
                       </p>
                       {event.description && (
                         <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
@@ -384,7 +455,7 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {format(parseYMDToLocalDate(event.event_date), "MMMM d, yyyy")}
+                      {formatEventDate(event.event_date)}
                     </p>
                     {event.description && (
                       <p className="text-sm text-muted-foreground mt-1">{event.description}</p>

@@ -29,5 +29,62 @@ export const BirthdatePicker = ({
       onChange(null);
     }
   };
-  return;
+  return (
+    <div className="space-y-4">
+      <Label>Birthdate</Label>
+      <div className="grid grid-cols-3 gap-2">
+        <Select value={month?.toString()} onValueChange={(val) => {
+          const newMonth = parseInt(val);
+          setMonth(newMonth);
+          updateDate(day, newMonth, year);
+        }}>
+          <SelectTrigger>
+            <SelectValue placeholder="Month" />
+          </SelectTrigger>
+          <SelectContent>
+            {months.map((m, idx) => (
+              <SelectItem key={idx} value={idx.toString()}>
+                {m}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={day?.toString()} onValueChange={(val) => {
+          const newDay = parseInt(val);
+          setDay(newDay);
+          updateDate(newDay, month, year);
+        }}>
+          <SelectTrigger>
+            <SelectValue placeholder="Day" />
+          </SelectTrigger>
+          <SelectContent>
+            {days.map((d) => (
+              <SelectItem key={d} value={d.toString()}>
+                {d}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={year?.toString() || ""} onValueChange={(val) => {
+          const newYear = val ? parseInt(val) : null;
+          setYear(newYear);
+          updateDate(day, month, newYear);
+        }}>
+          <SelectTrigger>
+            <SelectValue placeholder="Year (opt)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">No year</SelectItem>
+            {years.map((y) => (
+              <SelectItem key={y} value={y.toString()}>
+                {y}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
 };
