@@ -12,6 +12,7 @@ import { LoveLanguageHeartRatings } from "@/components/LoveLanguageHeartRatings"
 import { ItemManager } from "@/components/ItemManager";
 import { BirthdatePicker } from "@/components/BirthdatePicker";
 import { EventManager } from "@/components/EventManager";
+import { dateToYMDLocal } from "@/lib/utils";
 
 interface LoveLanguages {
   physical: number;
@@ -102,7 +103,7 @@ const PartnerDetail = () => {
         phone: phone.trim() || null,
         address: address.trim() || null,
         notes: notes.trim() || null,
-        birthdate: birthdate ? birthdate.toISOString().split('T')[0] : null,
+        birthdate: birthdate ? dateToYMDLocal(birthdate) : null,
         love_language_physical: loveLanguages.physical,
         love_language_words: loveLanguages.words,
         love_language_quality: loveLanguages.quality,
@@ -113,7 +114,7 @@ const PartnerDetail = () => {
 
     // Handle birthdate event (Birthday)
     if (birthdate) {
-      const birthdateStr = birthdate.toISOString().split('T')[0];
+      const birthdateStr = dateToYMDLocal(birthdate);
       
       // Check if Birthday event exists
       const { data: existingEvent } = await supabase

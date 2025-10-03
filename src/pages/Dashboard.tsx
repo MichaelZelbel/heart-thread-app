@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heart, Plus, Calendar, Sparkles, LogOut } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { AllEventsCalendar } from "@/components/AllEventsCalendar";
+import { dateToYMDLocal, parseYMDToLocalDate } from "@/lib/utils";
 
 interface Profile {
   display_name: string;
@@ -87,20 +90,20 @@ const Dashboard = () => {
       .from("events")
       .select("id, title, event_date, partner_id, is_recurring")
       .eq("user_id", userId);
-    
+
     const { data: partnersData } = await supabase
       .from("partners")
       .select("id, name, birthdate")
       .eq("user_id", userId);
-    
+
     if (!events && !partnersData) return;
-    
+
     const partnerMap = new Map(partnersData?.map(p => [p.id, p.name]) || []);
     const occurrences: EventOccurrence[] = [];
-    
+
     // Process regular events
     events?.forEach(event => {
-      const eventDate = new Date(event.event_date + 'T00:00:00');
+      const eventDate = parseYMDToLocalDate(event.event_date);
       
       if (event.is_recurring) {
         // Generate occurrences for recurring events
@@ -108,9 +111,9 @@ const Dashboard = () => {
         for (let year = currentYear; year <= currentYear + 1; year++) {
           const month = eventDate.getMonth();
           const day = eventDate.getDate();
-          
+
           let occurrenceDate = new Date(year, month, day);
-          
+
           // Handle Feb 29 in non-leap years
           if (month === 1 && day === 29 && !isLeapYear(year)) {
             occurrenceDate = new Date(year, 1, 28);
@@ -120,7 +123,7 @@ const Dashboard = () => {
             occurrences.push({
               ...event,
               originalDate: event.event_date,
-              displayDate: occurrenceDate.toISOString().split('T')[0],
+              displayDate: dateToYMDLocal(occurrenceDate),
               partnerName: event.partner_id ? partnerMap.get(event.partner_id) : undefined,
             });
           }
@@ -142,15 +145,15 @@ const Dashboard = () => {
     partnersData?.forEach(partner => {
       if (!partner.birthdate) return;
       
-      const birthdate = new Date(partner.birthdate + 'T00:00:00');
+      const birthdate = parseYMDToLocalDate(partner.birthdate);
       const currentYear = startOfToday.getFullYear();
       
       for (let year = currentYear; year <= currentYear + 1; year++) {
         const month = birthdate.getMonth();
         const day = birthdate.getDate();
-        
+
         let occurrenceDate = new Date(year, month, day);
-        
+
         // Handle Feb 29 in non-leap years
         if (month === 1 && day === 29 && !isLeapYear(year)) {
           occurrenceDate = new Date(year, 1, 28);
@@ -164,7 +167,7 @@ const Dashboard = () => {
             partner_id: partner.id,
             is_recurring: true,
             originalDate: partner.birthdate,
-            displayDate: occurrenceDate.toISOString().split('T')[0],
+            displayDate: dateToYMDLocal(occurrenceDate),
             partnerName: partner.name,
           });
         }
@@ -361,11 +364,8 @@ const Dashboard = () => {
                           )}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {new Date(event.displayDate + 'T00:00:00').toLocaleDateString('en-US', {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric'
-                          })}
+                          {format(parseYMDToLocalDate(event.displayDate), "EEEE, MMMM d")}
+                          {event.partnerName && ` • ${event.partnerName}`}
                         </p>
                       </div>
                     </div>
