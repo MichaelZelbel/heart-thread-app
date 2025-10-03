@@ -105,9 +105,7 @@ const PartnerWizard = () => {
             <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center">
               <Heart className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              Chirishly
-            </span>
+            <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">Cherishly</span>
           </div>
           <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
             Cancel
