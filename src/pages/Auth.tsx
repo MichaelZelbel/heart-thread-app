@@ -49,7 +49,7 @@ const Auth = () => {
           },
         });
         if (error) throw error;
-        toast.success("Account created! Welcome to HeartSync!");
+        toast.success("Account created! Welcome to Chirishly!");
         navigate("/dashboard");
       }
     } catch (error: any) {
@@ -67,7 +67,7 @@ const Auth = () => {
             <Heart className="w-8 h-8 text-white animate-pulse-soft" />
           </div>
           <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
-            HeartSync
+            Chirishly
           </h1>
           <p className="text-muted-foreground">Your relationship companion</p>
         </div>
@@ -153,7 +153,7 @@ const Auth = () => {
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-6 px-4">
-          Your data is private and secure. HeartSync helps you be the best partner you can be.
+          Your data is private and secure. Chirishly helps you be the best partner you can be.
         </p>
       </div>
     </div>
