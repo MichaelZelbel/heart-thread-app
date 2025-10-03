@@ -196,7 +196,7 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Heart className="w-5 h-5 text-primary" />
-                <span>Partners</span>
+                <span>Cherished</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -253,13 +253,13 @@ const Dashboard = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Your Partners</CardTitle>
+                  <CardTitle>Your Cherished</CardTitle>
                   <CardDescription>People who make your heart full</CardDescription>
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={() => navigate("/partner/new")} size="sm">
                     <Plus className="w-4 h-4 mr-2" />
-                    Add Partner
+                    Add Cherished
                   </Button>
                   <Button onClick={() => navigate("/archive")} size="sm" variant="outline">
                     Archive
@@ -271,10 +271,10 @@ const Dashboard = () => {
               {partners.length === 0 ? <div className="text-center py-8">
                   <Heart className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
                   <p className="text-muted-foreground mb-4">
-                    No partners added yet. Start building your connection map!
+                    No cherished added yet. Start building your connection map!
                   </p>
                   <Button onClick={() => navigate("/partner/new")} variant="outline">
-                    Add Your First Partner
+                    Add Your First Cherished
                   </Button>
                 </div> : <div className="space-y-3">
                   {partners.map(partner => <div key={partner.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer" onClick={() => navigate(`/partner/${partner.id}`)}>
@@ -286,7 +286,7 @@ const Dashboard = () => {
                       </div>
                     </div>)}
                   {partners.length >= 5 && <Button variant="ghost" className="w-full" onClick={() => navigate("/partners")}>
-                      View All Partners
+                      View All Cherished
                     </Button>}
                 </div>}
             </CardContent>

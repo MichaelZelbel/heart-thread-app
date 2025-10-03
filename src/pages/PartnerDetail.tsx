@@ -203,11 +203,11 @@ const PartnerDetail = () => {
       .eq("user_id", session.user.id);
 
     if (error) {
-      toast.error("Failed to delete partner");
+      toast.error("Failed to delete cherished");
       return;
     }
 
-    toast.success("Partner deleted permanently");
+    toast.success("Cherished deleted permanently");
     navigate("/dashboard");
   };
 
@@ -216,7 +216,7 @@ const PartnerDetail = () => {
       <div className="min-h-screen flex items-center justify-center bg-gradient-soft">
         <div className="text-center">
           <Heart className="w-12 h-12 mx-auto mb-4 text-primary animate-pulse-soft" />
-          <p className="text-muted-foreground">Loading partner details...</p>
+          <p className="text-muted-foreground">Loading cherished details...</p>
         </div>
       </div>
     );

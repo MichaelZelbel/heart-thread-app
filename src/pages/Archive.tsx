@@ -59,7 +59,7 @@ const Archive = () => {
       .eq("user_id", session.user.id);
 
     if (error) {
-      toast.error("Failed to recover partner");
+      toast.error("Failed to recover cherished");
       return;
     }
 
@@ -96,15 +96,15 @@ const Archive = () => {
             Archive
           </h1>
           <p className="text-muted-foreground">
-            Archived partners and their events are hidden from your main dashboard
+            Archived cherished and their events are hidden from your main dashboard
           </p>
         </div>
 
         <Card className="shadow-soft">
           <CardHeader>
-            <CardTitle>Archived Partners</CardTitle>
+            <CardTitle>Archived Cherished</CardTitle>
             <CardDescription>
-              Click "Recover" to restore a partner to your active list
+              Click "Recover" to restore a cherished to your active list
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -112,7 +112,7 @@ const Archive = () => {
               <div className="text-center py-8">
                 <Heart className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
                 <p className="text-muted-foreground">
-                  No archived partners
+                  No archived cherished
                 </p>
               </div>
             ) : (

@@ -45,7 +45,7 @@ const PartnerWizard = () => {
   };
   const handleNext = () => {
     if (currentStep === 1 && !name.trim()) {
-      toast.error("Partner name is required");
+      toast.error("Cherished name is required");
       return;
     }
     if (currentStep < totalSteps) {
@@ -61,7 +61,7 @@ const PartnerWizard = () => {
   };
   const handleSave = async () => {
     if (!name.trim()) {
-      toast.error("Partner name is required");
+      toast.error("Cherished name is required");
       return;
     }
     setLoading(true);
@@ -89,7 +89,7 @@ const PartnerWizard = () => {
         chat_history: chatHistory.trim() || null
       });
       if (error) throw error;
-      toast.success(`${name} added to your partners!`);
+      toast.success(`${name} added to your cherished!`);
       navigate("/dashboard");
     } catch (error: any) {
       toast.error(error.message);
@@ -115,7 +115,7 @@ const PartnerWizard = () => {
 
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="mb-8 animate-fade-in">
-          <h1 className="text-3xl font-bold mb-2">Add a New Partner</h1>
+          <h1 className="text-3xl font-bold mb-2">Add a New Cherished</h1>
           <p className="text-muted-foreground mb-4">
             Let's capture what makes this relationship special
           </p>
@@ -139,7 +139,7 @@ const PartnerWizard = () => {
             {currentStep === 1 && <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">
-                    Partner Name <span className="text-destructive">*</span>
+                    Cherished Name <span className="text-destructive">*</span>
                   </Label>
                   <Input id="name" placeholder="Their name" value={name} onChange={e => setName(e.target.value)} required />
                 </div>
@@ -194,7 +194,7 @@ const PartnerWizard = () => {
                       Saving...
                     </> : <>
                       <Save className="w-4 h-4 mr-2" />
-                      Save Partner
+                      Save Cherished
                     </>}
                 </Button>}
             </div>
