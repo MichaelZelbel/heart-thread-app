@@ -258,6 +258,56 @@ const PartnerDetail = () => {
 
         <div className="space-y-6">
           <Card className="shadow-soft">
+            <CardContent className="pt-6">
+              <EventManager partnerId={id!} partnerName={name} />
+            </CardContent>
+          </Card>
+
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold">Likes & Dislikes</h2>
+            <div className="grid md:grid-cols-2 gap-6">
+              <ItemManager
+                partnerId={id!}
+                type="likes"
+                title="Likes"
+                subtitle="Little things that make them light up."
+                emptyState="Add the first like — e.g., 'Chocolate Cake' (Food)."
+              />
+              <ItemManager
+                partnerId={id!}
+                type="dislikes"
+                title="Dislikes"
+                subtitle="Things to avoid—because you care."
+                emptyState="Add a gentle no — e.g., 'Crowded clubs' (Places)."
+              />
+            </div>
+          </div>
+
+          <Card className="shadow-soft">
+            <CardContent className="pt-6">
+              <LoveLanguageHeartRatings
+                values={loveLanguages}
+                onChange={setLoveLanguages}
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-soft">
+            <CardHeader>
+              <CardTitle>Notes & Thoughts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Special memories, preferences, important details..."
+                rows={6}
+                className="resize-none"
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-soft">
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
             </CardHeader>
@@ -303,56 +353,6 @@ const PartnerDetail = () => {
               <BirthdatePicker value={birthdate} onChange={setBirthdate} />
             </CardContent>
           </Card>
-
-          <Card className="shadow-soft">
-            <CardContent className="pt-6">
-              <LoveLanguageHeartRatings
-                values={loveLanguages}
-                onChange={setLoveLanguages}
-              />
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-soft">
-            <CardHeader>
-              <CardTitle>Notes & Thoughts</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Special memories, preferences, important details..."
-                rows={6}
-                className="resize-none"
-              />
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-soft">
-            <CardContent className="pt-6">
-              <EventManager partnerId={id!} partnerName={name} />
-            </CardContent>
-          </Card>
-
-          <div className="space-y-6">
-            <h2 className="text-2xl font-semibold">Likes & Dislikes</h2>
-            <div className="grid md:grid-cols-2 gap-6">
-              <ItemManager
-                partnerId={id!}
-                type="likes"
-                title="Likes"
-                subtitle="Little things that make them light up."
-                emptyState="Add the first like — e.g., 'Chocolate Cake' (Food)."
-              />
-              <ItemManager
-                partnerId={id!}
-                type="dislikes"
-                title="Dislikes"
-                subtitle="Things to avoid—because you care."
-                emptyState="Add a gentle no — e.g., 'Crowded clubs' (Places)."
-              />
-            </div>
-          </div>
         </div>
       </main>
 
