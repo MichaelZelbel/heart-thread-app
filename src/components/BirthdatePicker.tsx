@@ -76,9 +76,9 @@ export const BirthdatePicker = ({ value, onChange }: BirthdatePickerProps) => {
         </Select>
 
         <Select
-          value={year !== null ? year.toString() : ""}
+          value={year !== null ? year.toString() : "no-year"}
           onValueChange={(value) => {
-            const newYear = value ? parseInt(value) : null;
+            const newYear = value === "no-year" ? null : parseInt(value);
             setYear(newYear);
             updateDate(day, month, newYear);
           }}
@@ -87,7 +87,7 @@ export const BirthdatePicker = ({ value, onChange }: BirthdatePickerProps) => {
             <SelectValue placeholder="Year" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">No year</SelectItem>
+            <SelectItem value="no-year">No year</SelectItem>
             {years.map((y) => (
               <SelectItem key={y} value={y.toString()}>
                 {y}
