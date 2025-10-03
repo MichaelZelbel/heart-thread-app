@@ -6,8 +6,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Heart, ArrowLeft, Save, Archive } from "lucide-react";
+import { Heart, ArrowLeft, Save, Archive, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { LoveLanguageHeartRatings } from "@/components/LoveLanguageHeartRatings";
 import { ItemManager } from "@/components/ItemManager";
 import { BirthdatePicker } from "@/components/BirthdatePicker";
@@ -27,6 +37,7 @@ const PartnerDetail = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -179,6 +190,27 @@ const PartnerDetail = () => {
     navigate("/dashboard");
   };
 
+  const handleDelete = async () => {
+    if (!id) return;
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const { error } = await supabase
+      .from("partners")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", session.user.id);
+
+    if (error) {
+      toast.error("Failed to delete partner");
+      return;
+    }
+
+    toast.success("Partner deleted permanently");
+    navigate("/dashboard");
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-soft">
@@ -202,6 +234,10 @@ const PartnerDetail = () => {
             <Button onClick={handleArchive} variant="outline">
               <Archive className="w-4 h-4 mr-2" />
               Archive
+            </Button>
+            <Button onClick={() => setShowDeleteDialog(true)} variant="outline">
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
             </Button>
             <Button onClick={handleSave} disabled={saving}>
               <Save className="w-4 h-4 mr-2" />
@@ -319,6 +355,25 @@ const PartnerDetail = () => {
           </div>
         </div>
       </main>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete {name} and all associated data including events, likes, and dislikes.
+              <br /><br />
+              <strong>Consider archiving instead</strong> if you want to preserve the data and restore it later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
