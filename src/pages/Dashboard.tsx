@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heart, Plus, Calendar, Sparkles, LogOut } from "lucide-react";
 import { toast } from "sonner";
-import { AllEventsCalendar } from "@/components/AllEventsCalendar";
 
 interface Profile {
   display_name: string;
@@ -22,13 +21,20 @@ interface Event {
   title: string;
   event_date: string;
   partner_id: string | null;
+  is_recurring: boolean;
+}
+
+interface EventOccurrence extends Event {
+  originalDate: string;
+  displayDate: string;
+  partnerName?: string;
 }
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [partners, setPartners] = useState<Partner[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<EventOccurrence[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -69,17 +75,70 @@ const Dashboard = () => {
   };
 
   const loadUpcomingEvents = async (userId: string) => {
-    const today = new Date().toISOString().split('T')[0];
-    const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const today = new Date();
+    const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     
-    const { data } = await supabase
+    // Get all events and partners
+    const { data: events } = await supabase
       .from("events")
-      .select("id, title, event_date, partner_id")
-      .eq("user_id", userId)
-      .gte("event_date", today)
-      .lte("event_date", weekFromNow)
-      .order("event_date");
-    if (data) setUpcomingEvents(data);
+      .select("id, title, event_date, partner_id, is_recurring")
+      .eq("user_id", userId);
+    
+    const { data: partnersData } = await supabase
+      .from("partners")
+      .select("id, name")
+      .eq("user_id", userId);
+    
+    if (!events) return;
+    
+    const partnerMap = new Map(partnersData?.map(p => [p.id, p.name]) || []);
+    const occurrences: EventOccurrence[] = [];
+    
+    events.forEach(event => {
+      const eventDate = new Date(event.event_date + 'T00:00:00');
+      
+      if (event.is_recurring) {
+        // Generate occurrences for recurring events
+        const currentYear = today.getFullYear();
+        for (let year = currentYear; year <= currentYear + 1; year++) {
+          const month = eventDate.getMonth();
+          const day = eventDate.getDate();
+          
+          let occurrenceDate = new Date(year, month, day);
+          
+          // Handle Feb 29 in non-leap years
+          if (month === 1 && day === 29 && !isLeapYear(year)) {
+            occurrenceDate = new Date(year, 1, 28);
+          }
+          
+          if (occurrenceDate >= today && occurrenceDate <= weekFromNow) {
+            occurrences.push({
+              ...event,
+              originalDate: event.event_date,
+              displayDate: occurrenceDate.toISOString().split('T')[0],
+              partnerName: event.partner_id ? partnerMap.get(event.partner_id) : undefined,
+            });
+          }
+        }
+      } else {
+        // Non-recurring event
+        if (eventDate >= today && eventDate <= weekFromNow) {
+          occurrences.push({
+            ...event,
+            originalDate: event.event_date,
+            displayDate: event.event_date,
+            partnerName: event.partner_id ? partnerMap.get(event.partner_id) : undefined,
+          });
+        }
+      }
+    });
+    
+    occurrences.sort((a, b) => a.displayDate.localeCompare(b.displayDate));
+    setUpcomingEvents(occurrences);
+  };
+
+  const isLeapYear = (year: number) => {
+    return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
   };
 
   const handleLogout = async () => {
@@ -181,11 +240,6 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* All Love Events Calendar */}
-        <section className="mb-8">
-          <AllEventsCalendar />
-        </section>
-
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="shadow-soft animate-fade-in">
             <CardHeader>
@@ -252,16 +306,24 @@ const Dashboard = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {upcomingEvents.map((event) => (
+                  {upcomingEvents.map((event, index) => (
                     <div
-                      key={event.id}
+                      key={`${event.id}-${event.displayDate}-${index}`}
                       className="flex items-start space-x-3 p-3 rounded-lg hover:bg-muted transition-colors"
                     >
                       <Calendar className="w-5 h-5 text-primary mt-0.5" />
                       <div className="flex-1">
-                        <p className="font-medium">{event.title}</p>
+                        <p className="font-medium">
+                          {event.title}
+                          {event.partnerName && ` (${event.partnerName})`}
+                          {event.is_recurring && (
+                            <span className="ml-2 text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">
+                              Recurring
+                            </span>
+                          )}
+                        </p>
                         <p className="text-sm text-muted-foreground">
-                          {new Date(event.event_date).toLocaleDateString('en-US', {
+                          {new Date(event.displayDate + 'T00:00:00').toLocaleDateString('en-US', {
                             weekday: 'short',
                             month: 'short',
                             day: 'numeric'
