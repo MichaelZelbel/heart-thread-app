@@ -111,8 +111,8 @@ export const MomentManager = ({ partnerId, partnerName, showPartnerColumn = fals
   };
 
   const handleSave = async () => {
-    if (!description?.trim()) {
-      toast.error("Please add a note");
+    if (!title?.trim()) {
+      toast.error("Please add a title");
       return;
     }
 
@@ -120,8 +120,8 @@ export const MomentManager = ({ partnerId, partnerName, showPartnerColumn = fals
     if (!session) return;
 
     const momentData = {
-      title: title.trim() || null,
-      description: description.trim(),
+      title: title.trim(),
+      description: description.trim() || null,
       moment_date: momentDate,
       partner_ids: partnerId ? [partnerId] : [],
       user_id: session.user.id,
@@ -270,7 +270,7 @@ export const MomentManager = ({ partnerId, partnerName, showPartnerColumn = fals
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="moment-date">Date</Label>
+              <Label htmlFor="moment-date">Date *</Label>
               <Input
                 id="moment-date"
                 type="date"
@@ -279,7 +279,7 @@ export const MomentManager = ({ partnerId, partnerName, showPartnerColumn = fals
               />
             </div>
             <div>
-              <Label htmlFor="moment-title">Title (optional)</Label>
+              <Label htmlFor="moment-title">Title *</Label>
               <Input
                 id="moment-title"
                 value={title}
@@ -288,7 +288,7 @@ export const MomentManager = ({ partnerId, partnerName, showPartnerColumn = fals
               />
             </div>
             <div>
-              <Label htmlFor="moment-description">Note *</Label>
+              <Label htmlFor="moment-description">Note (optional)</Label>
               <Textarea
                 id="moment-description"
                 value={description}
