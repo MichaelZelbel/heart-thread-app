@@ -403,60 +403,9 @@ const Dashboard = () => {
 
           {/* Right Column */}
           <div className="space-y-6">
-            <div className="h-[400px]">
+            <div className="h-[800px]">
               <ClaireChat compact={isMobile} />
             </div>
-
-            <Card 
-              className="shadow-soft hover:shadow-glow transition-shadow animate-scale-in cursor-pointer" 
-              style={{ animationDelay: "0.2s" }}
-              onClick={() => setShowMomentsDialog(true)}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Sparkles className="w-5 h-5 text-accent" />
-                    <span>Moments</span>
-                  </div>
-                  <Button size="sm" variant="ghost" onClick={(e) => {
-                    e.stopPropagation();
-                    setShowMomentsDialog(true);
-                  }}>
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-4xl font-bold text-accent mb-2">
-                  {totalMoments}
-                </div>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Memories logged
-                </p>
-                {moments.length > 0 && (
-                  <div className="space-y-2 pt-2 border-t">
-                    {moments.map((moment) => {
-                      const partnerNames = moment.partner_ids
-                        .map((id) => partners.find((p) => p.id === id)?.name)
-                        .filter(Boolean)
-                        .join(", ");
-                      
-                      return (
-                        <div key={moment.id} className="text-xs">
-                          <p className="font-medium truncate">
-                            {moment.title || "Untitled"}
-                          </p>
-                          <p className="text-muted-foreground">
-                            {format(new Date(moment.moment_date), "MMM d")}
-                            {partnerNames && ` • ${partnerNames}`}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </div>
         </div>
       </main>
