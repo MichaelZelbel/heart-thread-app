@@ -6,13 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Heart, Loader2 } from "lucide-react";
+import { Heart, Loader2, Sparkles } from "lucide-react";
+import { CherishWizard } from "@/components/CherishWizard";
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigate = useNavigate();
   useEffect(() => {
     supabase.auth.getSession().then(({
@@ -21,6 +24,7 @@ const Auth = () => {
       }
     }) => {
       if (session) {
+        setIsLoggedIn(true);
         navigate("/dashboard");
       }
     });
@@ -62,6 +66,11 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  if (showWizard) {
+    return <CherishWizard onClose={() => setShowWizard(false)} isLoggedIn={isLoggedIn} />;
+  }
+
   return <div className="min-h-screen flex items-center justify-center bg-gradient-soft p-4">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
@@ -70,6 +79,25 @@ const Auth = () => {
           </div>
           <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">Cherishly</h1>
           <p className="text-muted-foreground">Your relationship companion</p>
+        </div>
+
+        {/* Main CTA Button */}
+        <Button 
+          onClick={() => setShowWizard(true)} 
+          size="lg"
+          className="w-full mb-6 h-14 text-lg shadow-glow hover:shadow-xl transition-all duration-300"
+        >
+          <Sparkles className="w-5 h-5 mr-2" />
+          Cherish a Lovely Person 💖
+        </Button>
+
+        <div className="relative mb-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border"></div>
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">Or continue with account</span>
+          </div>
         </div>
 
         <Card className="shadow-soft">

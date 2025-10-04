@@ -1,0 +1,523 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
+import { Heart, ArrowRight, ArrowLeft, Sparkles, Loader2, Plus, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+interface CherishWizardProps {
+  onClose: () => void;
+  isLoggedIn: boolean;
+}
+
+interface WizardData {
+  nickname: string;
+  specialDay: {
+    day: number | null;
+    month: number | null;
+    year: number | null;
+  };
+  likes: string[];
+  dislikes: string[];
+  favorites: string[];
+  nicknames: string[];
+  email?: string;
+  password?: string;
+  displayName?: string;
+}
+
+const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const days = Array.from({ length: 31 }, (_, i) => i + 1);
+const years = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);
+
+export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const navigate = useNavigate();
+
+  const [wizardData, setWizardData] = useState<WizardData>(() => {
+    // Try to load from localStorage for anonymous users
+    const saved = localStorage.getItem("cherishWizardData");
+    return saved ? JSON.parse(saved) : {
+      nickname: "",
+      specialDay: { day: null, month: null, year: null },
+      likes: [],
+      dislikes: [],
+      favorites: [],
+      nicknames: [],
+    };
+  });
+
+  // Save to localStorage for anonymous users
+  useEffect(() => {
+    if (!isLoggedIn) {
+      localStorage.setItem("cherishWizardData", JSON.stringify(wizardData));
+    }
+  }, [wizardData, isLoggedIn]);
+
+  const totalSteps = isLoggedIn ? 3 : 4;
+  const progress = (step / totalSteps) * 100;
+
+  const updateWizardData = (updates: Partial<WizardData>) => {
+    setWizardData((prev) => ({ ...prev, ...updates }));
+  };
+
+  const handleNext = () => {
+    if (step === 1 && !wizardData.nickname.trim()) {
+      toast.error("Please enter a nickname");
+      return;
+    }
+    
+    if (step < totalSteps) {
+      setStep(step + 1);
+    } else {
+      handleComplete();
+    }
+  };
+
+  const handleBack = () => {
+    if (step > 1) {
+      setStep(step - 1);
+    }
+  };
+
+  const handleSkip = () => {
+    if (step < totalSteps) {
+      setStep(step + 1);
+    }
+  };
+
+  const handleComplete = async () => {
+    setLoading(true);
+    try {
+      // If not logged in, handle signup first
+      if (!isLoggedIn && wizardData.email && wizardData.password) {
+        const { error: signUpError, data } = await supabase.auth.signUp({
+          email: wizardData.email,
+          password: wizardData.password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/dashboard`,
+            data: {
+              display_name: wizardData.displayName || "User",
+            },
+          },
+        });
+
+        if (signUpError) throw signUpError;
+        
+        // Wait a moment for auth to settle
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("Authentication required");
+        setLoading(false);
+        return;
+      }
+
+      // Create partner profile
+      const birthdate = wizardData.specialDay.day && wizardData.specialDay.month
+        ? new Date(
+            wizardData.specialDay.year || 2000,
+            wizardData.specialDay.month,
+            wizardData.specialDay.day
+          )
+        : null;
+
+      const { data: partner, error: partnerError } = await supabase
+        .from("partners")
+        .insert({
+          user_id: user.id,
+          name: wizardData.nickname,
+          birthdate: birthdate ? birthdate.toISOString().split('T')[0] : null,
+        })
+        .select()
+        .single();
+
+      if (partnerError) throw partnerError;
+
+      // Add likes
+      if (wizardData.likes.length > 0) {
+        const likesData = wizardData.likes.map((like, index) => ({
+          partner_id: partner.id,
+          item: like,
+          position: index,
+        }));
+        await supabase.from("partner_likes").insert(likesData);
+      }
+
+      // Add dislikes
+      if (wizardData.dislikes.length > 0) {
+        const dislikesData = wizardData.dislikes.map((dislike, index) => ({
+          partner_id: partner.id,
+          item: dislike,
+          position: index,
+        }));
+        await supabase.from("partner_dislikes").insert(dislikesData);
+      }
+
+      // Add nicknames
+      if (wizardData.nicknames.length > 0) {
+        const nicknamesData = wizardData.nicknames.map((nickname, index) => ({
+          partner_id: partner.id,
+          nickname: nickname,
+          position: index,
+        }));
+        await supabase.from("partner_nicknames").insert(nicknamesData);
+      }
+
+      // Clear localStorage
+      localStorage.removeItem("cherishWizardData");
+
+      // Show success screen
+      setShowSuccess(true);
+      
+      // Navigate after a moment
+      setTimeout(() => {
+        navigate(`/partner/${partner.id}`);
+      }, 2000);
+
+    } catch (error: any) {
+      console.error("Error completing wizard:", error);
+      toast.error(error.message || "Failed to create profile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addItem = (field: 'likes' | 'dislikes' | 'favorites' | 'nicknames', value: string) => {
+    if (!value.trim()) return;
+    updateWizardData({
+      [field]: [...wizardData[field], value.trim()],
+    });
+  };
+
+  const removeItem = (field: 'likes' | 'dislikes' | 'favorites' | 'nicknames', index: number) => {
+    updateWizardData({
+      [field]: wizardData[field].filter((_, i) => i !== index),
+    });
+  };
+
+  if (showSuccess) {
+    return (
+      <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+        <div className="text-center space-y-6 animate-scale-in">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-primary shadow-glow animate-pulse-soft">
+            <Sparkles className="w-10 h-10 text-white" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              Beautiful.
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              You've started cherishing someone special.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
+      <div className="w-full max-w-2xl my-8">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-primary mb-3 shadow-glow">
+            <Heart className="w-6 h-6 text-white animate-pulse-soft" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">Cherish a Lovely Person</h2>
+          <p className="text-sm text-muted-foreground">
+            Step {step} of {totalSteps}
+          </p>
+        </div>
+
+        {/* Progress Bar */}
+        <Progress value={progress} className="mb-6 h-2" />
+
+        {/* Step Content */}
+        <Card className="shadow-soft border-2">
+          <CardHeader>
+            <CardTitle>
+              {step === 1 && "Who do you cherish?"}
+              {step === 2 && "Do they have a special day?"}
+              {step === 3 && "Tell us more about them"}
+              {step === 4 && !isLoggedIn && "Save your connection"}
+            </CardTitle>
+            <CardDescription>
+              {step === 1 && "Start simple — what do you call them?"}
+              {step === 2 && "Cherish the moments that matter — birthdays, anniversaries, or first 'I love you's."}
+              {step === 3 && "Add a few things they love, dislike, or nicknames you have for them."}
+              {step === 4 && !isLoggedIn && "We'll keep what you just created safe. Create a free account to save and revisit your loved ones anytime."}
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            {/* Step 1: Nickname */}
+            {step === 1 && (
+              <div className="space-y-2">
+                <Label htmlFor="nickname">Nickname</Label>
+                <Input
+                  id="nickname"
+                  placeholder="Sweetie, Alex, Mom..."
+                  value={wizardData.nickname}
+                  onChange={(e) => updateWizardData({ nickname: e.target.value })}
+                  autoFocus
+                />
+              </div>
+            )}
+
+            {/* Step 2: Special Day */}
+            {step === 2 && (
+              <div className="space-y-4">
+                <Label>Special Date</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  <Select
+                    value={wizardData.specialDay.month?.toString()}
+                    onValueChange={(val) => updateWizardData({
+                      specialDay: { ...wizardData.specialDay, month: parseInt(val) }
+                    })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Month" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {months.map((m, idx) => (
+                        <SelectItem key={idx} value={idx.toString()}>
+                          {m}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    value={wizardData.specialDay.day?.toString()}
+                    onValueChange={(val) => updateWizardData({
+                      specialDay: { ...wizardData.specialDay, day: parseInt(val) }
+                    })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Day" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {days.map((d) => (
+                        <SelectItem key={d} value={d.toString()}>
+                          {d}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    value={wizardData.specialDay.year?.toString() || "none"}
+                    onValueChange={(val) => updateWizardData({
+                      specialDay: { ...wizardData.specialDay, year: val === "none" ? null : parseInt(val) }
+                    })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Year (opt)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No year</SelectItem>
+                      {years.map((y) => (
+                        <SelectItem key={y} value={y.toString()}>
+                          {y}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Details */}
+            {step === 3 && (
+              <div className="space-y-6">
+                {/* Likes */}
+                <DetailSection
+                  title="Things they love"
+                  placeholder="e.g., Chocolate cake"
+                  items={wizardData.likes}
+                  onAdd={(value) => addItem('likes', value)}
+                  onRemove={(index) => removeItem('likes', index)}
+                />
+
+                {/* Dislikes */}
+                <DetailSection
+                  title="Things they dislike"
+                  placeholder="e.g., Loud noises"
+                  items={wizardData.dislikes}
+                  onAdd={(value) => addItem('dislikes', value)}
+                  onRemove={(index) => removeItem('dislikes', index)}
+                />
+
+                {/* Nicknames */}
+                <DetailSection
+                  title="Nicknames you call them"
+                  placeholder="e.g., Sunshine"
+                  items={wizardData.nicknames}
+                  onAdd={(value) => addItem('nicknames', value)}
+                  onRemove={(index) => removeItem('nicknames', index)}
+                />
+              </div>
+            )}
+
+            {/* Step 4: Account Creation (for anonymous users) */}
+            {step === 4 && !isLoggedIn && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="displayName">Your Name</Label>
+                  <Input
+                    id="displayName"
+                    placeholder="How should we greet you?"
+                    value={wizardData.displayName || ""}
+                    onChange={(e) => updateWizardData({ displayName: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={wizardData.email || ""}
+                    onChange={(e) => updateWizardData({ email: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={wizardData.password || ""}
+                    onChange={(e) => updateWizardData({ password: e.target.value })}
+                    required
+                    minLength={6}
+                  />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Navigation Buttons */}
+        <div className="flex items-center justify-between mt-6 gap-4">
+          <div className="flex gap-2">
+            {step > 1 && (
+              <Button variant="outline" onClick={handleBack}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
+              </Button>
+            )}
+            {step === 1 && (
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            {step === 2 && (
+              <Button variant="ghost" onClick={handleSkip}>
+                Skip this step
+              </Button>
+            )}
+            
+            <Button onClick={handleNext} disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  {step === totalSteps ? "Save & Continue" : "Next"}
+                  {step < totalSteps && <ArrowRight className="w-4 h-4 ml-2" />}
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Helper component for detail sections in step 3
+interface DetailSectionProps {
+  title: string;
+  placeholder: string;
+  items: string[];
+  onAdd: (value: string) => void;
+  onRemove: (index: number) => void;
+}
+
+const DetailSection = ({ title, placeholder, items, onAdd, onRemove }: DetailSectionProps) => {
+  const [inputValue, setInputValue] = useState("");
+
+  const handleAdd = () => {
+    if (inputValue.trim()) {
+      onAdd(inputValue);
+      setInputValue("");
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <Label className="text-sm font-medium">{title}</Label>
+      
+      {items.length > 0 && (
+        <div className="space-y-2">
+          {items.map((item, index) => (
+            <div key={index} className="flex items-center gap-2 p-2 rounded-lg border bg-card/50">
+              <span className="flex-1 text-sm">{item}</span>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => onRemove(index)}
+                className="h-7 w-7 shrink-0"
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <Input
+          placeholder={placeholder}
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleAdd();
+            }
+          }}
+          className="text-sm"
+        />
+        <Button onClick={handleAdd} size="icon" className="shrink-0">
+          <Plus className="w-4 h-4" />
+        </Button>
+      </div>
+      
+      {items.length === 0 && (
+        <p className="text-xs text-muted-foreground">Add 1-2 items to get started</p>
+      )}
+    </div>
+  );
+};
