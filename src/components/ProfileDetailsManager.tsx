@@ -1,13 +1,34 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Plus, Edit2, Trash2 } from "lucide-react";
+import { Plus, Edit2, Trash2, GripVertical, Check, X } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ProfileDetail {
   id: string;
@@ -17,29 +38,257 @@ interface ProfileDetail {
   position: number;
 }
 
-interface ProfileDetailsManagerProps {
-  partnerId: string;
+interface CategoryConfig {
+  id: string;
+  label: string;
+  explainer: string;
+  emptyState: string;
+  valueOnly?: boolean;
+  labelSuggestions?: string[];
 }
 
-const CATEGORIES = [
-  { id: "body", label: "Body" },
-  { id: "favorites", label: "Favorites" },
-  { id: "links", label: "Links" },
-  { id: "nicknames", label: "Nicknames" },
+const CATEGORIES: CategoryConfig[] = [
+  {
+    id: "body",
+    label: "Body",
+    explainer: "Little details about how they look and carry themselves.",
+    emptyState: "Add your first detail — height, eyes, style, anything you notice.",
+    labelSuggestions: ["Height", "Weight", "Eye Color", "Hair Color", "Clothing Size", "Shoe Size", "Tattoo", "Piercing", "Body Type", "Skin Tone"],
+  },
+  {
+    id: "favorites",
+    label: "Favorites",
+    explainer: "Their go-to joys — from food to music to guilty pleasures.",
+    emptyState: "What lights them up? Add their favorite thing.",
+    labelSuggestions: ["Food", "Drink", "Movie", "Music", "Perfume", "Destination", "Hobby", "Book", "Artist", "Flower"],
+  },
+  {
+    id: "links",
+    label: "Links",
+    explainer: "Where to find them online when you're not together.",
+    emptyState: "Add a link to their social profile or favorite place online.",
+    labelSuggestions: ["TikTok", "Instagram", "Discord", "WhatsApp", "Twitter/X", "Facebook", "VRChat", "Steam", "Snapchat", "OnlyFans"],
+  },
+  {
+    id: "nicknames",
+    label: "Nicknames",
+    explainer: "How you call them when it's just the two of you.",
+    emptyState: "Add your first nickname — sweet, silly, or special.",
+    valueOnly: true,
+  },
+  {
+    id: "friends_family",
+    label: "Friends & Family",
+    explainer: "The other important people in their life.",
+    emptyState: "Who matters to them? Add a friend or family member.",
+    labelSuggestions: ["Mother", "Father", "Sister", "Brother", "Best Friend", "Close Friend", "Mentor", "Roommate", "Child", "Cousin"],
+  },
+  {
+    id: "pets",
+    label: "Pets",
+    explainer: "Because the furry (or feathery, or scaly) ones count too.",
+    emptyState: "Add their beloved companion — paws, claws, or fins.",
+    labelSuggestions: ["Dog", "Cat", "Bird", "Fish", "Rabbit", "Reptile", "Hamster", "Horse", "Ferret", "Other"],
+  },
+  {
+    id: "games",
+    label: "Games",
+    explainer: "The worlds they love to play in.",
+    emptyState: "What game do they play? Add it here.",
+    labelSuggestions: ["VRChat", "Roblox", "Fortnite", "Valorant", "Overwatch", "Minecraft", "League of Legends", "Genshin Impact", "Apex Legends", "World of Warcraft"],
+  },
+  {
+    id: "relationship",
+    label: "Relationship",
+    explainer: "What kind of connection you share — poly, mono, long-distance, or something uniquely yours.",
+    emptyState: "Define your bond — add a relationship detail.",
+    labelSuggestions: ["Poly", "Monogamous", "Open", "Long Distance", "VR Relationship", "Casual", "Committed", "Situationship", "Exploring", "Toys", "Custom"],
+  },
 ];
 
-export const ProfileDetailsManager = ({ partnerId }: ProfileDetailsManagerProps) => {
+interface ProfileDetailsManagerProps {
+  partnerId: string;
+  category: CategoryConfig;
+}
+
+interface SortableItemProps {
+  detail: ProfileDetail;
+  category: CategoryConfig;
+  isEditing: boolean;
+  editLabel: string;
+  editValue: string;
+  onEditLabelChange: (value: string) => void;
+  onEditValueChange: (value: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+function SortableItem({
+  detail,
+  category,
+  isEditing,
+  editLabel,
+  editValue,
+  onEditLabelChange,
+  onEditValueChange,
+  onSave,
+  onCancel,
+  onEdit,
+  onDelete,
+}: SortableItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: detail.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const renderValue = () => {
+    if (category.id === "links" && !isEditing) {
+      const url = detail.value.startsWith("http://") || detail.value.startsWith("https://")
+        ? detail.value
+        : `https://${detail.value}`;
+      return (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline break-all"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {detail.value}
+        </a>
+      );
+    }
+    return <span className="break-words">{detail.value}</span>;
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-2 p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
+    >
+      {isEditing ? (
+        <>
+          <div className="flex-1 flex gap-2">
+            {!category.valueOnly && (
+              <Input
+                value={editLabel}
+                onChange={(e) => onEditLabelChange(e.target.value)}
+                placeholder="Label"
+                className="h-9 w-1/3"
+              />
+            )}
+            <Input
+              value={editValue}
+              onChange={(e) => onEditValueChange(e.target.value)}
+              placeholder="Value"
+              className={`h-9 ${category.valueOnly ? 'flex-1' : 'flex-1'}`}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  onSave();
+                } else if (e.key === "Escape") {
+                  e.preventDefault();
+                  onCancel();
+                }
+              }}
+              autoFocus
+            />
+          </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onSave}
+            className="h-9 w-9 shrink-0"
+            aria-label="Save changes"
+          >
+            <Check className="w-4 h-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onCancel}
+            className="h-9 w-9 shrink-0"
+            aria-label="Cancel edit"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </>
+      ) : (
+        <>
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-1 shrink-0"
+            aria-label="Drag to reorder"
+          >
+            <GripVertical className="w-5 h-5 text-muted-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            {category.valueOnly ? (
+              <span className="font-medium">{renderValue()}</span>
+            ) : (
+              <span className="font-medium">
+                {detail.label}: {renderValue()}
+              </span>
+            )}
+          </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onEdit}
+            className="h-9 w-9 shrink-0"
+            aria-label="Edit item"
+          >
+            <Edit2 className="w-4 h-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onDelete}
+            className="h-9 w-9 shrink-0 text-destructive hover:text-destructive"
+            aria-label="Delete item"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}
+
+export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsManagerProps) => {
   const [details, setDetails] = useState<ProfileDetail[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showDialog, setShowDialog] = useState(false);
-  const [editingDetail, setEditingDetail] = useState<ProfileDetail | null>(null);
-  const [currentCategory, setCurrentCategory] = useState<string>("");
-  const [label, setLabel] = useState("");
-  const [value, setValue] = useState("");
+  const [newLabel, setNewLabel] = useState("");
+  const [newValue, setNewValue] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editLabel, setEditLabel] = useState("");
+  const [editValue, setEditValue] = useState("");
+  const [customLabel, setCustomLabel] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     loadDetails();
-  }, [partnerId]);
+  }, [partnerId, category.id]);
 
   const loadDetails = async () => {
     try {
@@ -50,6 +299,7 @@ export const ProfileDetailsManager = ({ partnerId }: ProfileDetailsManagerProps)
         .from("partner_profile_details")
         .select("*")
         .eq("partner_id", partnerId)
+        .eq("category", category.id)
         .order("position");
 
       if (error) throw error;
@@ -62,35 +312,13 @@ export const ProfileDetailsManager = ({ partnerId }: ProfileDetailsManagerProps)
     }
   };
 
-  const handleOpenDialog = (category: string, detail?: ProfileDetail) => {
-    setCurrentCategory(category);
-    if (detail) {
-      setEditingDetail(detail);
-      setLabel(detail.label);
-      setValue(detail.value);
-    } else {
-      setEditingDetail(null);
-      setLabel("");
-      setValue("");
-    }
-    setShowDialog(true);
-  };
-
-  const handleCloseDialog = () => {
-    setShowDialog(false);
-    setEditingDetail(null);
-    setLabel("");
-    setValue("");
-    setCurrentCategory("");
-  };
-
-  const handleSave = async () => {
-    if (!label.trim()) {
+  const handleAdd = async () => {
+    if (!category.valueOnly && !newLabel.trim()) {
       toast.error("Please add a label");
       return;
     }
 
-    if (!value.trim()) {
+    if (!newValue.trim()) {
       toast.error("Please add a value");
       return;
     }
@@ -102,37 +330,86 @@ export const ProfileDetailsManager = ({ partnerId }: ProfileDetailsManagerProps)
         return;
       }
 
-      const detailData = {
-        partner_id: partnerId,
-        category: currentCategory,
-        label: label.trim(),
-        value: value.trim(),
-        user_id: session.session.user.id,
-        position: editingDetail?.position ?? details.filter(d => d.category === currentCategory).length,
-      };
+      const maxPosition = details.length > 0 ? Math.max(...details.map(d => d.position)) : -1;
 
-      if (editingDetail) {
-        const { error } = await supabase
-          .from("partner_profile_details")
-          .update(detailData)
-          .eq("id", editingDetail.id);
-
-        if (error) throw error;
-        toast.success("Field updated successfully");
-      } else {
-        const { error } = await supabase
-          .from("partner_profile_details")
-          .insert([detailData]);
-
-        if (error) throw error;
-        toast.success("Field added successfully");
+      let finalValue = newValue.trim();
+      // Auto-prefix https:// for links if not present
+      if (category.id === "links" && !finalValue.startsWith("http://") && !finalValue.startsWith("https://")) {
+        finalValue = `https://${finalValue}`;
       }
 
+      const { error } = await supabase
+        .from("partner_profile_details")
+        .insert([{
+          partner_id: partnerId,
+          category: category.id,
+          label: category.valueOnly ? "" : newLabel.trim(),
+          value: finalValue,
+          user_id: session.session.user.id,
+          position: maxPosition + 1,
+        }]);
+
+      if (error) throw error;
+
+      setNewLabel("");
+      setNewValue("");
+      setCustomLabel(false);
       await loadDetails();
-      handleCloseDialog();
+      toast.success("Added!");
     } catch (error) {
-      console.error("Error saving profile detail:", error);
-      toast.error("Failed to save field");
+      console.error("Error adding profile detail:", error);
+      toast.error("Failed to add field");
+    }
+  };
+
+  const startEdit = (detail: ProfileDetail) => {
+    setEditingId(detail.id);
+    setEditLabel(detail.label);
+    setEditValue(detail.value);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditLabel("");
+    setEditValue("");
+  };
+
+  const saveEdit = async (id: string) => {
+    if (!category.valueOnly && !editLabel.trim()) {
+      toast.error("Please add a label");
+      return;
+    }
+
+    if (!editValue.trim()) {
+      toast.error("Please add a value");
+      return;
+    }
+
+    try {
+      let finalValue = editValue.trim();
+      // Auto-prefix https:// for links if not present
+      if (category.id === "links" && !finalValue.startsWith("http://") && !finalValue.startsWith("https://")) {
+        finalValue = `https://${finalValue}`;
+      }
+
+      const { error } = await supabase
+        .from("partner_profile_details")
+        .update({
+          label: category.valueOnly ? "" : editLabel.trim(),
+          value: finalValue,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setEditingId(null);
+      setEditLabel("");
+      setEditValue("");
+      await loadDetails();
+      toast.success("Updated!");
+    } catch (error) {
+      console.error("Error updating profile detail:", error);
+      toast.error("Failed to update field");
     }
   };
 
@@ -145,7 +422,7 @@ export const ProfileDetailsManager = ({ partnerId }: ProfileDetailsManagerProps)
 
       if (error) throw error;
 
-      toast.success("Field deleted successfully");
+      toast.success("Deleted");
       await loadDetails();
     } catch (error) {
       console.error("Error deleting profile detail:", error);
@@ -153,120 +430,154 @@ export const ProfileDetailsManager = ({ partnerId }: ProfileDetailsManagerProps)
     }
   };
 
-  const getDetailsByCategory = (category: string) => {
-    return details.filter(d => d.category === category);
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = details.findIndex((d) => d.id === active.id);
+    const newIndex = details.findIndex((d) => d.id === over.id);
+
+    const reorderedDetails = arrayMove(details, oldIndex, newIndex);
+    setDetails(reorderedDetails);
+
+    // Update positions in database
+    const updates = reorderedDetails.map((detail, index) =>
+      supabase
+        .from("partner_profile_details")
+        .update({ position: index })
+        .eq("id", detail.id)
+    );
+
+    await Promise.all(updates);
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-32">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
+      <Card className="shadow-soft">
+        <CardHeader>
+          <CardTitle>{category.label}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground text-sm">Loading...</p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <>
-      <div className="space-y-6">
-        {CATEGORIES.map((category) => {
-          const categoryDetails = getDetailsByCategory(category.id);
-          
-          return (
-            <Card key={category.id}>
-              <CardHeader>
-                <CardTitle className="text-lg">{category.label}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {categoryDetails.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No fields added yet</p>
-                ) : (
-                  categoryDetails.map((detail) => (
-                    <Card key={detail.id} className="bg-muted/30">
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start gap-4">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-muted-foreground">{detail.label}</p>
-                            <p className="text-base break-words">{detail.value}</p>
-                          </div>
-                          <div className="flex gap-2 shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handleOpenDialog(category.id, detail)}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handleDelete(detail.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleOpenDialog(category.id)}
-                  className="w-full"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Field
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+    <Card className="shadow-soft">
+      <CardHeader>
+        <CardTitle>{category.label}</CardTitle>
+        <CardDescription>{category.explainer}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {details.length === 0 ? (
+          <p className="text-muted-foreground text-sm text-center py-8">
+            {category.emptyState}
+          </p>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={details.map(d => d.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-2">
+                {details.map((detail) => (
+                  <SortableItem
+                    key={detail.id}
+                    detail={detail}
+                    category={category}
+                    isEditing={editingId === detail.id}
+                    editLabel={editLabel}
+                    editValue={editValue}
+                    onEditLabelChange={setEditLabel}
+                    onEditValueChange={setEditValue}
+                    onSave={() => saveEdit(detail.id)}
+                    onCancel={cancelEdit}
+                    onEdit={() => startEdit(detail)}
+                    onDelete={() => handleDelete(detail.id)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )}
 
-      <Dialog open={showDialog} onOpenChange={handleCloseDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingDetail ? "Edit Field" : "Add Field"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingDetail ? "Update the field details" : "Add a new field to this category"}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="field-label">Label *</Label>
+        <div className="flex gap-2 pt-2">
+          {!category.valueOnly && (
+            category.labelSuggestions ? (
+              customLabel ? (
+                <Input
+                  value={newLabel}
+                  onChange={(e) => setNewLabel(e.target.value)}
+                  placeholder="Custom label"
+                  className="w-1/3"
+                  onBlur={() => {
+                    if (!newLabel.trim()) {
+                      setCustomLabel(false);
+                    }
+                  }}
+                />
+              ) : (
+                <Select
+                  value={newLabel}
+                  onValueChange={(value) => {
+                    if (value === "custom") {
+                      setCustomLabel(true);
+                      setNewLabel("");
+                    } else {
+                      setNewLabel(value);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-1/3">
+                    <SelectValue placeholder="Label" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {category.labelSuggestions.map((suggestion) => (
+                      <SelectItem key={suggestion} value={suggestion}>
+                        {suggestion}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="custom">Custom...</SelectItem>
+                  </SelectContent>
+                </Select>
+              )
+            ) : (
               <Input
-                id="field-label"
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                placeholder="e.g., Eye color, Favorite food"
+                value={newLabel}
+                onChange={(e) => setNewLabel(e.target.value)}
+                placeholder="Label"
+                className="w-1/3"
               />
-            </div>
-            <div>
-              <Label htmlFor="field-value">Value *</Label>
-              <Textarea
-                id="field-value"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder="e.g., Green, Pizza"
-                rows={3}
-              />
-            </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={handleCloseDialog}>
-                Cancel
-              </Button>
-              <Button onClick={handleSave}>
-                {editingDetail ? "Update" : "Add"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+            )
+          )}
+          <Input
+            value={newValue}
+            onChange={(e) => setNewValue(e.target.value)}
+            placeholder={category.valueOnly ? `e.g., ${category.label === "Nicknames" ? "Sweetie" : "Value"}` : "Value"}
+            className="flex-1"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleAdd();
+              }
+            }}
+          />
+          <Button onClick={handleAdd} size="icon" className="shrink-0 bg-destructive hover:bg-destructive/90">
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
+
+export { CATEGORIES };

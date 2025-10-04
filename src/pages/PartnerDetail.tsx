@@ -15,7 +15,7 @@ import { ItemManager } from "@/components/ItemManager";
 import { BirthdatePicker } from "@/components/BirthdatePicker";
 import { EventManager } from "@/components/EventManager";
 import { MomentManager } from "@/components/MomentManager";
-import { ProfileDetailsManager } from "@/components/ProfileDetailsManager";
+import { ProfileDetailsManager, CATEGORIES } from "@/components/ProfileDetailsManager";
 import { dateToYMDLocal } from "@/lib/utils";
 interface LoveLanguages {
   physical: number;
@@ -252,14 +252,11 @@ const PartnerDetail = () => {
               <ItemManager partnerId={id!} type="dislikes" title="Dislikes" subtitle="Things to avoid—because you care." emptyState="No dislikes yet — Add your first dislike (e.g., Loud noises)" />
             </div>
 
-            <Card className="shadow-soft">
-              <CardHeader>
-                <CardTitle>Profile Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ProfileDetailsManager partnerId={id!} />
-              </CardContent>
-            </Card>
+            <div className="grid md:grid-cols-2 gap-6">
+              {CATEGORIES.map((category) => (
+                <ProfileDetailsManager key={category.id} partnerId={id!} category={category} />
+              ))}
+            </div>
 
             <Card className="shadow-soft">
               <CardContent className="pt-6">
