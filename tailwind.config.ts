@@ -131,12 +131,14 @@ export default {
         "float-heart": "float-heart 25s ease-in-out infinite",
       },
       backgroundImage: {
+        "gradient-radial": "radial-gradient(circle, var(--tw-gradient-stops))",
         "gradient-primary": "var(--gradient-primary)",
         "gradient-soft": "var(--gradient-soft)",
       },
       boxShadow: {
         "soft": "var(--shadow-soft)",
         "glow": "var(--shadow-glow)",
+        "elegant": "0 20px 50px -10px rgba(0, 0, 0, 0.15), 0 10px 20px -5px rgba(0, 0, 0, 0.1)",
       },
     },
   },
