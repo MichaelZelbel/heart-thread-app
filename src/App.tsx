@@ -10,6 +10,7 @@ import PartnerDetail from "./pages/PartnerDetail";
 import Archive from "./pages/Archive";
 import NotFound from "./pages/NotFound";
 import Footer from "./components/Footer";
+import CookieConsent from "./components/CookieConsent";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
           </div>
           <Footer />
         </div>
+        <CookieConsent />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
