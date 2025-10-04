@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -278,7 +278,7 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
               {step === 1 && "Start simple — what do you call them?"}
               {step === 2 && "Cherish the moments that matter — birthdays, anniversaries, or first 'I love you's."}
               {step === 3 && "Share what they love, what they dislike, and how they receive love best."}
-              {step === 4 && !isLoggedIn && "We'll keep what you just created safe. Create a free account to save and revisit your loved ones anytime."}
+              {step === 4 && !isLoggedIn && "We'll keep what you just created safe. Create a free Cherishly account — or log in if you already have one — to revisit your loved ones anytime."}
             </CardDescription>
           </CardHeader>
 
@@ -467,6 +467,16 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
                     required
                     minLength={6}
                   />
+                </div>
+
+                <div className="text-center text-sm text-muted-foreground">
+                  Already have an account?{" "}
+                  <Link 
+                    to="/auth" 
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Log in here
+                  </Link>
                 </div>
               </div>
             )}
