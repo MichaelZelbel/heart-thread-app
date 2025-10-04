@@ -15,6 +15,7 @@ import { ItemManager } from "@/components/ItemManager";
 import { BirthdatePicker } from "@/components/BirthdatePicker";
 import { EventManager } from "@/components/EventManager";
 import { MomentManager } from "@/components/MomentManager";
+import { ProfileDetailsManager } from "@/components/ProfileDetailsManager";
 import { dateToYMDLocal } from "@/lib/utils";
 interface LoveLanguages {
   physical: number;
@@ -250,6 +251,15 @@ const PartnerDetail = () => {
               <ItemManager partnerId={id!} type="likes" title="Likes" subtitle="Little things that make them light up." emptyState="No likes yet — Add your first like (e.g., Chocolate Cake)" />
               <ItemManager partnerId={id!} type="dislikes" title="Dislikes" subtitle="Things to avoid—because you care." emptyState="No dislikes yet — Add your first dislike (e.g., Loud noises)" />
             </div>
+
+            <Card className="shadow-soft">
+              <CardHeader>
+                <CardTitle>Profile Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ProfileDetailsManager partnerId={id!} />
+              </CardContent>
+            </Card>
 
             <Card className="shadow-soft">
               <CardContent className="pt-6">

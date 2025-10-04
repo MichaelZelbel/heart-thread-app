@@ -199,6 +199,42 @@ export type Database = {
           },
         ]
       }
+      partner_profile_details: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          label: string
+          partner_id: string
+          position: number
+          updated_at: string
+          user_id: string
+          value: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          label: string
+          partner_id: string
+          position?: number
+          updated_at?: string
+          user_id: string
+          value: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          label?: string
+          partner_id?: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+          value?: string
+        }
+        Relationships: []
+      }
       partners: {
         Row: {
           address: string | null
