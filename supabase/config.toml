@@ -1,1 +1,4 @@
 project_id = "wghsyeluwojspkyppyvv"
+
+[functions.claire-chat]
+verify_jwt = false

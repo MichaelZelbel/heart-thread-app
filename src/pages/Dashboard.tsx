@@ -8,7 +8,9 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { AllEventsCalendar } from "@/components/AllEventsCalendar";
 import { MomentManager } from "@/components/MomentManager";
+import { ClaireChat } from "@/components/ClaireChat";
 import { dateToYMDLocal, parseYMDToLocalDate } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Dialog,
   DialogContent,
@@ -45,6 +47,7 @@ interface MomentSummary {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<EventOccurrence[]>([]);
@@ -318,82 +321,143 @@ const Dashboard = () => {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="shadow-soft animate-fade-in">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Your Cherished</CardTitle>
-                  <CardDescription>People who make your heart full</CardDescription>
+          {/* Left Column */}
+          <div className="space-y-6">
+            <Card className="shadow-soft animate-fade-in">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Your Cherished</CardTitle>
+                    <CardDescription>People who make your heart full</CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={() => navigate("/partner/new")} size="sm" data-testid="add-partner-button">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Cherished
+                    </Button>
+                    <Button onClick={() => navigate("/archive")} size="sm" variant="outline">
+                      Archive
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button onClick={() => navigate("/partner/new")} size="sm" data-testid="add-partner-button">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Cherished
-                  </Button>
-                  <Button onClick={() => navigate("/archive")} size="sm" variant="outline">
-                    Archive
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {partners.length === 0 ? <div className="text-center py-8">
-                  <Heart className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                  <p className="text-muted-foreground mb-4">
-                    No cherished added yet. Start building your connection map!
-                  </p>
-                  <Button onClick={() => navigate("/partner/new")} variant="outline">
-                    Add Your First Cherished
-                  </Button>
-                </div> : <div className="space-y-3">
-                  {partners.map(partner => <div key={partner.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer" onClick={() => navigate(`/partner/${partner.id}`)}>
-                      <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold">
-                        {partner.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium">{partner.name}</p>
-                      </div>
-                    </div>)}
-                  {partners.length >= 5 && <Button variant="ghost" className="w-full" onClick={() => navigate("/partners")}>
-                      View All Cherished
-                    </Button>}
-                </div>}
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                {partners.length === 0 ? <div className="text-center py-8">
+                    <Heart className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                    <p className="text-muted-foreground mb-4">
+                      No cherished added yet. Start building your connection map!
+                    </p>
+                    <Button onClick={() => navigate("/partner/new")} variant="outline">
+                      Add Your First Cherished
+                    </Button>
+                  </div> : <div className="space-y-3">
+                    {partners.map(partner => <div key={partner.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer" onClick={() => navigate(`/partner/${partner.id}`)}>
+                        <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold">
+                          {partner.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">{partner.name}</p>
+                        </div>
+                      </div>)}
+                    {partners.length >= 5 && <Button variant="ghost" className="w-full" onClick={() => navigate("/partners")}>
+                        View All Cherished
+                      </Button>}
+                  </div>}
+              </CardContent>
+            </Card>
 
-          <Card className="shadow-soft animate-fade-in" style={{
-          animationDelay: "0.1s"
-        }}>
-            <CardHeader>
-              <CardTitle>This Week's Highlights</CardTitle>
-              <CardDescription>Important dates coming up</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {upcomingEvents.length === 0 ? <div className="text-center py-8">
-                  <Calendar className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                  <p className="text-muted-foreground">
-                    No upcoming events this week
-                  </p>
-                </div> : <div className="space-y-3" data-testid="upcoming-list">
-                  {upcomingEvents.map((event, index) => <div key={`${event.id}-${event.displayDate}-${index}`} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-muted transition-colors">
-                      <Calendar className="w-5 h-5 text-primary mt-0.5" />
-                      <div className="flex-1">
-                        <p className="font-medium">
-                          {event.title}
-                          {event.partnerName && ` (${event.partnerName})`}
-                          {event.is_recurring && <span className="ml-2 text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">
-                              Recurring
-                            </span>}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {format(parseYMDToLocalDate(event.displayDate), "EEEE, MMMM d")}
-                          {event.partnerName && ` • ${event.partnerName}`}
-                        </p>
-                      </div>
-                    </div>)}
-                </div>}
-            </CardContent>
-          </Card>
+            <Card className="shadow-soft animate-fade-in" style={{
+            animationDelay: "0.1s"
+          }}>
+              <CardHeader>
+                <CardTitle>This Week's Highlights</CardTitle>
+                <CardDescription>Important dates coming up</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {upcomingEvents.length === 0 ? <div className="text-center py-8">
+                    <Calendar className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                    <p className="text-muted-foreground">
+                      No upcoming events this week
+                    </p>
+                  </div> : <div className="space-y-3" data-testid="upcoming-list">
+                    {upcomingEvents.map((event, index) => <div key={`${event.id}-${event.displayDate}-${index}`} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-muted transition-colors">
+                        <Calendar className="w-5 h-5 text-primary mt-0.5" />
+                        <div className="flex-1">
+                          <p className="font-medium">
+                            {event.title}
+                            {event.partnerName && ` (${event.partnerName})`}
+                            {event.is_recurring && <span className="ml-2 text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">
+                                Recurring
+                              </span>}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {format(parseYMDToLocalDate(event.displayDate), "EEEE, MMMM d")}
+                            {event.partnerName && ` • ${event.partnerName}`}
+                          </p>
+                        </div>
+                      </div>)}
+                  </div>}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-6">
+            <div className="h-[400px]">
+              <ClaireChat compact={isMobile} />
+            </div>
+
+            <Card 
+              className="shadow-soft hover:shadow-glow transition-shadow animate-scale-in cursor-pointer" 
+              style={{ animationDelay: "0.2s" }}
+              onClick={() => setShowMomentsDialog(true)}
+            >
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Sparkles className="w-5 h-5 text-accent" />
+                    <span>Moments</span>
+                  </div>
+                  <Button size="sm" variant="ghost" onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMomentsDialog(true);
+                  }}>
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold text-accent mb-2">
+                  {totalMoments}
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Memories logged
+                </p>
+                {moments.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t">
+                    {moments.map((moment) => {
+                      const partnerNames = moment.partner_ids
+                        .map((id) => partners.find((p) => p.id === id)?.name)
+                        .filter(Boolean)
+                        .join(", ");
+                      
+                      return (
+                        <div key={moment.id} className="text-xs">
+                          <p className="font-medium truncate">
+                            {moment.title || "Untitled"}
+                          </p>
+                          <p className="text-muted-foreground">
+                            {format(new Date(moment.moment_date), "MMM d")}
+                            {partnerNames && ` • ${partnerNames}`}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </main>
 
