@@ -1,9 +1,102 @@
-import { Check, Heart, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { Check, Heart, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useUserRole } from '@/hooks/useUserRole';
+import { useNavigate } from 'react-router-dom';
 
 const Pricing = () => {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const { isPro, loading: roleLoading } = useUserRole();
+  const [isLoadingStripe, setIsLoadingStripe] = useState(false);
+  const [isLoadingPayPal, setIsLoadingPayPal] = useState(false);
+
+  const handleStripeCheckout = async () => {
+    try {
+      setIsLoadingStripe(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Please sign in",
+          description: "You need to be signed in to upgrade to Pro",
+          variant: "destructive",
+        });
+        navigate('/auth');
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (error) {
+      console.error('Error creating checkout:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create checkout session. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingStripe(false);
+    }
+  };
+
+  const handlePayPalCheckout = () => {
+    setIsLoadingPayPal(true);
+    toast({
+      title: "PayPal Integration",
+      description: "Please contact michael@zelbel.de to set up PayPal payment",
+    });
+    setIsLoadingPayPal(false);
+  };
+
+  const handleManageSubscription = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Please sign in",
+          description: "You need to be signed in to manage your subscription",
+          variant: "destructive",
+        });
+        navigate('/auth');
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('customer-portal', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (error) {
+      console.error('Error opening customer portal:', error);
+      toast({
+        title: "Error",
+        description: "Failed to open subscription management. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const freeFeatures = [
     'Create and save your Cherished people',
     'Add basic details, likes, and dislikes',
@@ -62,7 +155,7 @@ const Pricing = () => {
             </CardContent>
             <CardFooter>
               <Button variant="outline" className="w-full" disabled>
-                Current Plan
+                {roleLoading ? "Loading..." : "Free Plan"}
               </Button>
             </CardFooter>
           </Card>
@@ -101,11 +194,56 @@ const Pricing = () => {
                 ))}
               </ul>
             </CardContent>
-            <CardFooter>
-              <Button className="w-full gap-2" size="lg">
-                <Sparkles className="w-4 h-4" />
-                Upgrade to Pro 💞
-              </Button>
+            <CardFooter className="flex flex-col gap-2">
+              {isPro ? (
+                <Button 
+                  onClick={handleManageSubscription}
+                  variant="outline" 
+                  className="w-full gap-2" 
+                  size="lg"
+                >
+                  Manage Subscription
+                </Button>
+              ) : (
+                <>
+                  <Button 
+                    onClick={handleStripeCheckout}
+                    disabled={isLoadingStripe || roleLoading}
+                    className="w-full gap-2" 
+                    size="lg"
+                  >
+                    {isLoadingStripe ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        Upgrade with Stripe 💞
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    onClick={handlePayPalCheckout}
+                    disabled={isLoadingPayPal || roleLoading}
+                    variant="outline"
+                    className="w-full gap-2" 
+                    size="lg"
+                  >
+                    {isLoadingPayPal ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        Pay with PayPal
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
             </CardFooter>
           </Card>
         </div>
