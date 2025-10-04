@@ -7,8 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Mail, Lock, Bell, Globe } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
+import { ArrowLeft, Mail, Lock, Bell, Globe, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const COMMON_TIMEZONES = [
   { value: "America/New_York", label: "Eastern Time (ET)" },
@@ -31,6 +34,7 @@ const COMMON_TIMEZONES = [
 export default function Account() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isPro } = useUserRole();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
@@ -303,28 +307,45 @@ export default function Account() {
               <CardTitle className="flex items-center gap-2">
                 <Bell className="w-5 h-5" />
                 Email Notifications
+                {!isPro && <Badge variant="secondary" className="text-xs">Pro</Badge>}
               </CardTitle>
               <CardDescription>
                 Manage your notification preferences
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1 flex-1">
-                  <Label htmlFor="notifications">Event Reminders</Label>
-                  <p className="text-sm text-muted-foreground">
-                    When on, you'll receive an email at 00:00 in your selected timezone on the day of any important event for your Cherished.
+              {isPro ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1 flex-1">
+                      <Label htmlFor="notifications">Event Reminders</Label>
+                      <p className="text-sm text-muted-foreground">
+                        When on, you'll receive an email at 00:00 in your selected timezone on the day of any important event for your Cherished.
+                      </p>
+                    </div>
+                    <Switch
+                      id="notifications"
+                      checked={emailNotifications}
+                      onCheckedChange={setEmailNotifications}
+                    />
+                  </div>
+                  <Button onClick={saveProfile} disabled={saving}>
+                    {saving ? "Saving..." : "Save Notification Settings"}
+                  </Button>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-4">
+                    Upgrade to Pro to receive email reminders for your cherished ones' special dates.
                   </p>
+                  <Button asChild className="gap-2">
+                    <Link to="/pricing">
+                      <Sparkles className="w-4 h-4" />
+                      Upgrade to Pro
+                    </Link>
+                  </Button>
                 </div>
-                <Switch
-                  id="notifications"
-                  checked={emailNotifications}
-                  onCheckedChange={setEmailNotifications}
-                />
-              </div>
-              <Button onClick={saveProfile} disabled={saving}>
-                {saving ? "Saving..." : "Save Notification Settings"}
-              </Button>
+              )}
             </CardContent>
           </Card>
 

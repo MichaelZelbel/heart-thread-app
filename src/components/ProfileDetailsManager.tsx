@@ -29,6 +29,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useUserRole } from "@/hooks/useUserRole";
+import { UpgradePrompt } from "@/components/UpgradePrompt";
 
 interface ProfileDetail {
   id: string;
@@ -288,6 +290,7 @@ function SortableItem({
 }
 
 export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsManagerProps) => {
+  const { isPro } = useUserRole();
   const [details, setDetails] = useState<ProfileDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [newLabel, setNewLabel] = useState("");
@@ -297,6 +300,9 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
   const [editValue, setEditValue] = useState("");
   const [customLabel, setCustomLabel] = useState(false);
   const [customValue, setCustomValue] = useState(false);
+
+  // Check if this category is Pro-only
+  const isProCategory = ['relationship', 'favorites', 'friends_family'].includes(category.id);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -484,6 +490,16 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
           <p className="text-muted-foreground text-sm">Loading...</p>
         </CardContent>
       </Card>
+    );
+  }
+
+  // Show upgrade prompt for Pro categories if user is not Pro
+  if (isProCategory && !isPro) {
+    return (
+      <UpgradePrompt 
+        featureName={category.label}
+        description={category.explainer}
+      />
     );
   }
 

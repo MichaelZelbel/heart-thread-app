@@ -18,6 +18,8 @@ import { MomentManager } from "@/components/MomentManager";
 import { ProfileDetailsManager, CATEGORIES } from "@/components/ProfileDetailsManager";
 import { ClaireChat } from "@/components/ClaireChat";
 import { dateToYMDLocal } from "@/lib/utils";
+import { useUserRole } from "@/hooks/useUserRole";
+import { UpgradePrompt } from "@/components/UpgradePrompt";
 interface LoveLanguages {
   physical: number;
   words: number;
@@ -30,6 +32,7 @@ const PartnerDetail = () => {
     id
   } = useParams();
   const navigate = useNavigate();
+  const { isPro } = useUserRole();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -240,11 +243,18 @@ const PartnerDetail = () => {
           </TabsContent>
 
           <TabsContent value="moments" className="space-y-6">
-            <Card className="shadow-soft">
-              <CardContent className="pt-6">
-                <MomentManager partnerId={id!} partnerName={name} />
-              </CardContent>
-            </Card>
+            {isPro ? (
+              <Card className="shadow-soft">
+                <CardContent className="pt-6">
+                  <MomentManager partnerId={id!} partnerName={name} />
+                </CardContent>
+              </Card>
+            ) : (
+              <UpgradePrompt 
+                featureName="Moments Log"
+                description="Capture and organize your special memories with your cherished ones."
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="details" className="space-y-6">
@@ -253,9 +263,16 @@ const PartnerDetail = () => {
                 <ItemManager partnerId={id!} type="likes" title="Likes" subtitle="Little things that make them light up." emptyState="No likes yet — Add your first like (e.g., Chocolate Cake)" />
                 <ItemManager partnerId={id!} type="dislikes" title="Dislikes" subtitle="Things to avoid—because you care." emptyState="No dislikes yet — Add your first dislike (e.g., Loud noises)" />
               </div>
-              <div className="h-[600px]">
-                <ClaireChat partnerId={id} compact={false} />
-              </div>
+              {isPro ? (
+                <div className="h-[600px]">
+                  <ClaireChat partnerId={id} compact={false} />
+                </div>
+              ) : (
+                <UpgradePrompt 
+                  featureName="AI Chat with Claire"
+                  description="Get personalized relationship advice and gift ideas from your AI companion, Claire."
+                />
+              )}
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">

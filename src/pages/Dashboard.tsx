@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heart, Plus, Calendar, Sparkles, LogOut, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { AllEventsCalendar } from "@/components/AllEventsCalendar";
@@ -11,6 +13,8 @@ import { MomentManager } from "@/components/MomentManager";
 import { ClaireChat } from "@/components/ClaireChat";
 import { dateToYMDLocal, parseYMDToLocalDate } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useUserRole } from "@/hooks/useUserRole";
+import { UpgradePrompt } from "@/components/UpgradePrompt";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +52,7 @@ interface MomentSummary {
 const Dashboard = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { isPro, loading: roleLoading } = useUserRole();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<EventOccurrence[]>([]);
@@ -215,6 +220,10 @@ const Dashboard = () => {
             <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">Cherishly</span>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/pricing")}>
+              <Sparkles className="w-4 h-4 mr-2" />
+              Pricing
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => navigate("/account")}>
               <User className="w-4 h-4 mr-2" />
               Account
@@ -277,49 +286,65 @@ const Dashboard = () => {
           <Card 
             className="shadow-soft hover:shadow-glow transition-shadow animate-scale-in cursor-pointer" 
             style={{ animationDelay: "0.2s" }}
-            onClick={() => setShowMomentsDialog(true)}
+            onClick={() => isPro && setShowMomentsDialog(true)}
           >
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <Sparkles className="w-5 h-5 text-accent" />
                   <span>Moments</span>
+                  {!isPro && <Badge variant="secondary" className="text-xs">Pro</Badge>}
                 </div>
-                <Button size="sm" variant="ghost" onClick={(e) => {
-                  e.stopPropagation();
-                  setShowMomentsDialog(true);
-                }}>
-                  <Plus className="w-4 h-4" />
-                </Button>
+                {isPro && (
+                  <Button size="sm" variant="ghost" onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMomentsDialog(true);
+                  }}>
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold text-accent mb-2">
-                {totalMoments}
-              </div>
-              <p className="text-sm text-muted-foreground mb-3">
-                Memories logged
-              </p>
-              {moments.length > 0 && (
-                <div className="space-y-2 pt-2 border-t">
-                  {moments.map((moment) => {
-                    const partnerNames = moment.partner_ids
-                      .map((id) => partners.find((p) => p.id === id)?.name)
-                      .filter(Boolean)
-                      .join(", ");
-                    
-                    return (
-                      <div key={moment.id} className="text-xs">
-                        <p className="font-medium truncate">
-                          {moment.title || "Untitled"}
-                        </p>
-                        <p className="text-muted-foreground">
-                          {format(new Date(moment.moment_date), "MMM d")}
-                          {partnerNames && ` • ${partnerNames}`}
-                        </p>
-                      </div>
-                    );
-                  })}
+              {isPro ? (
+                <>
+                  <div className="text-4xl font-bold text-accent mb-2">
+                    {totalMoments}
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Memories logged
+                  </p>
+                  {moments.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t">
+                      {moments.map((moment) => {
+                        const partnerNames = moment.partner_ids
+                          .map((id) => partners.find((p) => p.id === id)?.name)
+                          .filter(Boolean)
+                          .join(", ");
+                        
+                        return (
+                          <div key={moment.id} className="text-xs">
+                            <p className="font-medium truncate">
+                              {moment.title || "Untitled"}
+                            </p>
+                            <p className="text-muted-foreground">
+                              {format(new Date(moment.moment_date), "MMM d")}
+                              {partnerNames && ` • ${partnerNames}`}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="py-4">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Capture and cherish your favorite memories together.
+                  </p>
+                  <Button size="sm" asChild className="w-full">
+                    <Link to="/pricing">Upgrade to Pro</Link>
+                  </Button>
                 </div>
               )}
             </CardContent>
@@ -409,21 +434,30 @@ const Dashboard = () => {
 
           {/* Right Column */}
           <div className="space-y-6">
-            <div className="h-[800px]">
-              <ClaireChat compact={isMobile} />
-            </div>
+            {isPro ? (
+              <div className="h-[800px]">
+                <ClaireChat compact={isMobile} />
+              </div>
+            ) : (
+              <UpgradePrompt 
+                featureName="AI Chat with Claire"
+                description="Get personalized relationship advice and gift ideas from your AI companion, Claire."
+              />
+            )}
           </div>
         </div>
       </main>
 
-      <Dialog open={showMomentsDialog} onOpenChange={setShowMomentsDialog}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>All Moments</DialogTitle>
-          </DialogHeader>
-          <MomentManager showPartnerColumn />
-        </DialogContent>
-      </Dialog>
+      {isPro && (
+        <Dialog open={showMomentsDialog} onOpenChange={setShowMomentsDialog}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>All Moments</DialogTitle>
+            </DialogHeader>
+            <MomentManager showPartnerColumn />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>;
 };
 export default Dashboard;
