@@ -107,6 +107,19 @@ export default {
           "50%": {
             opacity: "0.8"
           }
+        },
+        "float-heart": {
+          "0%": {
+            transform: "translateY(0) rotate(0deg)",
+            opacity: "0.2"
+          },
+          "50%": {
+            opacity: "0.4"
+          },
+          "100%": {
+            transform: "translateY(-100vh) rotate(180deg)",
+            opacity: "0"
+          }
         }
       },
       animation: {
@@ -115,6 +128,7 @@ export default {
         "fade-in": "fade-in 0.4s ease-out",
         "scale-in": "scale-in 0.3s ease-out",
         "pulse-soft": "pulse-soft 2s ease-in-out infinite",
+        "float-heart": "float-heart 25s ease-in-out infinite",
       },
       backgroundImage: {
         "gradient-primary": "var(--gradient-primary)",
