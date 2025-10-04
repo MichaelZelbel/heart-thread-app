@@ -138,7 +138,7 @@ export const AllEventsCalendar = () => {
   }
 
   return (
-    <Card className="shadow-soft">
+    <Card className="shadow-soft" data-testid="overall-calendar">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="w-5 h-5" />

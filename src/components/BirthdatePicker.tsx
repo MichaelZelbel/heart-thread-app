@@ -38,7 +38,7 @@ export const BirthdatePicker = ({
           setMonth(newMonth);
           updateDate(day, newMonth, year);
         }}>
-          <SelectTrigger>
+          <SelectTrigger data-testid="birthdate-month-input">
             <SelectValue placeholder="Month" />
           </SelectTrigger>
           <SelectContent>
@@ -55,7 +55,7 @@ export const BirthdatePicker = ({
           setDay(newDay);
           updateDate(newDay, month, year);
         }}>
-          <SelectTrigger>
+          <SelectTrigger data-testid="birthdate-day-input">
             <SelectValue placeholder="Day" />
           </SelectTrigger>
           <SelectContent>
@@ -72,7 +72,7 @@ export const BirthdatePicker = ({
           setYear(newYear);
           updateDate(day, month, newYear);
         }}>
-          <SelectTrigger>
+          <SelectTrigger data-testid="birthdate-year-input">
             <SelectValue placeholder="Year (opt)" />
           </SelectTrigger>
           <SelectContent>

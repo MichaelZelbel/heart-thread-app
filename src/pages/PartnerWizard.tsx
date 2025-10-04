@@ -141,7 +141,7 @@ const PartnerWizard = () => {
                   <Label htmlFor="name">
                     Cherished Name <span className="text-destructive">*</span>
                   </Label>
-                  <Input id="name" placeholder="Their name" value={name} onChange={e => setName(e.target.value)} required />
+                  <Input id="name" placeholder="Their name" value={name} onChange={e => setName(e.target.value)} required data-testid="what-do-you-call-them" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email (optional)</Label>
@@ -188,7 +188,7 @@ const PartnerWizard = () => {
               {currentStep < totalSteps ? <Button onClick={handleNext}>
                   Next
                   <ArrowRight className="w-4 h-4 ml-2" />
-                </Button> : <Button onClick={handleSave} disabled={loading}>
+                </Button> : <Button onClick={handleSave} disabled={loading} data-testid="partner-wizard-save-button">
                   {loading ? <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Saving...

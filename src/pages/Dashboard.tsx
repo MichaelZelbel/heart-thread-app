@@ -257,7 +257,7 @@ const Dashboard = () => {
                   <CardDescription>People who make your heart full</CardDescription>
                 </div>
                 <div className="flex gap-2">
-                  <Button onClick={() => navigate("/partner/new")} size="sm">
+                  <Button onClick={() => navigate("/partner/new")} size="sm" data-testid="add-partner-button">
                     <Plus className="w-4 h-4 mr-2" />
                     Add Cherished
                   </Button>
@@ -305,7 +305,7 @@ const Dashboard = () => {
                   <p className="text-muted-foreground">
                     No upcoming events this week
                   </p>
-                </div> : <div className="space-y-3">
+                </div> : <div className="space-y-3" data-testid="upcoming-list">
                   {upcomingEvents.map((event, index) => <div key={`${event.id}-${event.displayDate}-${index}`} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-muted transition-colors">
                       <Calendar className="w-5 h-5 text-primary mt-0.5" />
                       <div className="flex-1">

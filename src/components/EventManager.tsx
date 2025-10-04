@@ -272,7 +272,7 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="partner-calendar-container">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xl font-semibold">Love Calendar</h3>
@@ -285,7 +285,7 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button data-testid="calendar-add-event-button">
               <Plus className="w-4 h-4 mr-2" />
               Add Event
             </Button>
@@ -317,6 +317,7 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g., First Date"
+                  data-testid="event-title-input"
                 />
               </div>
               <div>
@@ -327,6 +328,7 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
                   value={eventDate}
                   onChange={(e) => setEventDate(e.target.value)}
                   placeholder="MM/DD or MM/DD/YYYY"
+                  data-testid="event-date-input"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Year is optional (e.g., 09/30 or 09/30/1999)
@@ -353,6 +355,7 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
                   id="recurring"
                   checked={isRecurring}
                   onCheckedChange={setIsRecurring}
+                  data-testid="event-recurrence-toggle"
                 />
               </div>
               <div className="flex justify-end gap-2">

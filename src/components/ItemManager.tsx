@@ -79,6 +79,7 @@ function SortableItem({
       ref={setNodeRef}
       style={style}
       className="flex items-center gap-2 p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
+      data-testid="item-row"
     >
       {isEditing ? (
         <>
@@ -125,6 +126,7 @@ function SortableItem({
             {...listeners}
             className="cursor-grab active:cursor-grabbing p-1 shrink-0"
             aria-label="Drag to reorder"
+            data-testid="item-drag-handle"
           >
             <GripVertical className="w-5 h-5 text-muted-foreground" />
           </div>
@@ -137,6 +139,7 @@ function SortableItem({
             onClick={onEdit}
             className="h-9 w-9 shrink-0"
             aria-label="Edit item"
+            data-testid="item-edit-button"
           >
             <Edit2 className="w-4 h-4" />
           </Button>
@@ -146,6 +149,7 @@ function SortableItem({
             onClick={onDelete}
             className="h-9 w-9 shrink-0 text-destructive hover:text-destructive"
             aria-label="Delete item"
+            data-testid="item-delete-button"
           >
             <Trash2 className="w-4 h-4" />
           </Button>
@@ -323,7 +327,7 @@ export const ItemManager = ({ partnerId, type, title, subtitle, emptyState }: It
               items={items.map(i => i.id)}
               strategy={verticalListSortingStrategy}
             >
-              <div className="space-y-2">
+              <div className="space-y-2" data-testid={`${type}-list-container`}>
                 {items.map((item) => (
                   <SortableItem
                     key={item.id}
@@ -353,8 +357,9 @@ export const ItemManager = ({ partnerId, type, title, subtitle, emptyState }: It
                 handleAdd();
               }
             }}
+            data-testid={`${type}-input`}
           />
-          <Button onClick={handleAdd} size="icon" className="shrink-0">
+          <Button onClick={handleAdd} size="icon" className="shrink-0" data-testid={`${type}-add-button`}>
             <Plus className="w-4 h-4" />
           </Button>
         </div>

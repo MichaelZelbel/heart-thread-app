@@ -23,6 +23,7 @@ export const HeartRatingRow = ({ label, value, onChange }: HeartRatingRowProps) 
             value === 0 ? 'bg-accent' : ''
           }`}
           aria-label={`Set ${label} to not at all`}
+          data-testid="love-language-not-at-all-chip"
         >
           Not at all
         </Button>
@@ -47,6 +48,7 @@ export const HeartRatingRow = ({ label, value, onChange }: HeartRatingRowProps) 
             role="radio"
             aria-checked={value === heartValue}
             aria-label={`${heartValue} of 5 hearts for ${label}`}
+            data-testid={`love-language-heart-button-${heartValue}`}
           >
             <Heart
               className={`w-10 h-10 transition-all ${

@@ -203,7 +203,7 @@ const PartnerDetail = () => {
               <Trash2 className="w-4 h-4 mr-2" />
               Delete
             </Button>
-            <Button onClick={handleSave} disabled={saving}>
+            <Button onClick={handleSave} disabled={saving} data-testid="partner-detail-save-button">
               <Save className="w-4 h-4 mr-2" />
               {saving ? "Saving..." : "Save Changes"}
             </Button>
@@ -257,7 +257,7 @@ const PartnerDetail = () => {
             <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="name">Name *</Label>
-                <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Partner's name" />
+                <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Partner's name" data-testid="what-do-you-call-them" />
               </div>
               <div>
                 <Label htmlFor="email">Email</Label>

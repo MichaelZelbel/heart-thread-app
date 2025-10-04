@@ -53,10 +53,20 @@ export const LoveLanguageHeartRatings = ({
         </p>
       </div>
 
-      {languages.map(({
-      key,
-      label,
-      icon: Icon
-    }) => <HeartRatingRow key={key} label={label} value={values[key]} onChange={newValue => handleChange(key, newValue)} />)}
+      <div data-testid="love-language-row-touch">
+        <HeartRatingRow label="Physical Touch" value={values.physical} onChange={newValue => handleChange('physical', newValue)} />
+      </div>
+      <div data-testid="love-language-row-words">
+        <HeartRatingRow label="Words of Affirmation" value={values.words} onChange={newValue => handleChange('words', newValue)} />
+      </div>
+      <div data-testid="love-language-row-time">
+        <HeartRatingRow label="Quality Time" value={values.quality} onChange={newValue => handleChange('quality', newValue)} />
+      </div>
+      <div data-testid="love-language-row-acts">
+        <HeartRatingRow label="Acts of Service" value={values.acts} onChange={newValue => handleChange('acts', newValue)} />
+      </div>
+      <div data-testid="love-language-row-gifts">
+        <HeartRatingRow label="Receiving Gifts" value={values.gifts} onChange={newValue => handleChange('gifts', newValue)} />
+      </div>
     </div>;
 };

@@ -106,6 +106,7 @@ const Auth = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  data-testid="auth-email-input"
                 />
               </div>
 
@@ -119,6 +120,7 @@ const Auth = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
+                  data-testid="auth-password-input"
                 />
               </div>
 
@@ -126,6 +128,7 @@ const Auth = () => {
                 type="submit"
                 className="w-full"
                 disabled={loading}
+                data-testid="auth-submit-button"
               >
                 {loading ? (
                   <>
