@@ -23,31 +23,31 @@ const CookieConsent = () => {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 sm:p-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="fixed bottom-16 left-0 right-0 z-50 px-4 pb-3">
+      <div className="max-w-3xl mx-auto">
         <div 
-          className="bg-background/85 backdrop-blur-md rounded-2xl shadow-lg border border-border/50 p-4 sm:p-6"
+          className="bg-background/75 backdrop-blur-lg rounded-xl shadow-sm border border-border/30 px-4 py-3"
           style={{
-            backdropFilter: 'blur(6px)',
+            backdropFilter: 'blur(8px)',
           }}
         >
-          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-            <p className="text-sm sm:text-base text-foreground text-center sm:text-left flex-1">
+          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
+            <p className="text-xs sm:text-sm text-foreground/90 text-center sm:text-left flex-1">
               A few cookies, so faces smile and feelings grow just right. 💗
             </p>
-            <div className="flex gap-3 shrink-0">
+            <div className="flex gap-2 shrink-0">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleDecline}
-                className="min-w-[80px]"
+                className="h-8 px-3 text-xs"
               >
                 Decline
               </Button>
               <Button
                 size="sm"
                 onClick={handleAccept}
-                className="min-w-[80px]"
+                className="h-8 px-3 text-xs"
               >
                 Accept
               </Button>
