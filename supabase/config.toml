@@ -2,3 +2,6 @@ project_id = "wghsyeluwojspkyppyvv"
 
 [functions.claire-chat]
 verify_jwt = false
+
+[functions.send-event-reminders]
+verify_jwt = false

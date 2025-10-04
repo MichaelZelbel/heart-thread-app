@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import PartnerWizard from "./pages/PartnerWizard";
 import PartnerDetail from "./pages/PartnerDetail";
 import Archive from "./pages/Archive";
+import Account from "./pages/Account";
 import NotFound from "./pages/NotFound";
 import Footer from "./components/Footer";
 import CookieConsent from "./components/CookieConsent";
@@ -30,6 +31,7 @@ const App = () => (
               <Route path="/partner/new" element={<PartnerWizard />} />
               <Route path="/partner/:id" element={<PartnerDetail />} />
               <Route path="/archive" element={<Archive />} />
+              <Route path="/account" element={<Account />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

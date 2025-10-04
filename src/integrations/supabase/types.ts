@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      event_notifications: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          notification_date: string
+          notified_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          notification_date: string
+          notified_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          notification_date?: string
+          notified_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_notifications_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           created_at: string
@@ -305,19 +340,31 @@ export type Database = {
         Row: {
           created_at: string
           display_name: string
+          email: string | null
+          email_notifications_enabled: boolean | null
+          email_verification_pending: boolean | null
           id: string
+          timezone: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           display_name: string
+          email?: string | null
+          email_notifications_enabled?: boolean | null
+          email_verification_pending?: boolean | null
           id: string
+          timezone?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           display_name?: string
+          email?: string | null
+          email_notifications_enabled?: boolean | null
+          email_verification_pending?: boolean | null
           id?: string
+          timezone?: string | null
           updated_at?: string
         }
         Relationships: []
