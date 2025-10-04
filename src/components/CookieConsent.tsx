@@ -23,12 +23,12 @@ const CookieConsent = () => {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-16 left-0 right-0 z-50 px-4 pb-3">
-      <div className="max-w-3xl mx-auto">
+    <div className="fixed bottom-0 left-0 right-0 z-50 animate-fade-in">
+      <div className="max-w-3xl mx-auto px-4 pb-4">
         <div 
-          className="bg-background/75 backdrop-blur-lg rounded-xl shadow-sm border border-border/30 px-4 py-3"
+          className="bg-background/70 backdrop-blur-xl rounded-lg shadow-sm border border-border/20 px-4 py-2.5"
           style={{
-            backdropFilter: 'blur(8px)',
+            backdropFilter: 'blur(10px)',
           }}
         >
           <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
