@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heart, ArrowLeft, Save, Archive, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -13,6 +14,7 @@ import { LoveLanguageHeartRatings } from "@/components/LoveLanguageHeartRatings"
 import { ItemManager } from "@/components/ItemManager";
 import { BirthdatePicker } from "@/components/BirthdatePicker";
 import { EventManager } from "@/components/EventManager";
+import { MomentManager } from "@/components/MomentManager";
 import { dateToYMDLocal } from "@/lib/utils";
 interface LoveLanguages {
   physical: number;
@@ -220,61 +222,76 @@ const PartnerDetail = () => {
           <p className="text-muted-foreground">Edit partner details</p>
         </div>
 
-        <div className="space-y-6">
-          <Card className="shadow-soft">
-            <CardContent className="pt-6">
-              <EventManager partnerId={id!} partnerName={name} />
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="calendar" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="calendar">Calendar</TabsTrigger>
+            <TabsTrigger value="moments">Moments</TabsTrigger>
+            <TabsTrigger value="details">Details</TabsTrigger>
+          </TabsList>
 
-          <div className="space-y-6">
-            
+          <TabsContent value="calendar" className="space-y-6">
+            <Card className="shadow-soft">
+              <CardContent className="pt-6">
+                <EventManager partnerId={id!} partnerName={name} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="moments" className="space-y-6">
+            <Card className="shadow-soft">
+              <CardContent className="pt-6">
+                <MomentManager partnerId={id!} partnerName={name} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="details" className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
               <ItemManager partnerId={id!} type="likes" title="Likes" subtitle="Little things that make them light up." emptyState="No likes yet — Add your first like (e.g., Chocolate Cake)" />
               <ItemManager partnerId={id!} type="dislikes" title="Dislikes" subtitle="Things to avoid—because you care." emptyState="No dislikes yet — Add your first dislike (e.g., Loud noises)" />
             </div>
-          </div>
 
-          <Card className="shadow-soft">
-            <CardContent className="pt-6">
-              <LoveLanguageHeartRatings values={loveLanguages} onChange={setLoveLanguages} />
-            </CardContent>
-          </Card>
+            <Card className="shadow-soft">
+              <CardContent className="pt-6">
+                <LoveLanguageHeartRatings values={loveLanguages} onChange={setLoveLanguages} />
+              </CardContent>
+            </Card>
 
-          <Card className="shadow-soft">
-            <CardHeader>
-              <CardTitle>Notes & Thoughts</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Special memories, preferences, important details..." rows={6} className="resize-none" />
-            </CardContent>
-          </Card>
+            <Card className="shadow-soft">
+              <CardHeader>
+                <CardTitle>Notes & Thoughts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Special memories, preferences, important details..." rows={6} className="resize-none" />
+              </CardContent>
+            </Card>
 
-          <Card className="shadow-soft">
-            <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="name">Name *</Label>
-                <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Partner's name" data-testid="what-do-you-call-them" />
-              </div>
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="partner@example.com" />
-              </div>
-              <div>
-                <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 (555) 000-0000" />
-              </div>
-              <div>
-                <Label htmlFor="address">Address</Label>
-                <Input id="address" value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main St, City, State" />
-              </div>
-              <BirthdatePicker value={birthdate} onChange={setBirthdate} />
-            </CardContent>
-          </Card>
-        </div>
+            <Card className="shadow-soft">
+              <CardHeader>
+                <CardTitle>Basic Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Name *</Label>
+                  <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Partner's name" data-testid="what-do-you-call-them" />
+                </div>
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="partner@example.com" />
+                </div>
+                <div>
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input id="phone" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 (555) 000-0000" />
+                </div>
+                <div>
+                  <Label htmlFor="address">Address</Label>
+                  <Input id="address" value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main St, City, State" />
+                </div>
+                <BirthdatePicker value={birthdate} onChange={setBirthdate} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </main>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

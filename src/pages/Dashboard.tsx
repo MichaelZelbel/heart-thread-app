@@ -7,7 +7,14 @@ import { Heart, Plus, Calendar, Sparkles, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { AllEventsCalendar } from "@/components/AllEventsCalendar";
+import { MomentManager } from "@/components/MomentManager";
 import { dateToYMDLocal, parseYMDToLocalDate } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 interface Profile {
   display_name: string;
 }
@@ -28,12 +35,23 @@ interface EventOccurrence extends Event {
   displayDate: string;
   partnerName?: string;
 }
+
+interface MomentSummary {
+  id: string;
+  title: string | null;
+  moment_date: string;
+  partner_ids: string[];
+}
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<EventOccurrence[]>([]);
+  const [moments, setMoments] = useState<MomentSummary[]>([]);
+  const [totalMoments, setTotalMoments] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showMomentsDialog, setShowMomentsDialog] = useState(false);
   useEffect(() => {
     checkAuth();
   }, []);
@@ -47,7 +65,12 @@ const Dashboard = () => {
       navigate("/auth");
       return;
     }
-    await Promise.all([loadProfile(session.user.id), loadPartners(session.user.id), loadUpcomingEvents(session.user.id)]);
+    await Promise.all([
+      loadProfile(session.user.id), 
+      loadPartners(session.user.id), 
+      loadUpcomingEvents(session.user.id),
+      loadMoments(session.user.id)
+    ]);
     setLoading(false);
   };
   const loadProfile = async (userId: string) => {
@@ -61,6 +84,20 @@ const Dashboard = () => {
       data
     } = await supabase.from("partners").select("id, name, photo_url").eq("user_id", userId).eq("archived", false).limit(5);
     if (data) setPartners(data);
+  };
+
+  const loadMoments = async (userId: string) => {
+    const { data, count } = await supabase
+      .from("moments")
+      .select("id, title, moment_date, partner_ids", { count: 'exact' })
+      .eq("user_id", userId)
+      .order("moment_date", { ascending: false })
+      .limit(3);
+    
+    if (data) {
+      setMoments(data);
+      setTotalMoments(count || 0);
+    }
   };
   const loadUpcomingEvents = async (userId: string) => {
     // Use date-only window to avoid time-of-day exclusion
@@ -228,22 +265,54 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="shadow-soft hover:shadow-glow transition-shadow animate-scale-in" style={{
-          animationDelay: "0.2s"
-        }}>
+          <Card 
+            className="shadow-soft hover:shadow-glow transition-shadow animate-scale-in cursor-pointer" 
+            style={{ animationDelay: "0.2s" }}
+            onClick={() => setShowMomentsDialog(true)}
+          >
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Sparkles className="w-5 h-5 text-accent" />
-                <span>Moments</span>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Sparkles className="w-5 h-5 text-accent" />
+                  <span>Moments</span>
+                </div>
+                <Button size="sm" variant="ghost" onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMomentsDialog(true);
+                }}>
+                  <Plus className="w-4 h-4" />
+                </Button>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-4xl font-bold text-accent mb-2">
-                0
+                {totalMoments}
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground mb-3">
                 Memories logged
               </p>
+              {moments.length > 0 && (
+                <div className="space-y-2 pt-2 border-t">
+                  {moments.map((moment) => {
+                    const partnerNames = moment.partner_ids
+                      .map((id) => partners.find((p) => p.id === id)?.name)
+                      .filter(Boolean)
+                      .join(", ");
+                    
+                    return (
+                      <div key={moment.id} className="text-xs">
+                        <p className="font-medium truncate">
+                          {moment.title || "Untitled"}
+                        </p>
+                        <p className="text-muted-foreground">
+                          {format(new Date(moment.moment_date), "MMM d")}
+                          {partnerNames && ` • ${partnerNames}`}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -327,6 +396,15 @@ const Dashboard = () => {
           </Card>
         </div>
       </main>
+
+      <Dialog open={showMomentsDialog} onOpenChange={setShowMomentsDialog}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>All Moments</DialogTitle>
+          </DialogHeader>
+          <MomentManager showPartnerColumn />
+        </DialogContent>
+      </Dialog>
     </div>;
 };
 export default Dashboard;
