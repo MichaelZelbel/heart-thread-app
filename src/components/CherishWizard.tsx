@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Heart, ArrowRight, ArrowLeft, Sparkles, Loader2, Plus, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LoveLanguageHeartRatings } from "./LoveLanguageHeartRatings";
 
 interface CherishWizardProps {
   onClose: () => void;
@@ -21,11 +22,18 @@ interface WizardData {
     day: number | null;
     month: number | null;
     year: number | null;
+    eventType: string;
+    customEventType?: string;
   };
   likes: string[];
   dislikes: string[];
-  favorites: string[];
-  nicknames: string[];
+  loveLanguages: {
+    physical: number;
+    words: number;
+    quality: number;
+    acts: number;
+    gifts: number;
+  };
   email?: string;
   password?: string;
   displayName?: string;
@@ -46,11 +54,16 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
     const saved = localStorage.getItem("cherishWizardData");
     return saved ? JSON.parse(saved) : {
       nickname: "",
-      specialDay: { day: null, month: null, year: null },
+      specialDay: { day: null, month: null, year: null, eventType: "Birthday" },
       likes: [],
       dislikes: [],
-      favorites: [],
-      nicknames: [],
+      loveLanguages: {
+        physical: 3,
+        words: 3,
+        quality: 3,
+        acts: 3,
+        gifts: 3,
+      },
     };
   });
 
@@ -125,25 +138,43 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
       }
 
       // Create partner profile
-      const birthdate = wizardData.specialDay.day && wizardData.specialDay.month
-        ? new Date(
-            wizardData.specialDay.year || 2000,
-            wizardData.specialDay.month,
-            wizardData.specialDay.day
-          )
-        : null;
-
       const { data: partner, error: partnerError } = await supabase
         .from("partners")
         .insert({
           user_id: user.id,
           name: wizardData.nickname,
-          birthdate: birthdate ? birthdate.toISOString().split('T')[0] : null,
+          love_language_physical: wizardData.loveLanguages.physical,
+          love_language_words: wizardData.loveLanguages.words,
+          love_language_quality: wizardData.loveLanguages.quality,
+          love_language_acts: wizardData.loveLanguages.acts,
+          love_language_gifts: wizardData.loveLanguages.gifts,
         })
         .select()
         .single();
 
       if (partnerError) throw partnerError;
+
+      // Create event if date is provided
+      if (wizardData.specialDay.day && wizardData.specialDay.month) {
+        const eventDate = new Date(
+          wizardData.specialDay.year || new Date().getFullYear(),
+          wizardData.specialDay.month,
+          wizardData.specialDay.day
+        );
+        
+        const eventType = wizardData.specialDay.eventType === "Custom..." 
+          ? wizardData.specialDay.customEventType 
+          : wizardData.specialDay.eventType;
+
+        await supabase.from("events").insert({
+          user_id: user.id,
+          partner_id: partner.id,
+          event_date: eventDate.toISOString().split('T')[0],
+          event_type: eventType || "custom",
+          title: eventType || "Special Day",
+          is_recurring: true,
+        });
+      }
 
       // Add likes
       if (wizardData.likes.length > 0) {
@@ -165,16 +196,6 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
         await supabase.from("partner_dislikes").insert(dislikesData);
       }
 
-      // Add nicknames
-      if (wizardData.nicknames.length > 0) {
-        const nicknamesData = wizardData.nicknames.map((nickname, index) => ({
-          partner_id: partner.id,
-          nickname: nickname,
-          position: index,
-        }));
-        await supabase.from("partner_nicknames").insert(nicknamesData);
-      }
-
       // Clear localStorage
       localStorage.removeItem("cherishWizardData");
 
@@ -194,14 +215,14 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
     }
   };
 
-  const addItem = (field: 'likes' | 'dislikes' | 'favorites' | 'nicknames', value: string) => {
+  const addItem = (field: 'likes' | 'dislikes', value: string) => {
     if (!value.trim()) return;
     updateWizardData({
       [field]: [...wizardData[field], value.trim()],
     });
   };
 
-  const removeItem = (field: 'likes' | 'dislikes' | 'favorites' | 'nicknames', index: number) => {
+  const removeItem = (field: 'likes' | 'dislikes', index: number) => {
     updateWizardData({
       [field]: wizardData[field].filter((_, i) => i !== index),
     });
@@ -250,13 +271,13 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
             <CardTitle>
               {step === 1 && "Who do you cherish?"}
               {step === 2 && "Do they have a special day?"}
-              {step === 3 && "Tell us more about them"}
+              {step === 3 && "Tell us what makes them light up"}
               {step === 4 && !isLoggedIn && "Save your connection"}
             </CardTitle>
             <CardDescription>
               {step === 1 && "Start simple — what do you call them?"}
               {step === 2 && "Cherish the moments that matter — birthdays, anniversaries, or first 'I love you's."}
-              {step === 3 && "Add a few things they love, dislike, or nicknames you have for them."}
+              {step === 3 && "Share what they love, what they dislike, and how they receive love best."}
               {step === 4 && !isLoggedIn && "We'll keep what you just created safe. Create a free account to save and revisit your loved ones anytime."}
             </CardDescription>
           </CardHeader>
@@ -279,62 +300,96 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
             {/* Step 2: Special Day */}
             {step === 2 && (
               <div className="space-y-4">
-                <Label>Special Date</Label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-2">
+                  <Label>Event Type</Label>
                   <Select
-                    value={wizardData.specialDay.month?.toString()}
+                    value={wizardData.specialDay.eventType}
                     onValueChange={(val) => updateWizardData({
-                      specialDay: { ...wizardData.specialDay, month: parseInt(val) }
+                      specialDay: { ...wizardData.specialDay, eventType: val }
                     })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Month" />
+                      <SelectValue placeholder="Select event type" />
                     </SelectTrigger>
                     <SelectContent>
-                      {months.map((m, idx) => (
-                        <SelectItem key={idx} value={idx.toString()}>
-                          {m}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="Birthday">Birthday</SelectItem>
+                      <SelectItem value="Anniversary">Anniversary</SelectItem>
+                      <SelectItem value="Day We Met">Day We Met</SelectItem>
+                      <SelectItem value="First 'I Love You'">First 'I Love You'</SelectItem>
+                      <SelectItem value="Special Day">Special Day</SelectItem>
+                      <SelectItem value="Custom...">Custom...</SelectItem>
                     </SelectContent>
                   </Select>
+                  
+                  {wizardData.specialDay.eventType === "Custom..." && (
+                    <Input
+                      placeholder="Enter custom event name"
+                      value={wizardData.specialDay.customEventType || ""}
+                      onChange={(e) => updateWizardData({
+                        specialDay: { ...wizardData.specialDay, customEventType: e.target.value }
+                      })}
+                    />
+                  )}
+                </div>
 
-                  <Select
-                    value={wizardData.specialDay.day?.toString()}
-                    onValueChange={(val) => updateWizardData({
-                      specialDay: { ...wizardData.specialDay, day: parseInt(val) }
-                    })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Day" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {days.map((d) => (
-                        <SelectItem key={d} value={d.toString()}>
-                          {d}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-2">
+                  <Label>Date</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Select
+                      value={wizardData.specialDay.month?.toString()}
+                      onValueChange={(val) => updateWizardData({
+                        specialDay: { ...wizardData.specialDay, month: parseInt(val) }
+                      })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Month" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {months.map((m, idx) => (
+                          <SelectItem key={idx} value={idx.toString()}>
+                            {m}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
 
-                  <Select
-                    value={wizardData.specialDay.year?.toString() || "none"}
-                    onValueChange={(val) => updateWizardData({
-                      specialDay: { ...wizardData.specialDay, year: val === "none" ? null : parseInt(val) }
-                    })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Year (opt)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No year</SelectItem>
-                      {years.map((y) => (
-                        <SelectItem key={y} value={y.toString()}>
-                          {y}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <Select
+                      value={wizardData.specialDay.day?.toString()}
+                      onValueChange={(val) => updateWizardData({
+                        specialDay: { ...wizardData.specialDay, day: parseInt(val) }
+                      })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Day" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {days.map((d) => (
+                          <SelectItem key={d} value={d.toString()}>
+                            {d}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={wizardData.specialDay.year?.toString() || "none"}
+                      onValueChange={(val) => updateWizardData({
+                        specialDay: { ...wizardData.specialDay, year: val === "none" ? null : parseInt(val) }
+                      })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Year (opt)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No year</SelectItem>
+                        {years.map((y) => (
+                          <SelectItem key={y} value={y.toString()}>
+                            {y}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             )}
@@ -360,14 +415,19 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
                   onRemove={(index) => removeItem('dislikes', index)}
                 />
 
-                {/* Nicknames */}
-                <DetailSection
-                  title="Nicknames you call them"
-                  placeholder="e.g., Sunshine"
-                  items={wizardData.nicknames}
-                  onAdd={(value) => addItem('nicknames', value)}
-                  onRemove={(index) => removeItem('nicknames', index)}
-                />
+                {/* Love Languages */}
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">How do they like to receive love?</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Rate what matters most to them — 1 to 5 hearts each.
+                    </p>
+                  </div>
+                  <LoveLanguageHeartRatings
+                    values={wizardData.loveLanguages}
+                    onChange={(newValues) => updateWizardData({ loveLanguages: newValues })}
+                  />
+                </div>
               </div>
             )}
 
