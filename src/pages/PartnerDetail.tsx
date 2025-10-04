@@ -230,8 +230,8 @@ const PartnerDetail = () => {
           <div className="space-y-6">
             
             <div className="grid md:grid-cols-2 gap-6">
-              <ItemManager partnerId={id!} type="likes" title="Likes" subtitle="Little things that make them light up." emptyState="Add the first like — e.g., 'Chocolate Cake' (Food)." />
-              <ItemManager partnerId={id!} type="dislikes" title="Dislikes" subtitle="Things to avoid—because you care." emptyState="Add a gentle no — e.g., 'Crowded clubs' (Places)." />
+              <ItemManager partnerId={id!} type="likes" title="Likes" subtitle="Little things that make them light up." emptyState="No likes yet — Add your first like (e.g., Chocolate Cake)" />
+              <ItemManager partnerId={id!} type="dislikes" title="Dislikes" subtitle="Things to avoid—because you care." emptyState="No dislikes yet — Add your first dislike (e.g., Loud noises)" />
             </div>
           </div>
 

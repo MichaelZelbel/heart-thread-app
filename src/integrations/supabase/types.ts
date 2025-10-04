@@ -103,6 +103,7 @@ export type Database = {
           id: string
           item: string
           partner_id: string
+          position: number | null
           tags: string[] | null
         }
         Insert: {
@@ -110,6 +111,7 @@ export type Database = {
           id?: string
           item: string
           partner_id: string
+          position?: number | null
           tags?: string[] | null
         }
         Update: {
@@ -117,6 +119,7 @@ export type Database = {
           id?: string
           item?: string
           partner_id?: string
+          position?: number | null
           tags?: string[] | null
         }
         Relationships: [
@@ -135,6 +138,7 @@ export type Database = {
           id: string
           item: string
           partner_id: string
+          position: number | null
           tags: string[] | null
         }
         Insert: {
@@ -142,6 +146,7 @@ export type Database = {
           id?: string
           item: string
           partner_id: string
+          position?: number | null
           tags?: string[] | null
         }
         Update: {
@@ -149,6 +154,7 @@ export type Database = {
           id?: string
           item?: string
           partner_id?: string
+          position?: number | null
           tags?: string[] | null
         }
         Relationships: [
