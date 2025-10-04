@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Edit2, Trash2, Calendar as CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -40,11 +41,12 @@ export const MomentManager = ({ partnerId, partnerName, showPartnerColumn = fals
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [momentDate, setMomentDate] = useState(dateToYMDLocal(new Date()));
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string>("");
   const [partners, setPartners] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     loadMoments();
-    if (showPartnerColumn) {
+    if (showPartnerColumn || !partnerId) {
       loadPartners();
     }
   }, [partnerId]);
@@ -93,11 +95,13 @@ export const MomentManager = ({ partnerId, partnerName, showPartnerColumn = fals
       setTitle(moment.title || "");
       setDescription(moment.description || "");
       setMomentDate(moment.moment_date);
+      setSelectedPartnerId(moment.partner_ids?.[0] || "");
     } else {
       setEditingMoment(null);
       setTitle("");
       setDescription("");
       setMomentDate(dateToYMDLocal(new Date()));
+      setSelectedPartnerId("");
     }
     setShowDialog(true);
   };
@@ -108,6 +112,7 @@ export const MomentManager = ({ partnerId, partnerName, showPartnerColumn = fals
     setTitle("");
     setDescription("");
     setMomentDate(dateToYMDLocal(new Date()));
+    setSelectedPartnerId("");
   };
 
   const handleSave = async () => {
@@ -123,7 +128,9 @@ export const MomentManager = ({ partnerId, partnerName, showPartnerColumn = fals
       title: title.trim(),
       description: description.trim() || null,
       moment_date: momentDate,
-      partner_ids: partnerId ? [partnerId] : [],
+      partner_ids: partnerId 
+        ? [partnerId] 
+        : (selectedPartnerId && selectedPartnerId !== "none" ? [selectedPartnerId] : []),
       user_id: session.user.id,
     };
 
@@ -269,6 +276,24 @@ export const MomentManager = ({ partnerId, partnerName, showPartnerColumn = fals
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {!partnerId && (
+              <div>
+                <Label htmlFor="moment-partner">Cherished (optional)</Label>
+                <Select value={selectedPartnerId} onValueChange={setSelectedPartnerId}>
+                  <SelectTrigger id="moment-partner">
+                    <SelectValue placeholder="Select a partner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {partners.map((partner) => (
+                      <SelectItem key={partner.id} value={partner.id}>
+                        {partner.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <Label htmlFor="moment-date">Date *</Label>
               <Input
