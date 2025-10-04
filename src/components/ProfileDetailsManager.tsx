@@ -296,6 +296,7 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
   const [editLabel, setEditLabel] = useState("");
   const [editValue, setEditValue] = useState("");
   const [customLabel, setCustomLabel] = useState(false);
+  const [customValue, setCustomValue] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -372,6 +373,7 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
       setNewLabel("");
       setNewValue("");
       setCustomLabel(false);
+      setCustomValue(false);
       await loadDetails();
       toast.success("Added!");
     } catch (error) {
@@ -578,28 +580,50 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
             )
           )}
           {category.valueSuggestions ? (
-            <Select
-              value={newValue}
-              onValueChange={(value) => {
-                if (value === "custom") {
-                  setNewValue("");
-                } else {
-                  setNewValue(value);
-                }
-              }}
-            >
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Select or type custom" />
-              </SelectTrigger>
-              <SelectContent>
-                {category.valueSuggestions.map((suggestion) => (
-                  <SelectItem key={suggestion} value={suggestion}>
-                    {suggestion}
-                  </SelectItem>
-                ))}
-                <SelectItem value="custom">Custom...</SelectItem>
-              </SelectContent>
-            </Select>
+            customValue ? (
+              <Input
+                value={newValue}
+                onChange={(e) => setNewValue(e.target.value)}
+                placeholder="Custom value"
+                className="flex-1"
+                onBlur={() => {
+                  if (!newValue.trim()) {
+                    setCustomValue(false);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAdd();
+                  }
+                }}
+                autoFocus
+              />
+            ) : (
+              <Select
+                value={newValue}
+                onValueChange={(value) => {
+                  if (value === "custom") {
+                    setCustomValue(true);
+                    setNewValue("");
+                  } else {
+                    setNewValue(value);
+                  }
+                }}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select or type custom" />
+                </SelectTrigger>
+                <SelectContent>
+                  {category.valueSuggestions.map((suggestion) => (
+                    <SelectItem key={suggestion} value={suggestion}>
+                      {suggestion}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="custom">Custom...</SelectItem>
+                </SelectContent>
+              </Select>
+            )
           ) : (
             <Input
               value={newValue}
