@@ -45,6 +45,7 @@ interface CategoryConfig {
   emptyState: string;
   valueOnly?: boolean;
   labelSuggestions?: string[];
+  valueSuggestions?: string[];
 }
 
 const CATEGORIES: CategoryConfig[] = [
@@ -95,14 +96,16 @@ const CATEGORIES: CategoryConfig[] = [
     label: "Games",
     explainer: "The worlds they love to play in.",
     emptyState: "What game do they play? Add it here.",
-    labelSuggestions: ["VRChat", "Roblox", "Fortnite", "Valorant", "Overwatch", "Minecraft", "League of Legends", "Genshin Impact", "Apex Legends", "World of Warcraft"],
+    valueOnly: true,
+    valueSuggestions: ["VRChat", "Roblox", "Fortnite", "Valorant", "Overwatch", "Minecraft", "League of Legends", "Genshin Impact", "Apex Legends", "World of Warcraft"],
   },
   {
     id: "relationship",
     label: "Relationship",
     explainer: "What kind of connection you share — poly, mono, long-distance, or something uniquely yours.",
     emptyState: "Define your bond — add a relationship detail.",
-    labelSuggestions: ["Poly", "Monogamous", "Open", "Long Distance", "VR Relationship", "Casual", "Committed", "Situationship", "Exploring", "Toys", "Custom"],
+    valueOnly: true,
+    valueSuggestions: ["Poly", "Monogamous", "Open", "Long Distance", "VR Relationship", "Casual", "Committed", "Situationship", "Exploring", "Toys"],
   },
 ];
 
@@ -158,15 +161,28 @@ function SortableItem({
       const url = detail.value.startsWith("http://") || detail.value.startsWith("https://")
         ? detail.value
         : `https://${detail.value}`;
+      
+      // Extract domain as fallback if no label
+      const getDomain = (urlString: string) => {
+        try {
+          const urlObj = new URL(urlString);
+          return urlObj.hostname.replace('www.', '');
+        } catch {
+          return urlString;
+        }
+      };
+      
+      const linkText = detail.label || getDomain(url);
+      
       return (
         <a
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-primary hover:underline break-all"
+          className="text-primary hover:underline truncate block"
           onClick={(e) => e.stopPropagation()}
         >
-          {detail.value}
+          {linkText}
         </a>
       );
     }
@@ -238,7 +254,9 @@ function SortableItem({
           </div>
           <div className="flex-1 min-w-0">
             {category.valueOnly ? (
-              <span className="font-medium">{renderValue()}</span>
+              renderValue()
+            ) : category.id === "links" ? (
+              renderValue()
             ) : (
               <span className="font-medium">
                 {detail.label}: {renderValue()}
@@ -559,18 +577,43 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
               />
             )
           )}
-          <Input
-            value={newValue}
-            onChange={(e) => setNewValue(e.target.value)}
-            placeholder={category.valueOnly ? `e.g., ${category.label === "Nicknames" ? "Sweetie" : "Value"}` : "Value"}
-            className="flex-1"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleAdd();
-              }
-            }}
-          />
+          {category.valueSuggestions ? (
+            <Select
+              value={newValue}
+              onValueChange={(value) => {
+                if (value === "custom") {
+                  setNewValue("");
+                } else {
+                  setNewValue(value);
+                }
+              }}
+            >
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Select or type custom" />
+              </SelectTrigger>
+              <SelectContent>
+                {category.valueSuggestions.map((suggestion) => (
+                  <SelectItem key={suggestion} value={suggestion}>
+                    {suggestion}
+                  </SelectItem>
+                ))}
+                <SelectItem value="custom">Custom...</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              value={newValue}
+              onChange={(e) => setNewValue(e.target.value)}
+              placeholder={category.valueOnly ? `e.g., ${category.label === "Nicknames" ? "Sweetie" : "Value"}` : "Value"}
+              className="flex-1"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAdd();
+                }
+              }}
+            />
+          )}
           <Button onClick={handleAdd} size="icon" className="shrink-0 bg-destructive hover:bg-destructive/90">
             <Plus className="w-4 h-4" />
           </Button>
