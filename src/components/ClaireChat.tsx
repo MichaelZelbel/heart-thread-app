@@ -18,16 +18,45 @@ interface ClaireChatProps {
 }
 
 export const ClaireChat = ({ partnerId, compact = false }: ClaireChatProps) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: "Hi! I'm Claire, your heart companion. 💕 I'm here to help you strengthen your relationships with thoughtful suggestions, gift ideas, and conversation starters. What would you like to explore today?"
-    }
-  ]);
+  const [partnerName, setPartnerName] = useState<string>("");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(!compact);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const getWelcomeMessage = () => {
+    if (partnerId && partnerName) {
+      return `Hi! I'm here to help you connect even more deeply with ${partnerName}. 💗 I can suggest thoughtful activities, gift ideas, conversation starters, and more based on what you've shared about them. What would you like to explore?`;
+    }
+    return "Hi! I'm Claire, your heart companion. 💕 I'm here to help you strengthen your relationships with thoughtful suggestions, gift ideas, and conversation starters. What would you like to explore today?";
+  };
+
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      role: 'assistant',
+      content: getWelcomeMessage()
+    }
+  ]);
+
+  useEffect(() => {
+    const fetchPartnerName = async () => {
+      if (partnerId) {
+        const { data } = await supabase
+          .from("partners")
+          .select("name")
+          .eq("id", partnerId)
+          .single();
+        if (data) {
+          setPartnerName(data.name);
+          setMessages([{
+            role: 'assistant',
+            content: `Hi! I'm here to help you connect even more deeply with ${data.name}. 💗 I can suggest thoughtful activities, gift ideas, conversation starters, and more based on what you've shared about them. What would you like to explore?`
+          }]);
+        }
+      }
+    };
+    fetchPartnerName();
+  }, [partnerId]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -93,7 +122,9 @@ export const ClaireChat = ({ partnerId, compact = false }: ClaireChatProps) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Sparkles className="w-5 h-5 text-primary" />
-              <CardTitle className="text-base">Claire – Your Heart Companion</CardTitle>
+              <CardTitle className="text-base">
+                {partnerId ? "Chat with Claire 💗" : "Claire – Your Heart Companion"}
+              </CardTitle>
             </div>
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </div>
@@ -113,7 +144,9 @@ export const ClaireChat = ({ partnerId, compact = false }: ClaireChatProps) => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Sparkles className="w-5 h-5 text-primary" />
-            <CardTitle className="text-base">Claire – Your Heart Companion</CardTitle>
+            <CardTitle className="text-base">
+              {partnerId ? "Chat with Claire 💗" : "Claire – Your Heart Companion"}
+            </CardTitle>
           </div>
           {compact && (
             <Button 

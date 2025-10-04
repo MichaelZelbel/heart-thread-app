@@ -16,6 +16,7 @@ import { BirthdatePicker } from "@/components/BirthdatePicker";
 import { EventManager } from "@/components/EventManager";
 import { MomentManager } from "@/components/MomentManager";
 import { ProfileDetailsManager, CATEGORIES } from "@/components/ProfileDetailsManager";
+import { ClaireChat } from "@/components/ClaireChat";
 import { dateToYMDLocal } from "@/lib/utils";
 interface LoveLanguages {
   physical: number;
@@ -248,8 +249,13 @@ const PartnerDetail = () => {
 
           <TabsContent value="details" className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
-              <ItemManager partnerId={id!} type="likes" title="Likes" subtitle="Little things that make them light up." emptyState="No likes yet — Add your first like (e.g., Chocolate Cake)" />
-              <ItemManager partnerId={id!} type="dislikes" title="Dislikes" subtitle="Things to avoid—because you care." emptyState="No dislikes yet — Add your first dislike (e.g., Loud noises)" />
+              <div className="space-y-6">
+                <ItemManager partnerId={id!} type="likes" title="Likes" subtitle="Little things that make them light up." emptyState="No likes yet — Add your first like (e.g., Chocolate Cake)" />
+                <ItemManager partnerId={id!} type="dislikes" title="Dislikes" subtitle="Things to avoid—because you care." emptyState="No dislikes yet — Add your first dislike (e.g., Loud noises)" />
+              </div>
+              <div className="h-[600px]">
+                <ClaireChat partnerId={id} compact={false} />
+              </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
