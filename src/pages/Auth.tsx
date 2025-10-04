@@ -53,7 +53,7 @@ const Auth = () => {
           }
         });
         if (error) throw error;
-        toast.success("Account created! Welcome to Chirishly!");
+        toast.success("Account created! Welcome to Cherishly!");
         navigate("/dashboard");
       }
     } catch (error: any) {
@@ -113,7 +113,7 @@ const Auth = () => {
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-6 px-4">
-          Your data is private and secure. Chirishly helps you be the best partner you can be.
+          Your data is private and secure. Cherishly helps you be the best partner you can be.
         </p>
       </div>
     </div>;
