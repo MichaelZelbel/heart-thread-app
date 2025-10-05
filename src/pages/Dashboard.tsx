@@ -374,7 +374,7 @@ const Dashboard = () => {
                   <>
                     {/* You chip - top-right on desktop, below header on mobile */}
                     <div 
-                      className="md:absolute md:top-0 md:right-0 flex items-center justify-end md:justify-start space-x-2 p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer mb-3 md:mb-0"
+                      className="md:absolute md:top-0 md:right-3 flex items-center justify-end md:justify-start space-x-2 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer mb-3 md:mb-0"
                       onClick={() => navigate("/account/profile")}
                       role="button"
                       aria-label="Open your profile"
@@ -397,11 +397,11 @@ const Dashboard = () => {
                     </div>
 
                     {/* Cherished list */}
-                    <div className="space-y-3 md:pr-32">
-                      {partners.map(partner => (
+                    <div className="space-y-3">
+                      {partners.map((partner, index) => (
                         <div 
                           key={partner.id} 
-                          className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer" 
+                          className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer relative" 
                           onClick={() => navigate(`/partner/${partner.id}`)}
                         >
                           <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold">
@@ -410,13 +410,26 @@ const Dashboard = () => {
                           <div className="flex-1">
                             <p className="font-medium">{partner.name}</p>
                           </div>
+                          
+                          {/* Action buttons on last row */}
+                          {index === partners.length - 1 && (
+                            <div className="hidden md:flex gap-2 ml-auto" onClick={(e) => e.stopPropagation()}>
+                              <Button onClick={() => navigate("/partner/new")} size="sm" data-testid="add-partner-button">
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add Cherished
+                              </Button>
+                              <Button onClick={() => navigate("/archive")} size="sm" variant="outline">
+                                Archive
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
 
-                    {/* Action buttons - bottom-right */}
-                    <div className="flex gap-2 justify-end pt-2">
-                      <Button onClick={() => navigate("/partner/new")} size="sm" data-testid="add-partner-button">
+                    {/* Mobile buttons - below list */}
+                    <div className="flex md:hidden gap-2 justify-end">
+                      <Button onClick={() => navigate("/partner/new")} size="sm" data-testid="add-partner-button-mobile">
                         <Plus className="w-4 h-4 mr-2" />
                         Add Cherished
                       </Button>
