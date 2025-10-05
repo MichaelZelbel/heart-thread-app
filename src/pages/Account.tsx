@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
-import { ArrowLeft, Mail, Lock, Bell, Globe, Sparkles } from "lucide-react";
+import { ArrowLeft, Mail, Lock, Bell, Globe, Sparkles, CreditCard, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const COMMON_TIMEZONES = [
@@ -34,9 +34,17 @@ const COMMON_TIMEZONES = [
 export default function Account() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isPro } = useUserRole();
+  const { isPro, isAdmin } = useUserRole();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // Subscription fields
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [subscriptionData, setSubscriptionData] = useState<{
+    subscribed: boolean;
+    subscription_end?: string;
+  } | null>(null);
+  const [openingPortal, setOpeningPortal] = useState(false);
   
   // Profile fields
   const [displayName, setDisplayName] = useState("");
@@ -54,7 +62,10 @@ export default function Account() {
   useEffect(() => {
     checkAuth();
     loadProfile();
-  }, []);
+    if (isPro) {
+      loadSubscription();
+    }
+  }, [isPro]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -99,6 +110,67 @@ export default function Account() {
 
   const getBrowserTimezone = () => {
     return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  };
+
+  const loadSubscription = async () => {
+    try {
+      setSubscriptionLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) return;
+
+      const { data, error } = await supabase.functions.invoke('check-subscription', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+
+      setSubscriptionData(data);
+    } catch (error) {
+      console.error("Error loading subscription:", error);
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    try {
+      setOpeningPortal(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Please sign in",
+          description: "You need to be signed in to manage your subscription",
+          variant: "destructive",
+        });
+        navigate("/auth");
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('customer-portal', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (error) {
+      console.error('Error opening customer portal:', error);
+      toast({
+        title: "Error",
+        description: "Failed to open subscription management. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setOpeningPortal(false);
+    }
   };
 
   const saveProfile = async () => {
@@ -298,6 +370,104 @@ export default function Account() {
               <Button onClick={saveProfile} disabled={saving}>
                 {saving ? "Saving..." : "Save Changes"}
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* Subscription & Billing */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5" />
+                Subscription & Billing
+              </CardTitle>
+              <CardDescription>
+                Manage your Cherishly subscription
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isPro || isAdmin ? (
+                <div className="space-y-4">
+                  {subscriptionLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="rounded-lg bg-primary/5 border border-primary/20 p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Current Plan</span>
+                          <Badge className="bg-gradient-to-r from-primary to-primary/80">
+                            <Sparkles className="w-3 h-3 mr-1" />
+                            Cherishly Pro
+                          </Badge>
+                        </div>
+                        
+                        {subscriptionData?.subscription_end && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Next Renewal</span>
+                            <span className="text-sm font-medium">
+                              {new Date(subscriptionData.subscription_end).toLocaleDateString('en-US', {
+                                month: 'long',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Status</span>
+                          <Badge variant="outline" className="text-green-600 border-green-600/50">
+                            Active
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Button 
+                          onClick={handleManageSubscription}
+                          disabled={openingPortal}
+                          className="w-full gap-2"
+                          variant="outline"
+                        >
+                          {openingPortal ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Opening Portal...
+                            </>
+                          ) : (
+                            <>
+                              <CreditCard className="w-4 h-4" />
+                              Manage Subscription
+                            </>
+                          )}
+                        </Button>
+                        <p className="text-xs text-muted-foreground text-center">
+                          Update payment method, view invoices, or cancel anytime in the portal.
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8 space-y-4">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-2">
+                    <Sparkles className="w-6 h-6 text-primary" />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-medium">You're on the Free plan</p>
+                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                      Upgrade to Cherishly Pro to unlock AI chats, email reminders, Moments, and advanced details.
+                    </p>
+                  </div>
+                  <Button asChild className="gap-2">
+                    <Link to="/pricing">
+                      <Sparkles className="w-4 h-4" />
+                      Upgrade to Pro
+                    </Link>
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 

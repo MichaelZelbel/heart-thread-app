@@ -13,7 +13,6 @@ const Pricing = () => {
   const navigate = useNavigate();
   const { isPro, loading: roleLoading } = useUserRole();
   const [isLoadingStripe, setIsLoadingStripe] = useState(false);
-  const [isLoadingPayPal, setIsLoadingPayPal] = useState(false);
 
   const handleStripeCheckout = async () => {
     try {
@@ -53,14 +52,6 @@ const Pricing = () => {
     }
   };
 
-  const handlePayPalCheckout = () => {
-    setIsLoadingPayPal(true);
-    toast({
-      title: "PayPal Integration",
-      description: "Please contact michael@zelbel.de to set up PayPal payment",
-    });
-    setIsLoadingPayPal(false);
-  };
 
   const handleManageSubscription = async () => {
     try {
@@ -205,44 +196,24 @@ const Pricing = () => {
                   Manage Subscription
                 </Button>
               ) : (
-                <>
-                  <Button 
-                    onClick={handleStripeCheckout}
-                    disabled={isLoadingStripe || roleLoading}
-                    className="w-full gap-2" 
-                    size="lg"
-                  >
-                    {isLoadingStripe ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4" />
-                        Upgrade with Stripe 💞
-                      </>
-                    )}
-                  </Button>
-                  <Button 
-                    onClick={handlePayPalCheckout}
-                    disabled={isLoadingPayPal || roleLoading}
-                    variant="outline"
-                    className="w-full gap-2" 
-                    size="lg"
-                  >
-                    {isLoadingPayPal ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        Pay with PayPal
-                      </>
-                    )}
-                  </Button>
-                </>
+                <Button 
+                  onClick={handleStripeCheckout}
+                  disabled={isLoadingStripe || roleLoading}
+                  className="w-full gap-2" 
+                  size="lg"
+                >
+                  {isLoadingStripe ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      Upgrade to Pro 💞
+                    </>
+                  )}
+                </Button>
               )}
             </CardFooter>
           </Card>
