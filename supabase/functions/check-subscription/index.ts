@@ -99,8 +99,19 @@ serve(async (req) => {
 
     if (hasActiveSub) {
       const subscription = subscriptions.data[0];
-      subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
-      productId = subscription.items.data[0].price.product;
+      logStep("Raw subscription data", { subscription });
+      
+      // Safely parse the subscription end date
+      if (subscription.current_period_end) {
+        try {
+          subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+        } catch (e) {
+          logStep("Error parsing subscription end date", { error: e, current_period_end: subscription.current_period_end });
+          subscriptionEnd = null;
+        }
+      }
+      
+      productId = subscription.items?.data?.[0]?.price?.product || null;
       logStep("Active subscription found", { subscriptionId: subscription.id, productId, endDate: subscriptionEnd });
       
       // Update user role to pro
