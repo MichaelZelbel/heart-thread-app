@@ -38,6 +38,9 @@ const PartnerDetail = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [name, setName] = useState("");
   const [relationshipType, setRelationshipType] = useState("partner");
+  const [genderIdentity, setGenderIdentity] = useState("");
+  const [customGender, setCustomGender] = useState("");
+  const [country, setCountry] = useState("");
   const [notes, setNotes] = useState("");
   const [birthdate, setBirthdate] = useState<Date | null>(null);
   const [loveLanguages, setLoveLanguages] = useState<LoveLanguages>({
@@ -76,6 +79,18 @@ const PartnerDetail = () => {
     setRelationshipType(data.relationship_type || "partner");
     setNotes(data.notes || "");
     setBirthdate(data.birthdate ? new Date(data.birthdate) : null);
+    
+    // Handle gender identity - check if it's a custom value
+    const standardGenders = ["Woman 💐", "Man 🌹", "Nonbinary 🌈", "Trans Woman 💖", "Trans Man 💙", "Prefer not to say 🙊"];
+    if (data.gender_identity && !standardGenders.includes(data.gender_identity)) {
+      setGenderIdentity("Custom ✨");
+      setCustomGender(data.gender_identity);
+    } else {
+      setGenderIdentity(data.gender_identity || "");
+      setCustomGender("");
+    }
+    
+    setCountry(data.country || "");
     setLoveLanguages({
       physical: data.love_language_physical || 3,
       words: data.love_language_words || 3,
@@ -88,6 +103,8 @@ const PartnerDetail = () => {
   const savePartnerData = useCallback(async (dataToSave: {
     name?: string;
     relationshipType?: string;
+    genderIdentity?: string;
+    country?: string;
     notes?: string;
     birthdate?: Date | null;
     loveLanguages?: LoveLanguages;
@@ -108,6 +125,8 @@ const PartnerDetail = () => {
       updateData.name = dataToSave.name.trim();
     }
     if (dataToSave.relationshipType !== undefined) updateData.relationship_type = dataToSave.relationshipType;
+    if (dataToSave.genderIdentity !== undefined) updateData.gender_identity = dataToSave.genderIdentity.trim() || null;
+    if (dataToSave.country !== undefined) updateData.country = dataToSave.country || null;
     if (dataToSave.notes !== undefined) updateData.notes = dataToSave.notes.trim() || null;
     if (dataToSave.birthdate !== undefined) {
       updateData.birthdate = dataToSave.birthdate ? dateToYMDLocal(dataToSave.birthdate) : null;
@@ -357,7 +376,7 @@ const PartnerDetail = () => {
               <CardHeader>
                 <CardTitle>Basic Information</CardTitle>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Add just a few details to remember what makes them special — no private info needed.
+                  A few gentle details — nothing personal, just what makes them <em>them</em> 💗
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -396,6 +415,117 @@ const PartnerDetail = () => {
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <Label htmlFor="genderIdentity">How do they identify, if you'd like to share? 💕</Label>
+                  <Select 
+                    value={genderIdentity} 
+                    onValueChange={(value) => {
+                      setGenderIdentity(value);
+                      const finalValue = value === "Custom ✨" ? customGender : value;
+                      if (value !== "Custom ✨") {
+                        savePartnerData({ genderIdentity: finalValue });
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="genderIdentity">
+                      <SelectValue placeholder="Optional — skip if you prefer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Woman 💐">Woman 💐</SelectItem>
+                      <SelectItem value="Man 🌹">Man 🌹</SelectItem>
+                      <SelectItem value="Nonbinary 🌈">Nonbinary 🌈</SelectItem>
+                      <SelectItem value="Trans Woman 💖">Trans Woman 💖</SelectItem>
+                      <SelectItem value="Trans Man 💙">Trans Man 💙</SelectItem>
+                      <SelectItem value="Prefer not to say 🙊">Prefer not to say 🙊</SelectItem>
+                      <SelectItem value="Custom ✨">Custom ✨</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This helps Cherishly personalize messages and suggestions — totally optional.
+                  </p>
+                  {genderIdentity === "Custom ✨" && (
+                    <Input 
+                      placeholder="Type anything that fits — we love unique identities! 🌸"
+                      value={customGender}
+                      onChange={e => {
+                        const newCustomGender = e.target.value;
+                        setCustomGender(newCustomGender);
+                        debouncedSave({ genderIdentity: newCustomGender });
+                      }}
+                      className="mt-2"
+                    />
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="country">Where in the world do they live? 🌍</Label>
+                  <Select 
+                    value={country} 
+                    onValueChange={(value) => {
+                      setCountry(value);
+                      savePartnerData({ country: value });
+                    }}
+                  >
+                    <SelectTrigger id="country">
+                      <SelectValue placeholder="Optional — skip if you prefer" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                      <SelectItem value="United States">United States 🇺🇸</SelectItem>
+                      <SelectItem value="United Kingdom">United Kingdom 🇬🇧</SelectItem>
+                      <SelectItem value="Canada">Canada 🇨🇦</SelectItem>
+                      <SelectItem value="Australia">Australia 🇦🇺</SelectItem>
+                      <SelectItem value="Germany">Germany 🇩🇪</SelectItem>
+                      <SelectItem value="France">France 🇫🇷</SelectItem>
+                      <SelectItem value="Spain">Spain 🇪🇸</SelectItem>
+                      <SelectItem value="Italy">Italy 🇮🇹</SelectItem>
+                      <SelectItem value="Netherlands">Netherlands 🇳🇱</SelectItem>
+                      <SelectItem value="Sweden">Sweden 🇸🇪</SelectItem>
+                      <SelectItem value="Norway">Norway 🇳🇴</SelectItem>
+                      <SelectItem value="Denmark">Denmark 🇩🇰</SelectItem>
+                      <SelectItem value="Finland">Finland 🇫🇮</SelectItem>
+                      <SelectItem value="Belgium">Belgium 🇧🇪</SelectItem>
+                      <SelectItem value="Switzerland">Switzerland 🇨🇭</SelectItem>
+                      <SelectItem value="Austria">Austria 🇦🇹</SelectItem>
+                      <SelectItem value="Poland">Poland 🇵🇱</SelectItem>
+                      <SelectItem value="Portugal">Portugal 🇵🇹</SelectItem>
+                      <SelectItem value="Greece">Greece 🇬🇷</SelectItem>
+                      <SelectItem value="Ireland">Ireland 🇮🇪</SelectItem>
+                      <SelectItem value="Japan">Japan 🇯🇵</SelectItem>
+                      <SelectItem value="South Korea">South Korea 🇰🇷</SelectItem>
+                      <SelectItem value="China">China 🇨🇳</SelectItem>
+                      <SelectItem value="India">India 🇮🇳</SelectItem>
+                      <SelectItem value="Singapore">Singapore 🇸🇬</SelectItem>
+                      <SelectItem value="Malaysia">Malaysia 🇲🇾</SelectItem>
+                      <SelectItem value="Thailand">Thailand 🇹🇭</SelectItem>
+                      <SelectItem value="Philippines">Philippines 🇵🇭</SelectItem>
+                      <SelectItem value="Indonesia">Indonesia 🇮🇩</SelectItem>
+                      <SelectItem value="Vietnam">Vietnam 🇻🇳</SelectItem>
+                      <SelectItem value="New Zealand">New Zealand 🇳🇿</SelectItem>
+                      <SelectItem value="Brazil">Brazil 🇧🇷</SelectItem>
+                      <SelectItem value="Mexico">Mexico 🇲🇽</SelectItem>
+                      <SelectItem value="Argentina">Argentina 🇦🇷</SelectItem>
+                      <SelectItem value="Chile">Chile 🇨🇱</SelectItem>
+                      <SelectItem value="Colombia">Colombia 🇨🇴</SelectItem>
+                      <SelectItem value="South Africa">South Africa 🇿🇦</SelectItem>
+                      <SelectItem value="Egypt">Egypt 🇪🇬</SelectItem>
+                      <SelectItem value="Nigeria">Nigeria 🇳🇬</SelectItem>
+                      <SelectItem value="Kenya">Kenya 🇰🇪</SelectItem>
+                      <SelectItem value="Israel">Israel 🇮🇱</SelectItem>
+                      <SelectItem value="United Arab Emirates">United Arab Emirates 🇦🇪</SelectItem>
+                      <SelectItem value="Saudi Arabia">Saudi Arabia 🇸🇦</SelectItem>
+                      <SelectItem value="Turkey">Turkey 🇹🇷</SelectItem>
+                      <SelectItem value="Russia">Russia 🇷🇺</SelectItem>
+                      <SelectItem value="Ukraine">Ukraine 🇺🇦</SelectItem>
+                      <SelectItem value="Czech Republic">Czech Republic 🇨🇿</SelectItem>
+                      <SelectItem value="Hungary">Hungary 🇭🇺</SelectItem>
+                      <SelectItem value="Romania">Romania 🇷🇴</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    So reminders and ideas fit their local time and vibe.
+                  </p>
                 </div>
                 <div>
                   <Label htmlFor="birthdate">Birthday (optional)</Label>

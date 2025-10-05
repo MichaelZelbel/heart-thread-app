@@ -21,6 +21,9 @@ const PartnerWizard = () => {
   // Form state
   const [name, setName] = useState("");
   const [relationshipType, setRelationshipType] = useState("partner");
+  const [genderIdentity, setGenderIdentity] = useState("");
+  const [customGender, setCustomGender] = useState("");
+  const [country, setCountry] = useState("");
   const [loveLanguages, setLoveLanguages] = useState({
     physical: 3,
     words: 3,
@@ -72,12 +75,16 @@ const PartnerWizard = () => {
         }
       } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
+      const finalGenderIdentity = genderIdentity === "Custom ✨" ? customGender.trim() : genderIdentity;
+      
       const {
         error
       } = await supabase.from("partners").insert({
         user_id: session.user.id,
         name: name.trim(),
         relationship_type: relationshipType,
+        gender_identity: finalGenderIdentity || null,
+        country: country || null,
         love_language_physical: loveLanguages.physical,
         love_language_words: loveLanguages.words,
         love_language_quality: loveLanguages.quality,
@@ -134,7 +141,7 @@ const PartnerWizard = () => {
           <CardContent className="space-y-6">
             {currentStep === 1 && <div className="space-y-4">
                 <p className="text-sm text-muted-foreground mb-4">
-                  Add just a few details to remember what makes them special — no private info needed.
+                  A few gentle details — nothing personal, just what makes them <em>them</em> 💗
                 </p>
                 <div className="space-y-2">
                   <Label htmlFor="name">
@@ -164,6 +171,98 @@ const PartnerWizard = () => {
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="genderIdentity">How do they identify, if you'd like to share? 💕</Label>
+                  <Select value={genderIdentity} onValueChange={setGenderIdentity}>
+                    <SelectTrigger id="genderIdentity">
+                      <SelectValue placeholder="Optional — skip if you prefer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Woman 💐">Woman 💐</SelectItem>
+                      <SelectItem value="Man 🌹">Man 🌹</SelectItem>
+                      <SelectItem value="Nonbinary 🌈">Nonbinary 🌈</SelectItem>
+                      <SelectItem value="Trans Woman 💖">Trans Woman 💖</SelectItem>
+                      <SelectItem value="Trans Man 💙">Trans Man 💙</SelectItem>
+                      <SelectItem value="Prefer not to say 🙊">Prefer not to say 🙊</SelectItem>
+                      <SelectItem value="Custom ✨">Custom ✨</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    This helps Cherishly personalize messages and suggestions — totally optional.
+                  </p>
+                  {genderIdentity === "Custom ✨" && (
+                    <Input 
+                      placeholder="Type anything that fits — we love unique identities! 🌸"
+                      value={customGender}
+                      onChange={e => setCustomGender(e.target.value)}
+                      className="mt-2"
+                    />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="country">Where in the world do they live? 🌍</Label>
+                  <Select value={country} onValueChange={setCountry}>
+                    <SelectTrigger id="country">
+                      <SelectValue placeholder="Optional — skip if you prefer" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                      <SelectItem value="United States">United States 🇺🇸</SelectItem>
+                      <SelectItem value="United Kingdom">United Kingdom 🇬🇧</SelectItem>
+                      <SelectItem value="Canada">Canada 🇨🇦</SelectItem>
+                      <SelectItem value="Australia">Australia 🇦🇺</SelectItem>
+                      <SelectItem value="Germany">Germany 🇩🇪</SelectItem>
+                      <SelectItem value="France">France 🇫🇷</SelectItem>
+                      <SelectItem value="Spain">Spain 🇪🇸</SelectItem>
+                      <SelectItem value="Italy">Italy 🇮🇹</SelectItem>
+                      <SelectItem value="Netherlands">Netherlands 🇳🇱</SelectItem>
+                      <SelectItem value="Sweden">Sweden 🇸🇪</SelectItem>
+                      <SelectItem value="Norway">Norway 🇳🇴</SelectItem>
+                      <SelectItem value="Denmark">Denmark 🇩🇰</SelectItem>
+                      <SelectItem value="Finland">Finland 🇫🇮</SelectItem>
+                      <SelectItem value="Belgium">Belgium 🇧🇪</SelectItem>
+                      <SelectItem value="Switzerland">Switzerland 🇨🇭</SelectItem>
+                      <SelectItem value="Austria">Austria 🇦🇹</SelectItem>
+                      <SelectItem value="Poland">Poland 🇵🇱</SelectItem>
+                      <SelectItem value="Portugal">Portugal 🇵🇹</SelectItem>
+                      <SelectItem value="Greece">Greece 🇬🇷</SelectItem>
+                      <SelectItem value="Ireland">Ireland 🇮🇪</SelectItem>
+                      <SelectItem value="Japan">Japan 🇯🇵</SelectItem>
+                      <SelectItem value="South Korea">South Korea 🇰🇷</SelectItem>
+                      <SelectItem value="China">China 🇨🇳</SelectItem>
+                      <SelectItem value="India">India 🇮🇳</SelectItem>
+                      <SelectItem value="Singapore">Singapore 🇸🇬</SelectItem>
+                      <SelectItem value="Malaysia">Malaysia 🇲🇾</SelectItem>
+                      <SelectItem value="Thailand">Thailand 🇹🇭</SelectItem>
+                      <SelectItem value="Philippines">Philippines 🇵🇭</SelectItem>
+                      <SelectItem value="Indonesia">Indonesia 🇮🇩</SelectItem>
+                      <SelectItem value="Vietnam">Vietnam 🇻🇳</SelectItem>
+                      <SelectItem value="New Zealand">New Zealand 🇳🇿</SelectItem>
+                      <SelectItem value="Brazil">Brazil 🇧🇷</SelectItem>
+                      <SelectItem value="Mexico">Mexico 🇲🇽</SelectItem>
+                      <SelectItem value="Argentina">Argentina 🇦🇷</SelectItem>
+                      <SelectItem value="Chile">Chile 🇨🇱</SelectItem>
+                      <SelectItem value="Colombia">Colombia 🇨🇴</SelectItem>
+                      <SelectItem value="South Africa">South Africa 🇿🇦</SelectItem>
+                      <SelectItem value="Egypt">Egypt 🇪🇬</SelectItem>
+                      <SelectItem value="Nigeria">Nigeria 🇳🇬</SelectItem>
+                      <SelectItem value="Kenya">Kenya 🇰🇪</SelectItem>
+                      <SelectItem value="Israel">Israel 🇮🇱</SelectItem>
+                      <SelectItem value="United Arab Emirates">United Arab Emirates 🇦🇪</SelectItem>
+                      <SelectItem value="Saudi Arabia">Saudi Arabia 🇸🇦</SelectItem>
+                      <SelectItem value="Turkey">Turkey 🇹🇷</SelectItem>
+                      <SelectItem value="Russia">Russia 🇷🇺</SelectItem>
+                      <SelectItem value="Ukraine">Ukraine 🇺🇦</SelectItem>
+                      <SelectItem value="Czech Republic">Czech Republic 🇨🇿</SelectItem>
+                      <SelectItem value="Hungary">Hungary 🇭🇺</SelectItem>
+                      <SelectItem value="Romania">Romania 🇷🇴</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    So reminders and ideas fit their local time and vibe.
+                  </p>
                 </div>
               </div>}
 

@@ -310,7 +310,9 @@ export type Database = {
           archived: boolean
           birthdate: string | null
           chat_history: string | null
+          country: string | null
           created_at: string
+          gender_identity: string | null
           id: string
           love_language_acts: number | null
           love_language_gifts: number | null
@@ -329,7 +331,9 @@ export type Database = {
           archived?: boolean
           birthdate?: string | null
           chat_history?: string | null
+          country?: string | null
           created_at?: string
+          gender_identity?: string | null
           id?: string
           love_language_acts?: number | null
           love_language_gifts?: number | null
@@ -348,7 +352,9 @@ export type Database = {
           archived?: boolean
           birthdate?: string | null
           chat_history?: string | null
+          country?: string | null
           created_at?: string
+          gender_identity?: string | null
           id?: string
           love_language_acts?: number | null
           love_language_gifts?: number | null
