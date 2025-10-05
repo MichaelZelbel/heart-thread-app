@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Heart, ArrowRight, ArrowLeft, Sparkles, Loader2, Plus, X } from "lucide-react";
+import { ArrowRight, ArrowLeft, Sparkles, Loader2, Plus, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LoveLanguageHeartRatings } from "./LoveLanguageHeartRatings";
+import cherishlyLogo from "@/assets/cherishly-logo.png";
 
 interface CherishWizardProps {
   onClose: () => void;
@@ -253,8 +254,8 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
       <div className="w-full max-w-2xl my-8">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-primary mb-3 shadow-glow">
-            <Heart className="w-6 h-6 text-white animate-pulse-soft" />
+          <div className="inline-flex items-center justify-center w-16 h-16 mb-3">
+            <img src={cherishlyLogo} alt="Cherishly logo" className="w-full h-full" />
           </div>
           <h2 className="text-2xl font-bold mb-2">Cherish a Lovely Person</h2>
           <p className="text-sm text-muted-foreground">
