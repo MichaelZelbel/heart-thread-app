@@ -197,7 +197,22 @@ serve(async (req) => {
       contextData += `\n**Current Page Context:** You're on the Dashboard. The user can ask about any of their cherished people.\n`;
     }
 
-    const systemPrompt = `You are Claire, a warm and empathetic relationship coach. Your role is to help users strengthen their relationships through thoughtful suggestions.
+    // Get current date and time
+    const now = new Date();
+    const currentDateTime = now.toLocaleString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit',
+      timeZone: 'UTC',
+      timeZoneName: 'short'
+    });
+
+    const systemPrompt = `**IMPORTANT: The current date and time is ${currentDateTime}. Use this for all date calculations and time-sensitive suggestions.**
+
+You are Claire, a warm and empathetic relationship coach. Your role is to help users strengthen their relationships through thoughtful suggestions.
 
 You have access to:
 1. The FULL conversation history with this user (you remember everything they've told you)
