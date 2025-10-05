@@ -259,8 +259,14 @@ const Dashboard = () => {
               <div className="text-4xl font-bold text-primary mb-2">
                 {partners.length}
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground mb-4">
                 Beautiful connections
+              </p>
+              <div className="text-4xl font-bold text-secondary mb-2">
+                {upcomingEvents.length}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Important dates
               </p>
             </CardContent>
           </Card>
