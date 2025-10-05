@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Heart, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Save, Loader2 } from "lucide-react";
 import { LoveLanguageHeartRatings } from "@/components/LoveLanguageHeartRatings";
+import cherishlyLogo from "@/assets/cherishly-logo.png";
 const PartnerWizard = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
@@ -99,10 +100,8 @@ const PartnerWizard = () => {
       <nav className="bg-card border-b border-border shadow-soft">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center">
-              <Heart className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">Cherishly</span>
+            <img src={cherishlyLogo} alt="Cherishly logo" className="w-10 h-10" />
+            <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">CHERISHLY</span>
           </div>
           <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
             Cancel

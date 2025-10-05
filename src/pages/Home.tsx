@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Heart, Calendar, Sparkles, Users } from "lucide-react";
+import { Heart, Calendar, Users } from "lucide-react";
 import { CherishWizard } from "@/components/CherishWizard";
 import heroImage from "@/assets/cherishly-hero.jpg";
+import cherishlyLogo from "@/assets/cherishly-logo.png";
 
 const Home = () => {
   const [showWizard, setShowWizard] = useState(false);
@@ -34,9 +35,9 @@ const Home = () => {
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-white/40">
         <div className="container mx-auto px-4 h-16 flex items-center justify-center relative">
           <div className="flex items-center gap-2">
-            <Heart className="w-6 h-6 text-primary" />
+            <img src={cherishlyLogo} alt="Cherishly logo" className="w-8 h-8" />
             <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              Cherishly
+              CHERISHLY
             </span>
           </div>
           <Button
@@ -135,7 +136,7 @@ const Home = () => {
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16 space-y-4 animate-fade-in">
             <h2 className="text-4xl md:text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              How Cherishly Works
+              How CHERISHLY Works
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Three simple steps to deepen your connections

@@ -15,6 +15,7 @@ import { dateToYMDLocal, parseYMDToLocalDate } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useUserRole } from "@/hooks/useUserRole";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
+import cherishlyLogo from "@/assets/cherishly-logo.png";
 import {
   Dialog,
   DialogContent,
@@ -214,10 +215,8 @@ const Dashboard = () => {
       <nav className="bg-card border-b border-border shadow-soft">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center">
-              <Heart className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">Cherishly</span>
+            <img src={cherishlyLogo} alt="Cherishly logo" className="w-10 h-10" />
+            <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">CHERISHLY</span>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => navigate("/pricing")}>

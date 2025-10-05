@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Heart, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import cherishlyLogo from "@/assets/cherishly-logo.png";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -65,11 +66,11 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-soft p-4">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-primary mb-4 shadow-glow">
-            <Heart className="w-8 h-8 text-white animate-pulse-soft" />
+          <div className="inline-flex items-center justify-center w-16 h-16 mb-4">
+            <img src={cherishlyLogo} alt="Cherishly logo" className="w-16 h-16" />
           </div>
           <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
-            Cherishly
+            CHERISHLY
           </h1>
           <p className="text-muted-foreground">Your relationship companion</p>
         </div>
