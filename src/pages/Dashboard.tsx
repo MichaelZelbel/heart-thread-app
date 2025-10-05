@@ -12,7 +12,7 @@ import { AllEventsCalendar } from "@/components/AllEventsCalendar";
 import { MomentManager } from "@/components/MomentManager";
 import { ClaireChat } from "@/components/ClaireChat";
 import { ActivitySuggestion } from "@/components/ActivitySuggestion";
-import { dateToYMDLocal, parseYMDToLocalDate } from "@/lib/utils";
+import { dateToYMDLocal, parseYMDToLocalDate, cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useUserRole } from "@/hooks/useUserRole";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
@@ -374,7 +374,7 @@ const Dashboard = () => {
                   <>
                     {/* You chip - top-right on desktop, below header on mobile */}
                     <div 
-                      className="md:absolute md:top-0 md:right-0 flex items-center justify-end md:justify-start space-x-2 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer mb-3 md:mb-0"
+                      className="md:absolute md:top-0 md:right-0 flex items-center justify-end md:justify-start space-x-2 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer mb-3 md:mb-0 z-10"
                       onClick={() => navigate("/account/profile")}
                       role="button"
                       aria-label="Open your profile"
@@ -390,7 +390,7 @@ const Dashboard = () => {
                         {profile?.display_name?.charAt(0).toUpperCase() || "Y"}
                       </div>
                       <div>
-                        <p className="font-medium text-sm">
+                        <p className="font-medium text-sm whitespace-nowrap">
                           {profile?.display_name || "You"} (You)
                         </p>
                       </div>
@@ -401,19 +401,22 @@ const Dashboard = () => {
                       {partners.map((partner, index) => (
                         <div 
                           key={partner.id} 
-                          className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer relative" 
+                          className={cn(
+                            "flex items-center space-x-3 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer relative",
+                            index === 0 && "md:pr-52" // Reserve space for the You chip on first row
+                          )}
                           onClick={() => navigate(`/partner/${partner.id}`)}
                         >
                           <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold">
                             {partner.name.charAt(0).toUpperCase()}
                           </div>
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             <p className="font-medium">{partner.name}</p>
                           </div>
                           
                           {/* Action buttons on last row */}
                           {index === partners.length - 1 && (
-                            <div className="hidden md:flex gap-2 ml-auto" onClick={(e) => e.stopPropagation()}>
+                            <div className="hidden md:flex gap-2 ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
                               <Button onClick={() => navigate("/partner/new")} size="sm" data-testid="add-partner-button">
                                 <Plus className="w-4 h-4 mr-2" />
                                 Add Cherished
