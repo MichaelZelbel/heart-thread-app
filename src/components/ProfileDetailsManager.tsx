@@ -654,7 +654,7 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
               }}
             />
           )}
-          <Button onClick={handleAdd} size="icon" className="shrink-0 bg-destructive hover:bg-destructive/90">
+          <Button onClick={handleAdd} size="icon" className="shrink-0">
             <Plus className="w-4 h-4" />
           </Button>
         </div>
