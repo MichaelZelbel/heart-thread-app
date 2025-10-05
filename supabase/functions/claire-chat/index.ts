@@ -45,6 +45,18 @@ serve(async (req) => {
       });
     }
 
+    // Fetch last 10 messages from chat history for context
+    const { data: chatHistory } = await supabase
+      .from('claire_chat_messages')
+      .select('role, content')
+      .eq('user_id', user.id)
+      .eq('partner_id', partnerId || null)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    
+    // Reverse to get chronological order (oldest first)
+    const conversationHistory = chatHistory ? chatHistory.reverse() : [];
+
     // Fetch user's cherished data
     const { data: partners } = await supabase
       .from('partners')
@@ -157,6 +169,16 @@ Always be warm, supportive, and respectful. Keep responses concise but meaningfu
 
 User's Context:${contextData}`;
 
+    // Build messages array with conversation history
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...conversationHistory.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      })),
+      { role: 'user', content: message }
+    ];
+
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -165,10 +187,7 @@ User's Context:${contextData}`;
       },
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: message }
-        ],
+        messages
       }),
     });
 

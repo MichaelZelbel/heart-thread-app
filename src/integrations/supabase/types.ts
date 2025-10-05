@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      claire_chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          partner_id: string | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          partner_id?: string | null
+          role: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          partner_id?: string | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claire_chat_messages_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_notifications: {
         Row: {
           created_at: string
@@ -395,6 +430,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_role_by_email: {
+        Args: { _email: string; _role: Database["public"]["Enums"]["app_role"] }
+        Returns: undefined
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
