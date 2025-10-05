@@ -374,7 +374,7 @@ const Dashboard = () => {
                   <>
                     {/* You chip - top-right on desktop, below header on mobile */}
                     <div 
-                      className="md:absolute md:top-3 md:right-3 flex items-center justify-end md:justify-start space-x-2 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer mb-3 md:mb-0 z-10"
+                      className="md:absolute md:top-3 md:right-6 flex items-center justify-end md:justify-start space-x-2 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer mb-3 md:mb-0 z-20"
                       onClick={() => navigate("/account/profile")}
                       role="button"
                       aria-label="Open your profile"
@@ -403,11 +403,11 @@ const Dashboard = () => {
                           key={partner.id} 
                           className={cn(
                             "flex items-center space-x-3 p-3 relative",
-                            index === 0 && "md:pr-52" // Reserve space for the You chip on first row
+                            index === 0 && "md:pr-56" // Reserve space for the You chip on first row
                           )}
                         >
                           <div 
-                            className="flex items-center space-x-3 rounded-lg hover:bg-muted transition-colors cursor-pointer p-3 -m-3 flex-1 min-w-0"
+                            className="flex items-center space-x-3 rounded-lg hover:bg-muted transition-colors cursor-pointer p-3 -ml-3 flex-1 min-w-0"
                             onClick={() => navigate(`/partner/${partner.id}`)}
                           >
                             <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold">
