@@ -45,12 +45,11 @@ serve(async (req) => {
       });
     }
 
-    // Fetch last 10 messages from chat history for context
+    // Fetch last 10 messages from chat history for context (across ALL conversations)
     const { data: chatHistory } = await supabase
       .from('claire_chat_messages')
       .select('role, content')
       .eq('user_id', user.id)
-      .eq('partner_id', partnerId || null)
       .order('created_at', { ascending: false })
       .limit(10);
     
@@ -149,12 +148,14 @@ serve(async (req) => {
 
     const systemPrompt = `You are Claire, a warm and empathetic relationship coach. Your role is to help users strengthen their relationships through thoughtful suggestions.
 
-You have access to the user's saved information about their loved ones (cherished people), including:
-- Names, birthdates, and important dates
-- Love languages (how they prefer to receive love)
-- Likes, dislikes, and preferences
-- Profile details (favorite places, links, physical attributes)
-- Recent moments and memories logged
+You have access to:
+1. The FULL conversation history with this user (you remember everything they've told you)
+2. Their saved information about their loved ones (cherished people), including:
+   - Names, birthdates, and important dates
+   - Love languages (how they prefer to receive love)
+   - Likes, dislikes, and preferences
+   - Profile details (favorite places, links, physical attributes)
+   - Recent moments and memories logged
 
 Based on this data, you provide:
 - Personalized gift ideas
@@ -165,7 +166,7 @@ Based on this data, you provide:
 
 You also gently identify missing information that could help you give better suggestions (e.g., "I notice you haven't added their favorite restaurant—knowing that could help me suggest great date spots!").
 
-Always be warm, supportive, and respectful. Keep responses concise but meaningful. When multiple cherished people exist, ask which one the user wants suggestions for.
+Always be warm, supportive, and respectful. Keep responses concise but meaningful. When the user is viewing a specific partner's page, focus your suggestions on that partner. Otherwise, help with any of their cherished relationships.
 
 User's Context:${contextData}`;
 

@@ -45,12 +45,11 @@ export const ClaireChat = ({ partnerId, compact = false }: ClaireChatProps) => {
           }
         }
 
-        // Load chat history
+        // Load ALL chat history for the user (continuous conversation)
         const { data: historyData } = await supabase
           .from('claire_chat_messages')
           .select('*')
           .eq('user_id', session.user.id)
-          .eq('partner_id', partnerId || null)
           .order('created_at', { ascending: true });
 
         if (historyData && historyData.length > 0) {
@@ -74,7 +73,7 @@ export const ClaireChat = ({ partnerId, compact = false }: ClaireChatProps) => {
     };
 
     loadChatHistory();
-  }, [partnerId, partnerName]);
+  }, [partnerId]);
 
   useEffect(() => {
     if (scrollRef.current) {
