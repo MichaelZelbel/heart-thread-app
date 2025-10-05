@@ -34,7 +34,7 @@ const COMMON_TIMEZONES = [
 export default function Account() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isPro, isAdmin } = useUserRole();
+  const { isPro, isAdmin, role } = useUserRole();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
@@ -398,7 +398,7 @@ export default function Account() {
                           <span className="text-sm text-muted-foreground">Current Plan</span>
                           <Badge className="bg-gradient-to-r from-primary to-primary/80">
                             <Sparkles className="w-3 h-3 mr-1" />
-                            Cherishly Pro
+                            Cherishly Pro {role === 'pro_gift' && '(Gifted)'}
                           </Badge>
                         </div>
                         
@@ -424,27 +424,37 @@ export default function Account() {
                       </div>
 
                       <div className="space-y-2">
-                        <Button 
-                          onClick={handleManageSubscription}
-                          disabled={openingPortal}
-                          className="w-full gap-2"
-                          variant="outline"
-                        >
-                          {openingPortal ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              Opening Portal...
-                            </>
-                          ) : (
-                            <>
-                              <CreditCard className="w-4 h-4" />
-                              Manage Subscription
-                            </>
-                          )}
-                        </Button>
-                        <p className="text-xs text-muted-foreground text-center">
-                          Update payment method, view invoices, or cancel anytime in the portal.
-                        </p>
+                        {role !== 'pro_gift' ? (
+                          <>
+                            <Button 
+                              onClick={handleManageSubscription}
+                              disabled={openingPortal}
+                              className="w-full gap-2"
+                              variant="outline"
+                            >
+                              {openingPortal ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  Opening Portal...
+                                </>
+                              ) : (
+                                <>
+                                  <CreditCard className="w-4 h-4" />
+                                  Manage Subscription
+                                </>
+                              )}
+                            </Button>
+                            <p className="text-xs text-muted-foreground text-center">
+                              Update payment method, view invoices, or cancel anytime in the portal.
+                            </p>
+                          </>
+                        ) : (
+                          <div className="text-center py-2">
+                            <p className="text-sm text-muted-foreground">
+                              You have lifetime Pro access as a gift. No subscription management needed.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </>
                   )}
