@@ -53,17 +53,17 @@ const Home = () => {
       <main className="relative flex-1 flex flex-col items-center justify-center pt-24 pb-20 px-4 overflow-hidden">
         {/* Floating Hearts Background */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(12)].map((_, i) => (
+          {[...Array(25)].map((_, i) => (
             <Heart
               key={i}
-              className="absolute text-primary/15 animate-float-heart"
+              className="absolute text-primary/20 animate-float-heart"
               style={{
-                left: `${(i * 12) % 100}%`,
-                top: `${100 + (i * 8)}%`,
+                left: `${(i * 9) % 100}%`,
+                top: `${100 + (i * 6)}%`,
                 width: `${12 + (i % 4) * 8}px`,
                 height: `${12 + (i % 4) * 8}px`,
-                animationDelay: `${i * 2.5}s`,
-                animationDuration: `${25 + (i % 3) * 10}s`,
+                animationDelay: `${i * 0.2}s`,
+                animationDuration: `${5 + (i % 3) * 1.5}s`,
               }}
               fill="currentColor"
             />
