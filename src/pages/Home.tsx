@@ -76,13 +76,13 @@ const Home = () => {
         {/* Hero Content - Centered */}
         <div className="relative z-10 w-full max-w-4xl mx-auto text-center space-y-12 animate-fade-in">
           {/* Text Content with Glassy Panel */}
-          <div className="overflow-hidden bg-white/40 backdrop-blur-xl rounded-3xl border border-white/60 shadow-2xl">
+          <div className="overflow-visible bg-white/40 backdrop-blur-xl rounded-3xl border border-white/60 shadow-2xl">
             <div className="space-y-6 px-6 md:px-12 py-12 overflow-visible">
               {/* Headline */}
               <h1 
-                className="text-5xl md:text-7xl font-bold bg-gradient-primary bg-clip-text text-transparent pb-1"
+                className="text-5xl md:text-7xl font-bold bg-gradient-primary bg-clip-text text-transparent pb-2"
                 style={{
-                  lineHeight: '1.15',
+                  lineHeight: '1.35',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   textRendering: 'optimizeLegibility',
