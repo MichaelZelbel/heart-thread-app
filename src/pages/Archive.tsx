@@ -9,8 +9,6 @@ import { toast } from "sonner";
 interface Partner {
   id: string;
   name: string;
-  email: string | null;
-  phone: string | null;
   birthdate: string | null;
 }
 
@@ -128,9 +126,6 @@ const Archive = () => {
                       </div>
                       <div>
                         <p className="font-medium">{partner.name}</p>
-                        {partner.email && (
-                          <p className="text-sm text-muted-foreground">{partner.email}</p>
-                        )}
                       </div>
                     </div>
                     <Button

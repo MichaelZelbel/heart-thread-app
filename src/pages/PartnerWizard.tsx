@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
@@ -18,9 +19,7 @@ const PartnerWizard = () => {
 
   // Form state
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
+  const [relationshipType, setRelationshipType] = useState("partner");
   const [loveLanguages, setLoveLanguages] = useState({
     physical: 3,
     words: 3,
@@ -77,9 +76,7 @@ const PartnerWizard = () => {
       } = await supabase.from("partners").insert({
         user_id: session.user.id,
         name: name.trim(),
-        email: email.trim() || null,
-        phone: phone.trim() || null,
-        address: address.trim() || null,
+        relationship_type: relationshipType,
         love_language_physical: loveLanguages.physical,
         love_language_words: loveLanguages.words,
         love_language_quality: loveLanguages.quality,
@@ -137,19 +134,37 @@ const PartnerWizard = () => {
           </CardHeader>
           <CardContent className="space-y-6">
             {currentStep === 1 && <div className="space-y-4">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Add just a few details to remember what makes them special — no private info needed.
+                </p>
                 <div className="space-y-2">
                   <Label htmlFor="name">
-                    Cherished Name <span className="text-destructive">*</span>
+                    Name / Nickname <span className="text-destructive">*</span>
                   </Label>
-                  <Input id="name" placeholder="Their name" value={name} onChange={e => setName(e.target.value)} required data-testid="what-do-you-call-them" />
+                  <Input 
+                    id="name" 
+                    placeholder="What do you call them?" 
+                    value={name} 
+                    onChange={e => setName(e.target.value)} 
+                    required 
+                    data-testid="what-do-you-call-them" 
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email (optional)</Label>
-                  <Input id="email" type="email" placeholder="their@email.com" value={email} onChange={e => setEmail(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone (optional)</Label>
-                  <Input id="phone" type="tel" placeholder="+1 (555) 000-0000" value={phone} onChange={e => setPhone(e.target.value)} />
+                  <Label htmlFor="relationshipType">Relationship Type</Label>
+                  <Select value={relationshipType} onValueChange={setRelationshipType}>
+                    <SelectTrigger id="relationshipType">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="partner">Partner</SelectItem>
+                      <SelectItem value="crush">Crush</SelectItem>
+                      <SelectItem value="friend">Friend</SelectItem>
+                      <SelectItem value="family">Family</SelectItem>
+                      <SelectItem value="colleague">Colleague</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>}
 
@@ -157,12 +172,8 @@ const PartnerWizard = () => {
 
             {currentStep === 3 && <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="address">Address (optional)</Label>
-                  <Input id="address" placeholder="123 Main St, City, State" value={address} onChange={e => setAddress(e.target.value)} />
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="chatHistory">Chat History (optional)</Label>
-                  <Textarea id="chatHistory" placeholder="Paste important chat logs or messages here..." value={chatHistory} onChange={e => setChatHistory(e.target.value)} rows={6} />
+                  <Textarea id="chatHistory" placeholder="Paste important chat logs or messages here..." value={chatHistory} onChange={e => setChatHistory(e.target.value)} rows={8} />
                   <p className="text-xs text-muted-foreground">
                     A private space to store meaningful conversations
                   </p>

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heart, ArrowLeft, Archive, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -36,9 +37,7 @@ const PartnerDetail = () => {
   const [loading, setLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
+  const [relationshipType, setRelationshipType] = useState("partner");
   const [notes, setNotes] = useState("");
   const [birthdate, setBirthdate] = useState<Date | null>(null);
   const [loveLanguages, setLoveLanguages] = useState<LoveLanguages>({
@@ -74,9 +73,7 @@ const PartnerDetail = () => {
       return;
     }
     setName(data.name);
-    setEmail(data.email || "");
-    setPhone(data.phone || "");
-    setAddress(data.address || "");
+    setRelationshipType(data.relationship_type || "partner");
     setNotes(data.notes || "");
     setBirthdate(data.birthdate ? new Date(data.birthdate) : null);
     setLoveLanguages({
@@ -90,9 +87,7 @@ const PartnerDetail = () => {
   };
   const savePartnerData = useCallback(async (dataToSave: {
     name?: string;
-    email?: string;
-    phone?: string;
-    address?: string;
+    relationshipType?: string;
     notes?: string;
     birthdate?: Date | null;
     loveLanguages?: LoveLanguages;
@@ -112,9 +107,7 @@ const PartnerDetail = () => {
       }
       updateData.name = dataToSave.name.trim();
     }
-    if (dataToSave.email !== undefined) updateData.email = dataToSave.email.trim() || null;
-    if (dataToSave.phone !== undefined) updateData.phone = dataToSave.phone.trim() || null;
-    if (dataToSave.address !== undefined) updateData.address = dataToSave.address.trim() || null;
+    if (dataToSave.relationshipType !== undefined) updateData.relationship_type = dataToSave.relationshipType;
     if (dataToSave.notes !== undefined) updateData.notes = dataToSave.notes.trim() || null;
     if (dataToSave.birthdate !== undefined) {
       updateData.birthdate = dataToSave.birthdate ? dateToYMDLocal(dataToSave.birthdate) : null;
@@ -363,10 +356,13 @@ const PartnerDetail = () => {
             <Card className="shadow-soft">
               <CardHeader>
                 <CardTitle>Basic Information</CardTitle>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Add just a few details to remember what makes them special — no private info needed.
+                </p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="name">Name *</Label>
+                  <Label htmlFor="name">Name / Nickname *</Label>
                   <Input 
                     id="name" 
                     value={name} 
@@ -375,58 +371,45 @@ const PartnerDetail = () => {
                       setName(newName);
                       debouncedSave({ name: newName });
                     }} 
-                    placeholder="Partner's name" 
+                    placeholder="What do you call them?" 
                     data-testid="what-do-you-call-them" 
                   />
                 </div>
                 <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    value={email} 
-                    onChange={e => {
-                      const newEmail = e.target.value;
-                      setEmail(newEmail);
-                      debouncedSave({ email: newEmail });
-                    }} 
-                    placeholder="partner@example.com" 
-                  />
+                  <Label htmlFor="relationshipType">Relationship Type</Label>
+                  <Select 
+                    value={relationshipType} 
+                    onValueChange={(value) => {
+                      setRelationshipType(value);
+                      savePartnerData({ relationshipType: value });
+                    }}
+                  >
+                    <SelectTrigger id="relationshipType">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="partner">Partner</SelectItem>
+                      <SelectItem value="crush">Crush</SelectItem>
+                      <SelectItem value="friend">Friend</SelectItem>
+                      <SelectItem value="family">Family</SelectItem>
+                      <SelectItem value="colleague">Colleague</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input 
-                    id="phone" 
-                    type="tel" 
-                    value={phone} 
-                    onChange={e => {
-                      const newPhone = e.target.value;
-                      setPhone(newPhone);
-                      debouncedSave({ phone: newPhone });
+                  <Label htmlFor="birthdate">Birthday (optional)</Label>
+                  <BirthdatePicker 
+                    value={birthdate} 
+                    onChange={(newBirthdate) => {
+                      setBirthdate(newBirthdate);
+                      savePartnerData({ birthdate: newBirthdate });
                     }} 
-                    placeholder="+1 (555) 000-0000" 
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    We'll add their birthday to your Love Calendar
+                  </p>
                 </div>
-                <div>
-                  <Label htmlFor="address">Address</Label>
-                  <Input 
-                    id="address" 
-                    value={address} 
-                    onChange={e => {
-                      const newAddress = e.target.value;
-                      setAddress(newAddress);
-                      debouncedSave({ address: newAddress });
-                    }} 
-                    placeholder="123 Main St, City, State" 
-                  />
-                </div>
-                <BirthdatePicker 
-                  value={birthdate} 
-                  onChange={(newBirthdate) => {
-                    setBirthdate(newBirthdate);
-                    savePartnerData({ birthdate: newBirthdate });
-                  }} 
-                />
               </CardContent>
             </Card>
           </TabsContent>

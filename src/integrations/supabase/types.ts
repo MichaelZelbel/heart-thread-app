@@ -307,12 +307,10 @@ export type Database = {
       }
       partners: {
         Row: {
-          address: string | null
           archived: boolean
           birthdate: string | null
           chat_history: string | null
           created_at: string
-          email: string | null
           id: string
           love_language_acts: number | null
           love_language_gifts: number | null
@@ -321,19 +319,17 @@ export type Database = {
           love_language_words: number | null
           name: string
           notes: string | null
-          phone: string | null
           photo_url: string | null
+          relationship_type: string | null
           social_media: Json | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          address?: string | null
           archived?: boolean
           birthdate?: string | null
           chat_history?: string | null
           created_at?: string
-          email?: string | null
           id?: string
           love_language_acts?: number | null
           love_language_gifts?: number | null
@@ -342,19 +338,17 @@ export type Database = {
           love_language_words?: number | null
           name: string
           notes?: string | null
-          phone?: string | null
           photo_url?: string | null
+          relationship_type?: string | null
           social_media?: Json | null
           updated_at?: string
           user_id: string
         }
         Update: {
-          address?: string | null
           archived?: boolean
           birthdate?: string | null
           chat_history?: string | null
           created_at?: string
-          email?: string | null
           id?: string
           love_language_acts?: number | null
           love_language_gifts?: number | null
@@ -363,8 +357,8 @@ export type Database = {
           love_language_words?: number | null
           name?: string
           notes?: string | null
-          phone?: string | null
           photo_url?: string | null
+          relationship_type?: string | null
           social_media?: Json | null
           updated_at?: string
           user_id?: string
