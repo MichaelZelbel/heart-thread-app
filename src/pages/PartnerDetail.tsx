@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Heart, ArrowLeft, Save, Archive, Trash2 } from "lucide-react";
+import { Heart, ArrowLeft, Archive, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { LoveLanguageHeartRatings } from "@/components/LoveLanguageHeartRatings";
@@ -34,7 +34,6 @@ const PartnerDetail = () => {
   const navigate = useNavigate();
   const { isPro } = useUserRole();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -49,6 +48,8 @@ const PartnerDetail = () => {
     acts: 3,
     gifts: 3
   });
+  
+  const saveTimeoutRef = useRef<NodeJS.Timeout>();
   useEffect(() => {
     loadPartnerData();
   }, [id]);
@@ -87,67 +88,118 @@ const PartnerDetail = () => {
     });
     setLoading(false);
   };
-  const handleSave = async () => {
-    if (!name.trim()) {
-      toast.error("Partner name is required");
-      return;
-    }
-    setSaving(true);
-    const {
-      data: {
-        session
-      }
-    } = await supabase.auth.getSession();
+  const savePartnerData = useCallback(async (dataToSave: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    notes?: string;
+    birthdate?: Date | null;
+    loveLanguages?: LoveLanguages;
+  }) => {
+    if (!id) return;
+
+    const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    const {
-      error
-    } = await supabase.from("partners").update({
-      name: name.trim(),
-      email: email.trim() || null,
-      phone: phone.trim() || null,
-      address: address.trim() || null,
-      notes: notes.trim() || null,
-      birthdate: birthdate ? dateToYMDLocal(birthdate) : null,
-      love_language_physical: loveLanguages.physical,
-      love_language_words: loveLanguages.words,
-      love_language_quality: loveLanguages.quality,
-      love_language_acts: loveLanguages.acts,
-      love_language_gifts: loveLanguages.gifts
-    }).eq("id", id);
 
-    // Handle birthdate event (Birthday)
-    if (birthdate) {
-      const birthdateStr = dateToYMDLocal(birthdate);
-
-      // Check if Birthday event exists
-      const {
-        data: existingEvent
-      } = await supabase.from("events").select("id").eq("partner_id", id).eq("event_type", "Birthday").single();
-      if (existingEvent) {
-        // Update existing Birthday event
-        await supabase.from("events").update({
-          event_date: birthdateStr,
-          title: `${name}'s Birthday`
-        }).eq("id", existingEvent.id);
-      } else {
-        // Create new Birthday event
-        await supabase.from("events").insert({
-          user_id: session.user.id,
-          partner_id: id,
-          title: `${name}'s Birthday`,
-          event_date: birthdateStr,
-          event_type: "Birthday",
-          is_recurring: true
-        });
+    // Prepare update data
+    const updateData: any = {};
+    
+    if (dataToSave.name !== undefined) {
+      if (!dataToSave.name.trim()) {
+        toast.error("Partner name is required");
+        return;
       }
+      updateData.name = dataToSave.name.trim();
     }
-    setSaving(false);
+    if (dataToSave.email !== undefined) updateData.email = dataToSave.email.trim() || null;
+    if (dataToSave.phone !== undefined) updateData.phone = dataToSave.phone.trim() || null;
+    if (dataToSave.address !== undefined) updateData.address = dataToSave.address.trim() || null;
+    if (dataToSave.notes !== undefined) updateData.notes = dataToSave.notes.trim() || null;
+    if (dataToSave.birthdate !== undefined) {
+      updateData.birthdate = dataToSave.birthdate ? dateToYMDLocal(dataToSave.birthdate) : null;
+    }
+    if (dataToSave.loveLanguages) {
+      updateData.love_language_physical = dataToSave.loveLanguages.physical;
+      updateData.love_language_words = dataToSave.loveLanguages.words;
+      updateData.love_language_quality = dataToSave.loveLanguages.quality;
+      updateData.love_language_acts = dataToSave.loveLanguages.acts;
+      updateData.love_language_gifts = dataToSave.loveLanguages.gifts;
+    }
+
+    const { error } = await supabase
+      .from("partners")
+      .update(updateData)
+      .eq("id", id);
+
     if (error) {
       toast.error("Failed to save changes");
       return;
     }
-    toast.success("Saved. Your secret wingman took notes.");
-  };
+
+    // Handle birthdate event (Birthday) if birthdate was updated
+    if (dataToSave.birthdate !== undefined) {
+      const currentBirthdate = dataToSave.birthdate;
+      const currentName = dataToSave.name !== undefined ? dataToSave.name : name;
+      
+      if (currentBirthdate) {
+        const birthdateStr = dateToYMDLocal(currentBirthdate);
+
+        // Check if Birthday event exists
+        const { data: existingEvent } = await supabase
+          .from("events")
+          .select("id")
+          .eq("partner_id", id)
+          .eq("event_type", "Birthday")
+          .single();
+          
+        if (existingEvent) {
+          // Update existing Birthday event
+          await supabase
+            .from("events")
+            .update({
+              event_date: birthdateStr,
+              title: `${currentName}'s Birthday`
+            })
+            .eq("id", existingEvent.id);
+        } else {
+          // Create new Birthday event
+          await supabase
+            .from("events")
+            .insert({
+              user_id: session.user.id,
+              partner_id: id,
+              title: `${currentName}'s Birthday`,
+              event_date: birthdateStr,
+              event_type: "Birthday",
+              is_recurring: true
+            });
+        }
+      }
+    }
+
+    toast.success("Saved");
+  }, [id, name]);
+
+  // Debounced save for text fields
+  const debouncedSave = useCallback((dataToSave: any) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    saveTimeoutRef.current = setTimeout(() => {
+      savePartnerData(dataToSave);
+    }, 1000); // 1 second debounce
+  }, [savePartnerData]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
   const handleArchive = async () => {
     if (!id) return;
     const {
@@ -209,10 +261,6 @@ const PartnerDetail = () => {
             <Button onClick={() => setShowDeleteDialog(true)} variant="outline">
               <Trash2 className="w-4 h-4 mr-2" />
               Delete
-            </Button>
-            <Button onClick={handleSave} disabled={saving} data-testid="partner-detail-save-button">
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </div>
@@ -283,7 +331,13 @@ const PartnerDetail = () => {
 
             <Card className="shadow-soft">
               <CardContent className="pt-6">
-                <LoveLanguageHeartRatings values={loveLanguages} onChange={setLoveLanguages} />
+                <LoveLanguageHeartRatings 
+                  values={loveLanguages} 
+                  onChange={(newValues) => {
+                    setLoveLanguages(newValues);
+                    savePartnerData({ loveLanguages: newValues });
+                  }} 
+                />
               </CardContent>
             </Card>
 
@@ -292,7 +346,17 @@ const PartnerDetail = () => {
                 <CardTitle>Notes & Thoughts</CardTitle>
               </CardHeader>
               <CardContent>
-                <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Special memories, preferences, important details..." rows={6} className="resize-none" />
+                <Textarea 
+                  value={notes} 
+                  onChange={e => {
+                    const newNotes = e.target.value;
+                    setNotes(newNotes);
+                    debouncedSave({ notes: newNotes });
+                  }} 
+                  placeholder="Special memories, preferences, important details..." 
+                  rows={6} 
+                  className="resize-none" 
+                />
               </CardContent>
             </Card>
 
@@ -303,21 +367,66 @@ const PartnerDetail = () => {
               <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="name">Name *</Label>
-                  <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Partner's name" data-testid="what-do-you-call-them" />
+                  <Input 
+                    id="name" 
+                    value={name} 
+                    onChange={e => {
+                      const newName = e.target.value;
+                      setName(newName);
+                      debouncedSave({ name: newName });
+                    }} 
+                    placeholder="Partner's name" 
+                    data-testid="what-do-you-call-them" 
+                  />
                 </div>
                 <div>
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="partner@example.com" />
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    value={email} 
+                    onChange={e => {
+                      const newEmail = e.target.value;
+                      setEmail(newEmail);
+                      debouncedSave({ email: newEmail });
+                    }} 
+                    placeholder="partner@example.com" 
+                  />
                 </div>
                 <div>
                   <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 (555) 000-0000" />
+                  <Input 
+                    id="phone" 
+                    type="tel" 
+                    value={phone} 
+                    onChange={e => {
+                      const newPhone = e.target.value;
+                      setPhone(newPhone);
+                      debouncedSave({ phone: newPhone });
+                    }} 
+                    placeholder="+1 (555) 000-0000" 
+                  />
                 </div>
                 <div>
                   <Label htmlFor="address">Address</Label>
-                  <Input id="address" value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main St, City, State" />
+                  <Input 
+                    id="address" 
+                    value={address} 
+                    onChange={e => {
+                      const newAddress = e.target.value;
+                      setAddress(newAddress);
+                      debouncedSave({ address: newAddress });
+                    }} 
+                    placeholder="123 Main St, City, State" 
+                  />
                 </div>
-                <BirthdatePicker value={birthdate} onChange={setBirthdate} />
+                <BirthdatePicker 
+                  value={birthdate} 
+                  onChange={(newBirthdate) => {
+                    setBirthdate(newBirthdate);
+                    savePartnerData({ birthdate: newBirthdate });
+                  }} 
+                />
               </CardContent>
             </Card>
           </TabsContent>
