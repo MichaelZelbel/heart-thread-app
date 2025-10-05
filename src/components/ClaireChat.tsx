@@ -24,6 +24,7 @@ export const ClaireChat = ({ partnerId, compact = false }: ClaireChatProps) => {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [expanded, setExpanded] = useState(!compact);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);
 
   useEffect(() => {
@@ -75,11 +76,17 @@ export const ClaireChat = ({ partnerId, compact = false }: ClaireChatProps) => {
     loadChatHistory();
   }, [partnerId]);
 
+  // Auto-scroll to bottom when messages change or loading completes
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    const scrollToBottom = () => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+    
+    // Use setTimeout to ensure DOM has updated
+    const timeoutId = setTimeout(scrollToBottom, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, [messages, loadingHistory]);
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
@@ -233,6 +240,7 @@ export const ClaireChat = ({ partnerId, compact = false }: ClaireChatProps) => {
                   </div>
                 </div>
               )}
+              <div ref={messagesEndRef} />
             </div>
           )}
         </ScrollArea>
