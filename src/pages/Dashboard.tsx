@@ -386,44 +386,44 @@ const Dashboard = () => {
                         View All Cherished
                       </Button>}
                   </div>}
+              </CardContent>
+            </Card>
 
-                {/* This Week subsection */}
-                {partners.length > 0 && (
-                  <div className="pt-6 border-t">
-                    <div className="mb-3">
-                      <h3 className="font-semibold flex items-center space-x-2">
-                        <Calendar className="w-4 h-4 text-secondary" />
-                        <span>This Week</span>
-                      </h3>
-                      <p className="text-xs text-muted-foreground mt-1">Important dates coming up</p>
-                    </div>
-                    {upcomingEvents.length === 0 ? (
-                      <div className="text-center py-4">
-                        <Calendar className="w-8 h-8 mx-auto mb-2 text-muted-foreground opacity-50" />
-                        <p className="text-sm text-muted-foreground">
-                          No upcoming events this week
-                        </p>
+            <Card className="shadow-soft animate-fade-in">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Calendar className="w-5 h-5 text-secondary" />
+                  <span>This Week's Highlights</span>
+                </CardTitle>
+                <CardDescription>Important dates coming up</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {upcomingEvents.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Calendar className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                    <p className="text-muted-foreground">
+                      No upcoming events this week
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3" data-testid="upcoming-list">
+                    {upcomingEvents.map((event, index) => (
+                      <div key={`${event.id}-${event.displayDate}-${index}`} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-muted transition-colors">
+                        <Calendar className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium">
+                            {event.title}
+                            {event.is_recurring && <Badge variant="secondary" className="ml-2 text-xs">
+                                Recurring
+                              </Badge>}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {format(parseYMDToLocalDate(event.displayDate), "EEEE, MMMM d")}
+                            {event.partnerName && ` • ${event.partnerName}`}
+                          </p>
+                        </div>
                       </div>
-                    ) : (
-                      <div className="space-y-2" data-testid="upcoming-list">
-                        {upcomingEvents.slice(0, 3).map((event, index) => (
-                          <div key={`${event.id}-${event.displayDate}-${index}`} className="flex items-start space-x-2 p-2 rounded-lg hover:bg-muted transition-colors text-sm">
-                            <Calendar className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">
-                                {event.title}
-                                {event.is_recurring && <span className="ml-1 text-xs px-1.5 py-0.5 bg-primary/10 text-primary rounded-full">
-                                    Recurring
-                                  </span>}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {format(parseYMDToLocalDate(event.displayDate), "EEE, MMM d")}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    ))}
                   </div>
                 )}
               </CardContent>
