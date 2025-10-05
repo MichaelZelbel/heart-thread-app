@@ -374,7 +374,7 @@ const Dashboard = () => {
                   <>
                     {/* You chip - top-right on desktop, below header on mobile */}
                     <div 
-                      className="md:absolute md:top-0 md:right-3 flex items-center justify-end md:justify-start space-x-2 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer mb-3 md:mb-0"
+                      className="md:absolute md:top-0 md:right-0 flex items-center justify-end md:justify-start space-x-2 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer mb-3 md:mb-0"
                       onClick={() => navigate("/account/profile")}
                       role="button"
                       aria-label="Open your profile"
