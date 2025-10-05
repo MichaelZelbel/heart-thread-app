@@ -100,50 +100,101 @@ serve(async (req) => {
       .order('moment_date', { ascending: false })
       .limit(10);
 
-    // Build context for Claire
-    let contextData = '';
+    // Build comprehensive markdown report for all partners
+    let contextData = '\n\n# User\'s Cherished People\n';
     
+    if (partners?.length) {
+      partners.forEach(partner => {
+        contextData += `\n## ${partner.name}\n`;
+        
+        // Basic info
+        if (partner.birthdate) {
+          contextData += `- **Birthdate:** ${partner.birthdate}\n`;
+        }
+        
+        // Love languages
+        contextData += `- **Love Languages (scale 1-5):**\n`;
+        contextData += `  - Physical Touch: ${partner.love_language_physical}\n`;
+        contextData += `  - Words of Affirmation: ${partner.love_language_words}\n`;
+        contextData += `  - Quality Time: ${partner.love_language_quality}\n`;
+        contextData += `  - Acts of Service: ${partner.love_language_acts}\n`;
+        contextData += `  - Gifts: ${partner.love_language_gifts}\n`;
+        
+        // Notes
+        if (partner.notes) {
+          contextData += `\n**Notes:** ${partner.notes}\n`;
+        }
+        
+        // Likes
+        const partnerLikes = likes?.filter(l => l.partner_id === partner.id);
+        if (partnerLikes?.length) {
+          contextData += `\n### Likes\n`;
+          partnerLikes.forEach(like => {
+            const tags = like.tags?.length ? ` [${like.tags.join(', ')}]` : '';
+            contextData += `- ${like.item}${tags}\n`;
+          });
+        }
+        
+        // Dislikes
+        const partnerDislikes = dislikes?.filter(d => d.partner_id === partner.id);
+        if (partnerDislikes?.length) {
+          contextData += `\n### Dislikes\n`;
+          partnerDislikes.forEach(dislike => {
+            const tags = dislike.tags?.length ? ` [${dislike.tags.join(', ')}]` : '';
+            contextData += `- ${dislike.item}${tags}\n`;
+          });
+        }
+        
+        // Profile Details
+        const partnerDetails = profileDetails?.filter(d => d.partner_id === partner.id);
+        if (partnerDetails?.length) {
+          contextData += `\n### Profile Details\n`;
+          
+          // Group by category
+          const categories = [...new Set(partnerDetails.map(d => d.category))];
+          categories.forEach(category => {
+            const categoryDetails = partnerDetails.filter(d => d.category === category);
+            contextData += `\n**${category}:**\n`;
+            categoryDetails.forEach(detail => {
+              contextData += `- ${detail.label}: ${detail.value}\n`;
+            });
+          });
+        }
+        
+        // Events
+        const partnerEvents = events?.filter(e => e.partner_id === partner.id);
+        if (partnerEvents?.length) {
+          contextData += `\n### Important Dates & Events\n`;
+          partnerEvents.forEach(event => {
+            const recurring = event.is_recurring ? ' (recurring)' : '';
+            const eventType = event.event_type ? ` [${event.event_type}]` : '';
+            contextData += `- ${event.title} - ${event.event_date}${recurring}${eventType}\n`;
+          });
+        }
+        
+        // Moments
+        const partnerMoments = moments?.filter(m => m.partner_ids?.includes(partner.id));
+        if (partnerMoments?.length) {
+          contextData += `\n### Recent Moments\n`;
+          partnerMoments.forEach(moment => {
+            if (moment.title) {
+              contextData += `- ${moment.title} - ${moment.moment_date}\n`;
+            }
+          });
+        }
+        
+        contextData += '\n---\n';
+      });
+    } else {
+      contextData += '\nNo cherished people added yet.\n';
+    }
+    
+    // Add current page context
     if (partnerId && partners?.find(p => p.id === partnerId)) {
-      const partner = partners.find(p => p.id === partnerId);
-      contextData = `\n\nCurrent Partner Focus: ${partner?.name}`;
-      
-      const partnerLikes = likes?.filter(l => l.partner_id === partnerId);
-      const partnerDislikes = dislikes?.filter(d => d.partner_id === partnerId);
-      const partnerDetails = profileDetails?.filter(d => d.partner_id === partnerId);
-      const partnerEvents = events?.filter(e => e.partner_id === partnerId);
-      const partnerMoments = moments?.filter(m => m.partner_ids?.includes(partnerId));
-
-      if (partner) {
-        contextData += `\nBirthdate: ${partner.birthdate || 'Not set'}`;
-        contextData += `\nLove Languages (1-5): Physical Touch: ${partner.love_language_physical}, Words: ${partner.love_language_words}, Quality Time: ${partner.love_language_quality}, Acts of Service: ${partner.love_language_acts}, Gifts: ${partner.love_language_gifts}`;
-        if (partner.notes) contextData += `\nNotes: ${partner.notes}`;
-      }
-
-      if (partnerLikes?.length) {
-        contextData += `\n\nLikes: ${partnerLikes.map(l => l.item).join(', ')}`;
-      }
-
-      if (partnerDislikes?.length) {
-        contextData += `\nDislikes: ${partnerDislikes.map(d => d.item).join(', ')}`;
-      }
-
-      if (partnerDetails?.length) {
-        contextData += `\n\nProfile Details:`;
-        partnerDetails.forEach(d => {
-          contextData += `\n- ${d.label}: ${d.value}`;
-        });
-      }
-
-      if (partnerEvents?.length) {
-        contextData += `\n\nImportant Dates: ${partnerEvents.map(e => `${e.title} (${e.event_date})`).join(', ')}`;
-      }
-
-      if (partnerMoments?.length) {
-        contextData += `\n\nRecent Moments: ${partnerMoments.map(m => m.title).filter(Boolean).join(', ')}`;
-      }
-    } else if (partners?.length) {
-      contextData = `\n\nAll Cherished People: ${partners.map(p => p.name).join(', ')}`;
-      contextData += `\n\nNote: Ask the user which person they'd like suggestions for to give more personalized advice.`;
+      const currentPartner = partners.find(p => p.id === partnerId);
+      contextData += `\n**Current Page Context:** You're viewing ${currentPartner?.name}'s detail page. Focus your suggestions on them.\n`;
+    } else {
+      contextData += `\n**Current Page Context:** You're on the Dashboard. The user can ask about any of their cherished people.\n`;
     }
 
     const systemPrompt = `You are Claire, a warm and empathetic relationship coach. Your role is to help users strengthen their relationships through thoughtful suggestions.
