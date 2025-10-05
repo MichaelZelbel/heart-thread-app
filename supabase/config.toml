@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.seed-test-users]
 verify_jwt = false
+
+[functions.suggest-activity]
+verify_jwt = false

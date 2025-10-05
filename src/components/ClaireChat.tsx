@@ -15,9 +15,10 @@ interface Message {
 interface ClaireChatProps {
   partnerId?: string;
   compact?: boolean;
+  prefillMessage?: string;
 }
 
-export const ClaireChat = ({ partnerId, compact = false }: ClaireChatProps) => {
+export const ClaireChat = ({ partnerId, compact = false, prefillMessage = "" }: ClaireChatProps) => {
   const [partnerName, setPartnerName] = useState<string>("");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -66,6 +67,11 @@ export const ClaireChat = ({ partnerId, compact = false }: ClaireChatProps) => {
           
           setMessages([{ role: 'assistant', content: welcomeMsg }]);
         }
+        
+        // Set prefilled message if provided
+        if (prefillMessage) {
+          setInput(prefillMessage);
+        }
       } catch (error) {
         console.error('Error loading chat history:', error);
       } finally {
@@ -74,7 +80,7 @@ export const ClaireChat = ({ partnerId, compact = false }: ClaireChatProps) => {
     };
 
     loadChatHistory();
-  }, [partnerId]);
+  }, [partnerId, prefillMessage]);
 
   // Auto-scroll to bottom when messages change or loading completes
   useEffect(() => {

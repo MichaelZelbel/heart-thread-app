@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { AllEventsCalendar } from "@/components/AllEventsCalendar";
 import { MomentManager } from "@/components/MomentManager";
 import { ClaireChat } from "@/components/ClaireChat";
+import { ActivitySuggestion } from "@/components/ActivitySuggestion";
 import { dateToYMDLocal, parseYMDToLocalDate } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -61,6 +62,7 @@ const Dashboard = () => {
   const [totalMoments, setTotalMoments] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showMomentsDialog, setShowMomentsDialog] = useState(false);
+  const [clairePrefillMessage, setClairePrefillMessage] = useState<string>("");
   useEffect(() => {
     checkAuth();
   }, []);
@@ -245,7 +247,7 @@ const Dashboard = () => {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 mb-8">
           <Card className="shadow-soft hover:shadow-glow transition-shadow animate-scale-in">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -263,28 +265,9 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="shadow-soft hover:shadow-glow transition-shadow animate-scale-in" style={{
-          animationDelay: "0.1s"
-        }}>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Calendar className="w-5 h-5 text-secondary" />
-                <span>This Week</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold text-secondary mb-2">
-                {upcomingEvents.length}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Important dates
-              </p>
-            </CardContent>
-          </Card>
-
           <Card 
             className="shadow-soft hover:shadow-glow transition-shadow animate-scale-in cursor-pointer" 
-            style={{ animationDelay: "0.2s" }}
+            style={{ animationDelay: "0.1s" }}
             onClick={() => isPro && setShowMomentsDialog(true)}
           >
             <CardHeader>
@@ -371,7 +354,7 @@ const Dashboard = () => {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-6">
                 {partners.length === 0 ? <div className="text-center py-8">
                     <Heart className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
                     <p className="text-muted-foreground mb-4">
@@ -393,55 +376,87 @@ const Dashboard = () => {
                         View All Cherished
                       </Button>}
                   </div>}
+
+                {/* This Week subsection */}
+                {partners.length > 0 && (
+                  <div className="pt-6 border-t">
+                    <div className="mb-3">
+                      <h3 className="font-semibold flex items-center space-x-2">
+                        <Calendar className="w-4 h-4 text-secondary" />
+                        <span>This Week</span>
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-1">Important dates coming up</p>
+                    </div>
+                    {upcomingEvents.length === 0 ? (
+                      <div className="text-center py-4">
+                        <Calendar className="w-8 h-8 mx-auto mb-2 text-muted-foreground opacity-50" />
+                        <p className="text-sm text-muted-foreground">
+                          No upcoming events this week
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2" data-testid="upcoming-list">
+                        {upcomingEvents.slice(0, 3).map((event, index) => (
+                          <div key={`${event.id}-${event.displayDate}-${index}`} className="flex items-start space-x-2 p-2 rounded-lg hover:bg-muted transition-colors text-sm">
+                            <Calendar className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">
+                                {event.title}
+                                {event.is_recurring && <span className="ml-1 text-xs px-1.5 py-0.5 bg-primary/10 text-primary rounded-full">
+                                    Recurring
+                                  </span>}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {format(parseYMDToLocalDate(event.displayDate), "EEE, MMM d")}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            <Card className="shadow-soft animate-fade-in" style={{
-            animationDelay: "0.1s"
-          }}>
-              <CardHeader>
-                <CardTitle>This Week's Highlights</CardTitle>
-                <CardDescription>Important dates coming up</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {upcomingEvents.length === 0 ? <div className="text-center py-8">
-                    <Calendar className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                    <p className="text-muted-foreground">
-                      No upcoming events this week
-                    </p>
-                  </div> : <div className="space-y-3" data-testid="upcoming-list">
-                    {upcomingEvents.map((event, index) => <div key={`${event.id}-${event.displayDate}-${index}`} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-muted transition-colors">
-                        <Calendar className="w-5 h-5 text-primary mt-0.5" />
-                        <div className="flex-1">
-                          <p className="font-medium">
-                            {event.title}
-                            {event.partnerName && ` (${event.partnerName})`}
-                            {event.is_recurring && <span className="ml-2 text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">
-                                Recurring
-                              </span>}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {format(parseYMDToLocalDate(event.displayDate), "EEEE, MMMM d")}
-                            {event.partnerName && ` • ${event.partnerName}`}
-                          </p>
-                        </div>
-                      </div>)}
-                  </div>}
-              </CardContent>
-            </Card>
+            <ActivitySuggestion 
+              partnerId={partners[0]?.id}
+              onOpenClaire={(message) => setClairePrefillMessage(message)}
+              hasPartners={partners.length > 0}
+              onAddPartner={() => navigate("/partner/new")}
+              isPro={isPro}
+            />
           </div>
 
           {/* Right Column */}
           <div className="space-y-6">
+            <Card className="shadow-soft animate-fade-in" style={{
+            animationDelay: "0.2s"
+          }}>
+              <CardHeader>
+                <CardTitle>All Events</CardTitle>
+                <CardDescription>Your full relationship calendar</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AllEventsCalendar />
+              </CardContent>
+            </Card>
+
             {isPro ? (
-              <div className="h-[800px]">
-                <ClaireChat compact={isMobile} />
+              <div className="h-[800px] animate-fade-in" style={{
+            animationDelay: "0.3s"
+          }}>
+                <ClaireChat compact={isMobile} prefillMessage={clairePrefillMessage} partnerId={partners[0]?.id} />
               </div>
             ) : (
-              <UpgradePrompt 
-                featureName="AI Chat with Claire"
-                description="Get personalized relationship advice and gift ideas from your AI companion, Claire."
-              />
+              <Card className="shadow-soft animate-fade-in" style={{
+            animationDelay: "0.3s"
+          }}>
+                <UpgradePrompt 
+                  featureName="AI Chat with Claire"
+                  description="Get personalized relationship advice and gift ideas from your AI companion, Claire."
+                />
+              </Card>
             )}
           </div>
         </div>
