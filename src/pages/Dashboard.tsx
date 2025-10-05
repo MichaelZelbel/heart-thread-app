@@ -247,7 +247,7 @@ const Dashboard = () => {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 mb-8">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
           <Card className="shadow-soft hover:shadow-glow transition-shadow animate-scale-in">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -265,9 +265,19 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
+          <div className="animate-scale-in" style={{ animationDelay: "0.1s" }}>
+            <ActivitySuggestion 
+              partnerId={partners[0]?.id}
+              onOpenClaire={(message) => setClairePrefillMessage(message)}
+              hasPartners={partners.length > 0}
+              onAddPartner={() => navigate("/partner/new")}
+              isPro={isPro}
+            />
+          </div>
+
           <Card 
             className="shadow-soft hover:shadow-glow transition-shadow animate-scale-in cursor-pointer" 
-            style={{ animationDelay: "0.1s" }}
+            style={{ animationDelay: "0.2s" }}
             onClick={() => isPro && setShowMomentsDialog(true)}
           >
             <CardHeader>
@@ -418,14 +428,6 @@ const Dashboard = () => {
                 )}
               </CardContent>
             </Card>
-
-            <ActivitySuggestion 
-              partnerId={partners[0]?.id}
-              onOpenClaire={(message) => setClairePrefillMessage(message)}
-              hasPartners={partners.length > 0}
-              onAddPartner={() => navigate("/partner/new")}
-              isPro={isPro}
-            />
           </div>
 
           {/* Right Column */}
