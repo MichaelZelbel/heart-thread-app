@@ -10,6 +10,7 @@ import PartnerWizard from "./pages/PartnerWizard";
 import PartnerDetail from "./pages/PartnerDetail";
 import Archive from "./pages/Archive";
 import Account from "./pages/Account";
+import SelfProfile from "./pages/SelfProfile";
 import Pricing from "./pages/Pricing";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import NotFound from "./pages/NotFound";
@@ -34,6 +35,7 @@ const App = () => (
               <Route path="/partner/:id" element={<PartnerDetail />} />
               <Route path="/archive" element={<Archive />} />
               <Route path="/account" element={<Account />} />
+              <Route path="/account/profile" element={<SelfProfile />} />
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/payment-success" element={<PaymentSuccess />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

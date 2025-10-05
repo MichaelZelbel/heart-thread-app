@@ -354,24 +354,14 @@ const Dashboard = () => {
           <div className="space-y-6">
             <Card className="shadow-soft animate-fade-in">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Your Cherished</CardTitle>
-                    <CardDescription>People who make your heart full</CardDescription>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button onClick={() => navigate("/partner/new")} size="sm" data-testid="add-partner-button">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Cherished
-                    </Button>
-                    <Button onClick={() => navigate("/archive")} size="sm" variant="outline">
-                      Archive
-                    </Button>
-                  </div>
+                <div>
+                  <CardTitle>Your Cherished</CardTitle>
+                  <CardDescription>People who make your heart full</CardDescription>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {partners.length === 0 ? <div className="text-center py-8">
+              <CardContent className="space-y-6 relative">
+                {partners.length === 0 ? (
+                  <div className="text-center py-8">
                     <Heart className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
                     <p className="text-muted-foreground mb-4">
                       No cherished added yet. Start building your connection map!
@@ -379,19 +369,69 @@ const Dashboard = () => {
                     <Button onClick={() => navigate("/partner/new")} variant="outline">
                       Add Your First Cherished
                     </Button>
-                  </div> : <div className="space-y-3">
-                    {partners.map(partner => <div key={partner.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer" onClick={() => navigate(`/partner/${partner.id}`)}>
-                        <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold">
-                          {partner.name.charAt(0).toUpperCase()}
+                  </div>
+                ) : (
+                  <>
+                    {/* You chip - top-right on desktop, below header on mobile */}
+                    <div 
+                      className="md:absolute md:top-0 md:right-0 flex items-center justify-end md:justify-start space-x-2 p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer mb-3 md:mb-0"
+                      onClick={() => navigate("/account/profile")}
+                      role="button"
+                      aria-label="Open your profile"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          navigate("/account/profile");
+                        }
+                      }}
+                    >
+                      <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold">
+                        {profile?.display_name?.charAt(0).toUpperCase() || "Y"}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">
+                          {profile?.display_name || "You"} (You)
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Cherished list */}
+                    <div className="space-y-3 md:pr-32">
+                      {partners.map(partner => (
+                        <div 
+                          key={partner.id} 
+                          className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer" 
+                          onClick={() => navigate(`/partner/${partner.id}`)}
+                        >
+                          <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold">
+                            {partner.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium">{partner.name}</p>
+                          </div>
                         </div>
-                        <div className="flex-1">
-                          <p className="font-medium">{partner.name}</p>
-                        </div>
-                      </div>)}
-                    {partners.length >= 5 && <Button variant="ghost" className="w-full" onClick={() => navigate("/partners")}>
+                      ))}
+                    </div>
+
+                    {/* Action buttons - bottom-right */}
+                    <div className="flex gap-2 justify-end pt-2">
+                      <Button onClick={() => navigate("/partner/new")} size="sm" data-testid="add-partner-button">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Cherished
+                      </Button>
+                      <Button onClick={() => navigate("/archive")} size="sm" variant="outline">
+                        Archive
+                      </Button>
+                    </div>
+
+                    {partners.length >= 5 && (
+                      <Button variant="ghost" className="w-full" onClick={() => navigate("/partners")}>
                         View All Cherished
-                      </Button>}
-                  </div>}
+                      </Button>
+                    )}
+                  </>
+                )}
               </CardContent>
             </Card>
 
