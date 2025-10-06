@@ -7,10 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { ArrowRight, ArrowLeft, Sparkles, Loader2, Plus, X } from "lucide-react";
+import { ArrowRight, ArrowLeft, Sparkles, Loader2, Plus, X, Eye, EyeOff } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LoveLanguageHeartRatings } from "./LoveLanguageHeartRatings";
 import cherishlyLogo from "@/assets/cherishly-logo.png";
+import { PasswordStrengthIndicator } from "./PasswordStrengthIndicator";
+import { validateEmail, passwordSchema, isTestUser } from "@/lib/auth-validation";
 
 interface CherishWizardProps {
   onClose: () => void;
@@ -48,6 +50,9 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailError, setEmailError] = useState<string>("");
+  const [passwordError, setPasswordError] = useState<string>("");
   const navigate = useNavigate();
 
   const [wizardData, setWizardData] = useState<WizardData>(() => {
@@ -87,6 +92,32 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
       toast.error("Please enter a nickname");
       return;
     }
+
+    // Validate step 4 (authentication) before proceeding
+    if (step === 4 && !isLoggedIn) {
+      setEmailError("");
+      setPasswordError("");
+
+      if (!wizardData.email || !wizardData.password || !wizardData.displayName) {
+        toast.error("Please fill in all fields");
+        return;
+      }
+
+      // Validate email
+      const emailValidation = validateEmail(wizardData.email);
+      if (!emailValidation.valid) {
+        setEmailError(emailValidation.error || "Invalid email");
+        return;
+      }
+
+      // Validate password
+      try {
+        passwordSchema.parse(wizardData.password);
+      } catch (error: any) {
+        setPasswordError(error.errors[0]?.message || "Password does not meet requirements");
+        return;
+      }
+    }
     
     if (step < totalSteps) {
       setStep(step + 1);
@@ -110,6 +141,9 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
   const handleComplete = async () => {
     setLoading(true);
     try {
+      let user = null;
+      let isNewUser = false;
+
       // If not logged in, handle signup first
       if (!isLoggedIn && wizardData.email && wizardData.password) {
         const { error: signUpError, data } = await supabase.auth.signUp({
@@ -124,17 +158,31 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
         });
 
         if (signUpError) throw signUpError;
+        user = data.user;
+        isNewUser = true;
         
-        // Wait a moment for auth to settle
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Wait for auth to settle
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      } else {
+        // Get current user for logged-in users
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        user = currentUser;
       }
-
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
         toast.error("Authentication required");
         setLoading(false);
+        return;
+      }
+
+      // For new users who need email verification, save wizard data and redirect
+      if (isNewUser && !isTestUser(wizardData.email || "")) {
+        // Save wizard data to localStorage for completion after email verification
+        localStorage.setItem("pendingCherishData", JSON.stringify(wizardData));
+        localStorage.removeItem("cherishWizardData");
+        
+        toast.info("Please check your email to verify your account");
+        navigate("/email-verification-pending");
         return;
       }
 
@@ -199,6 +247,7 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
 
       // Clear localStorage
       localStorage.removeItem("cherishWizardData");
+      localStorage.removeItem("pendingCherishData");
 
       // Show success screen
       setShowSuccess(true);
@@ -442,6 +491,7 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
                     placeholder="How should we greet you?"
                     value={wizardData.displayName || ""}
                     onChange={(e) => updateWizardData({ displayName: e.target.value })}
+                    required
                   />
                 </div>
 
@@ -452,22 +502,51 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
                     type="email"
                     placeholder="your@email.com"
                     value={wizardData.email || ""}
-                    onChange={(e) => updateWizardData({ email: e.target.value })}
+                    onChange={(e) => {
+                      updateWizardData({ email: e.target.value });
+                      setEmailError("");
+                    }}
                     required
+                    className={emailError ? "border-destructive" : ""}
                   />
+                  {emailError && (
+                    <p className="text-sm text-destructive">{emailError}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={wizardData.password || ""}
-                    onChange={(e) => updateWizardData({ password: e.target.value })}
-                    required
-                    minLength={6}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={wizardData.password || ""}
+                      onChange={(e) => {
+                        updateWizardData({ password: e.target.value });
+                        setPasswordError("");
+                      }}
+                      required
+                      className={passwordError ? "border-destructive pr-10" : "pr-10"}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
+                  {passwordError && (
+                    <p className="text-sm text-destructive">{passwordError}</p>
+                  )}
+                  <PasswordStrengthIndicator password={wizardData.password || ""} />
                 </div>
 
                 <div className="text-center text-sm text-muted-foreground">
