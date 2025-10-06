@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useNavigate } from 'react-router-dom';
+import michaelAvatar from '@/assets/michael-avatar.png';
 
 const Pricing = () => {
   const { toast } = useToast();
@@ -222,9 +223,12 @@ const Pricing = () => {
         <div className="max-w-3xl mx-auto mb-16 bg-gradient-to-r from-primary/5 to-secondary/5 rounded-2xl p-8 border border-primary/10">
           <div className="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
             <div className="flex-shrink-0">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-3xl border-4 border-primary/20" style={{ boxShadow: '0 0 20px hsl(340 75% 55% / 0.3)' }}>
-                💗
-              </div>
+              <img 
+                src={michaelAvatar} 
+                alt="Michael Zelbel, Founder of Cherishly" 
+                className="w-16 h-16 rounded-full border-4 border-primary/20 object-cover"
+                style={{ boxShadow: '0 0 20px hsl(340 75% 55% / 0.3)' }}
+              />
             </div>
             <div className="flex-1">
               <p className="text-base md:text-lg italic text-foreground/90 mb-2">
