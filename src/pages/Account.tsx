@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
-import { ArrowLeft, Mail, Lock, Bell, Globe, Sparkles, CreditCard, Loader2 } from "lucide-react";
+import { ArrowLeft, Mail, Lock, Bell, Globe, Sparkles, CreditCard, Loader2, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const COMMON_TIMEZONES = [
@@ -312,6 +312,30 @@ export default function Account() {
         <h1 className="text-3xl font-bold mb-8">Account Settings</h1>
 
         <div className="space-y-6">
+          {/* Admin Dashboard Link - Only visible to admins */}
+          {isAdmin && (
+            <Card className="border-red-500/20 bg-gradient-to-br from-red-50/50 to-pink-50/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-600">
+                  <Shield className="w-5 h-5" />
+                  Admin Access
+                </CardTitle>
+                <CardDescription>
+                  Manage users and system settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  onClick={() => navigate("/admin")}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  Open Admin Dashboard
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Profile Information */}
           <Card>
             <CardHeader>

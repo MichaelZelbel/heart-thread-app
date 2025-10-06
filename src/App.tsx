@@ -14,6 +14,7 @@ import SelfProfile from "./pages/SelfProfile";
 import Pricing from "./pages/Pricing";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import EmailVerificationPending from "./pages/EmailVerificationPending";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import Footer from "./components/Footer";
 import CookieConsent from "./components/CookieConsent";
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/archive" element={<Archive />} />
               <Route path="/account" element={<Account />} />
               <Route path="/account/profile" element={<SelfProfile />} />
+              <Route path="/admin" element={<Admin />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/payment-success" element={<PaymentSuccess />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
