@@ -8,9 +8,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { ArrowLeft, Search, Shield } from "lucide-react";
+import { ArrowLeft, Search, Shield, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type UserRole = 'free' | 'pro' | 'pro_gift' | 'admin';
 
@@ -32,6 +43,9 @@ export default function Admin() {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (!roleLoading && !isAdmin) {
@@ -50,37 +64,11 @@ export default function Admin() {
     try {
       setLoading(true);
       
-      // Fetch all profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (profilesError) throw profilesError;
-
-      // Fetch all user roles
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role')
-        .order('role', { ascending: true });
-
-      if (rolesError) throw rolesError;
-
-      // Create a map of user roles (taking the first/highest role)
-      const roleMap = new Map<string, UserRole>();
-      roles?.forEach(r => {
-        if (!roleMap.has(r.user_id)) {
-          roleMap.set(r.user_id, r.role as UserRole);
-        }
-      });
-
-      // Combine profiles with roles
-      const usersWithRoles: UserWithRole[] = (profiles || []).map(profile => ({
-        ...profile,
-        role: roleMap.get(profile.id) || 'free'
-      }));
-
-      setUsers(usersWithRoles);
+      const { data, error } = await supabase.functions.invoke('admin-get-users');
+      
+      if (error) throw error;
+      
+      setUsers(data.users || []);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast.error("Failed to load users");
@@ -129,6 +117,59 @@ export default function Admin() {
       console.error('Error updating email notifications:', error);
       toast.error("Failed to update email notifications");
     }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      const { error } = await supabase.functions.invoke('admin-delete-users', {
+        body: { userIds: [userId] }
+      });
+
+      if (error) throw error;
+
+      toast.success("User deleted successfully");
+      fetchUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error("Failed to delete user");
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedUsers.size === 0) return;
+
+    try {
+      const { error } = await supabase.functions.invoke('admin-delete-users', {
+        body: { userIds: Array.from(selectedUsers) }
+      });
+
+      if (error) throw error;
+
+      toast.success(`Successfully deleted ${selectedUsers.size} user(s)`);
+      setSelectedUsers(new Set());
+      fetchUsers();
+    } catch (error) {
+      console.error('Error deleting users:', error);
+      toast.error("Failed to delete users");
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedUsers.size === filteredUsers.length) {
+      setSelectedUsers(new Set());
+    } else {
+      setSelectedUsers(new Set(filteredUsers.map(u => u.id)));
+    }
+  };
+
+  const toggleSelectUser = (userId: string) => {
+    const newSelected = new Set(selectedUsers);
+    if (newSelected.has(userId)) {
+      newSelected.delete(userId);
+    } else {
+      newSelected.add(userId);
+    }
+    setSelectedUsers(newSelected);
   };
 
   const filteredUsers = users.filter(user => 
@@ -201,15 +242,26 @@ export default function Admin() {
               View and manage user profiles and roles
             </CardDescription>
             
-            {/* Search */}
-            <div className="relative mt-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+            {/* Search and Bulk Actions */}
+            <div className="flex gap-4 mt-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name or email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              {selectedUsers.size > 0 && (
+                <Button
+                  variant="destructive"
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete {selectedUsers.size} user(s)
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent>
@@ -217,23 +269,36 @@ export default function Admin() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={selectedUsers.size === filteredUsers.length && filteredUsers.length > 0}
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </TableHead>
                     <TableHead className="font-semibold">User</TableHead>
                     <TableHead className="font-semibold">Email</TableHead>
                     <TableHead className="font-semibold">Role</TableHead>
                     <TableHead className="font-semibold">Email Notifications</TableHead>
                     <TableHead className="font-semibold">Joined</TableHead>
+                    <TableHead className="font-semibold w-12">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                         {searchTerm ? "No users found matching your search" : "No users found"}
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredUsers.map((user) => (
                       <TableRow key={user.id} className="hover:bg-muted/30">
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedUsers.has(user.id)}
+                            onCheckedChange={() => toggleSelectUser(user.id)}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">{user.display_name}</TableCell>
                         <TableCell className="text-muted-foreground">
                           {user.email || "N/A"}
@@ -270,6 +335,18 @@ export default function Admin() {
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {new Date(user.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setUserToDelete(user.id);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))
@@ -313,6 +390,43 @@ export default function Admin() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {userToDelete
+                  ? "This will permanently delete this user and all their data. This action cannot be undone."
+                  : `This will permanently delete ${selectedUsers.size} user(s) and all their data. This action cannot be undone.`
+                }
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => {
+                setUserToDelete(null);
+                setDeleteDialogOpen(false);
+              }}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (userToDelete) {
+                    handleDeleteUser(userToDelete);
+                    setUserToDelete(null);
+                  } else {
+                    handleBulkDelete();
+                  }
+                  setDeleteDialogOpen(false);
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
