@@ -502,7 +502,13 @@ const Dashboard = () => {
             <DialogHeader>
               <DialogTitle>All Moments</DialogTitle>
             </DialogHeader>
-            <MomentManager showPartnerColumn />
+            <MomentManager 
+              showPartnerColumn 
+              onMomentChange={async () => {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) await loadMoments(session.user.id);
+              }}
+            />
           </DialogContent>
         </Dialog>
       )}

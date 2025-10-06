@@ -31,9 +31,10 @@ interface MomentManagerProps {
   partnerId?: string;
   partnerName?: string;
   showPartnerColumn?: boolean;
+  onMomentChange?: () => void;
 }
 
-export const MomentManager = ({ partnerId, partnerName, showPartnerColumn = false }: MomentManagerProps) => {
+export const MomentManager = ({ partnerId, partnerName, showPartnerColumn = false, onMomentChange }: MomentManagerProps) => {
   const [moments, setMoments] = useState<Moment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
@@ -146,6 +147,7 @@ export const MomentManager = ({ partnerId, partnerName, showPartnerColumn = fals
       } else {
         toast.success("Moment updated");
         loadMoments();
+        onMomentChange?.();
         handleCloseDialog();
       }
     } else {
@@ -159,6 +161,7 @@ export const MomentManager = ({ partnerId, partnerName, showPartnerColumn = fals
       } else {
         toast.success("Moment created");
         loadMoments();
+        onMomentChange?.();
         handleCloseDialog();
       }
     }
@@ -178,6 +181,7 @@ export const MomentManager = ({ partnerId, partnerName, showPartnerColumn = fals
     } else {
       toast.success("Moment deleted");
       loadMoments();
+      onMomentChange?.();
     }
   };
 
