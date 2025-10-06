@@ -353,12 +353,21 @@ const Dashboard = () => {
           {/* Left Column */}
           <div className="space-y-6">
             <Card className="shadow-soft animate-fade-in">
-              <CardHeader>
-                <div>
-                  <CardTitle>Your Cherished</CardTitle>
-                  <CardDescription>People who make your heart full</CardDescription>
-                </div>
-              </CardHeader>
+                <CardHeader className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Your Cherished</CardTitle>
+                    <CardDescription>People who make your heart full</CardDescription>
+                  </div>
+                  <div className="hidden md:flex gap-2">
+                    <Button onClick={() => navigate("/partner/new")} size="sm" data-testid="add-partner-button">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Cherished
+                    </Button>
+                    <Button onClick={() => navigate("/archive")} size="sm" variant="outline">
+                      Archive
+                    </Button>
+                  </div>
+                </CardHeader>
               <CardContent className="space-y-6 relative">
                 {partners.length === 0 ? (
                   <div className="text-center py-8">
@@ -402,8 +411,7 @@ const Dashboard = () => {
                         <div 
                           key={partner.id} 
                           className={cn(
-                            "flex w-full items-center relative",
-                            index === 0 && "md:pr-56" // Reserve space for the You chip on first row
+                            "flex w-full items-center",
                           )}
                         >
                           <div 
@@ -418,20 +426,22 @@ const Dashboard = () => {
                             </div>
                           </div>
                           
-                          {/* Action buttons on last row */}
-                          {index === partners.length - 1 && (
-                            <div className="hidden md:flex gap-2 shrink-0 ml-auto pr-3">
-                              <Button onClick={() => navigate("/partner/new")} size="sm" data-testid="add-partner-button">
-                                <Plus className="w-4 h-4 mr-2" />
-                                Add Cherished
-                              </Button>
-                              <Button onClick={() => navigate("/archive")} size="sm" variant="outline">
-                                Archive
-                              </Button>
-                            </div>
-                          )}
+                          {/* Header now contains the action buttons; none here */}
                         </div>
                       ))}
+
+                      {/* Current user row at bottom */}
+                      <div 
+                        className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer"
+                        onClick={() => navigate("/account/profile")}
+                      >
+                        <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold shrink-0">
+                          {profile?.display_name?.charAt(0).toUpperCase() || "Y"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium">{profile?.display_name || "You"} (You)</p>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Mobile buttons - below list */}
