@@ -381,29 +381,7 @@ const Dashboard = () => {
                   </div>
                 ) : (
                   <>
-                    {/* You chip - top-right on desktop, below header on mobile */}
-                    <div 
-                      className="md:absolute md:top-3 md:right-6 flex items-center justify-end md:justify-start space-x-2 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer mb-3 md:mb-0 z-20"
-                      onClick={() => navigate("/account/profile")}
-                      role="button"
-                      aria-label="Open your profile"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          navigate("/account/profile");
-                        }
-                      }}
-                    >
-                      <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold">
-                        {profile?.display_name?.charAt(0).toUpperCase() || "Y"}
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm whitespace-nowrap">
-                          {profile?.display_name || "You"} (You)
-                        </p>
-                      </div>
-                    </div>
+                    {/* Current user row will be shown at the bottom of the list */}
 
                     {/* Cherished list */}
                     <div className="space-y-3">
@@ -444,16 +422,6 @@ const Dashboard = () => {
                       </div>
                     </div>
 
-                    {/* Mobile buttons - below list */}
-                    <div className="flex md:hidden gap-2 justify-end">
-                      <Button onClick={() => navigate("/partner/new")} size="sm" data-testid="add-partner-button-mobile">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Cherished
-                      </Button>
-                      <Button onClick={() => navigate("/archive")} size="sm" variant="outline">
-                        Archive
-                      </Button>
-                    </div>
 
                     {partners.length >= 5 && (
                       <Button variant="ghost" className="w-full" onClick={() => navigate("/partners")}>
