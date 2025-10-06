@@ -72,9 +72,10 @@ const EmailVerificationPending = () => {
   };
 
   const completePendingCherish = async (user: any, wizardData: any) => {
+    let loadingToast: string | number | undefined;
     try {
       setChecking(true);
-      toast.loading("Completing your profile...");
+      loadingToast = toast.loading("Completing your profile...");
       
       // Clear pending data immediately to prevent duplicate processing
       localStorage.removeItem("pendingCherishData");
@@ -109,6 +110,8 @@ const EmailVerificationPending = () => {
 
       if (existingPartner) {
         // Partner already exists, just navigate to dashboard
+        if (loadingToast) toast.dismiss(loadingToast);
+        setChecking(false);
         toast.success("Welcome back to Cherishly 💕");
         navigate("/dashboard");
         return;
@@ -192,10 +195,14 @@ const EmailVerificationPending = () => {
         );
       }
 
+      if (loadingToast) toast.dismiss(loadingToast);
+      setChecking(false);
       toast.success("Profile complete! Welcome to Cherishly 💕");
       navigate("/dashboard");
     } catch (error: any) {
       console.error("Error completing profile:", error);
+      if (loadingToast) toast.dismiss(loadingToast);
+      setChecking(false);
       toast.error("Failed to complete profile. Please try again.");
       navigate("/dashboard");
     }
