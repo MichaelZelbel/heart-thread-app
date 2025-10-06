@@ -98,12 +98,12 @@ const Pricing = () => {
   ];
 
   const proFeatures = [
-    'All Free features',
-    '💬 AI chats with Claire — your gentle relationship companion',
-    '💌 Email reminders for birthdays, anniversaries & special dates',
-    '📓 Full "Moments Log" to capture your memories',
-    '💖 Advanced details for a deeper connection',
-    '🎀 Priority support when love tech needs a hand'
+    { text: 'All Free features', icon: null },
+    { text: 'AI chats with Claire — your gentle relationship companion', icon: '💬' },
+    { text: 'Email reminders for birthdays, anniversaries & special dates', icon: '💌' },
+    { text: 'Full "Moments Log" to capture your memories', icon: '📓' },
+    { text: 'Advanced details for a deeper connection', icon: '💖' },
+    { text: 'Priority support when love tech needs a hand', icon: '🎀' }
   ];
 
   return (
@@ -111,8 +111,12 @@ const Pricing = () => {
       <div className="container mx-auto px-4 py-16">
         {/* Hero Section */}
         <div className="text-center mb-20 space-y-6">
-          <div className="text-5xl mb-4">💕</div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent leading-tight pb-2">
+          <div className="flex justify-center gap-4 text-4xl mb-6">
+            <span className="animate-pulse">💕</span>
+            <span className="animate-pulse" style={{ animationDelay: '0.5s' }}>💕</span>
+            <span className="animate-pulse" style={{ animationDelay: '1s' }}>💕</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent leading-tight pb-4">
             Choose the plan that feels right for your heart 💕
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
@@ -123,7 +127,7 @@ const Pricing = () => {
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-16">
           {/* Free Plan */}
-          <Card className="relative border-2 hover:shadow-lg hover:border-primary/30 transition-all p-6" style={{ boxShadow: 'var(--shadow-soft)' }}>
+          <Card className="relative border-2 hover:shadow-lg hover:border-primary/30 transition-all p-6 animate-fade-in" style={{ boxShadow: 'var(--shadow-soft)', animationDelay: '0.1s' }}>
             <CardHeader className="space-y-3">
               <CardTitle className="text-2xl font-semibold">Free</CardTitle>
               <CardDescription className="text-base">Perfect for getting started</CardDescription>
@@ -153,10 +157,10 @@ const Pricing = () => {
           </Card>
 
           {/* Pro Plan */}
-          <Card className="relative border-2 border-primary p-6 transition-all hover:shadow-2xl" style={{ boxShadow: '0 8px 30px -4px hsl(340 75% 55% / 0.2)' }}>
+          <Card className="relative border-2 border-primary p-6 transition-all hover:shadow-2xl animate-fade-in" style={{ boxShadow: '0 8px 30px -4px hsl(340 75% 55% / 0.2)', animationDelay: '0.2s' }}>
             <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-              <Badge className="bg-gradient-to-r from-primary to-primary/80 px-4 py-1.5 rounded-full shadow-md">
-                🌸 Special Launch Offer
+              <Badge className="bg-gradient-to-r from-primary/20 to-secondary/20 text-primary border border-primary/30 px-5 py-1.5 rounded-full shadow-sm backdrop-blur-sm">
+                ✨ Special launch offer
               </Badge>
             </div>
             <CardHeader className="pt-8 space-y-3">
@@ -178,7 +182,10 @@ const Pricing = () => {
                 {proFeatures.map((feature, index) => (
                   <li key={index} className="flex items-start gap-3">
                     <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span className="text-sm font-medium leading-relaxed">{feature}</span>
+                    <span className="text-sm font-medium leading-relaxed flex-1">{feature.text}</span>
+                    {feature.icon && (
+                      <span className="text-lg flex-shrink-0 opacity-70">{feature.icon}</span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -200,18 +207,24 @@ const Pricing = () => {
                 <Button 
                   onClick={handleStripeCheckout}
                   disabled={isLoadingStripe || roleLoading}
-                  className="w-full gap-2 hover:scale-105 transition-transform" 
+                  className="w-full gap-2 hover:scale-105 transition-all animate-pulse group relative overflow-hidden" 
                   size="lg"
+                  style={{ 
+                    animationDuration: '3s',
+                    animationIterationCount: 'infinite'
+                  }}
+                  title="Make your love stories even sweeter 💕"
                 >
+                  <span className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   {isLoadingStripe ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Processing...
+                      <Loader2 className="w-4 h-4 animate-spin relative z-10" />
+                      <span className="relative z-10">Processing...</span>
                     </>
                   ) : (
-                    <>
+                    <span className="relative z-10 group-hover:scale-105 transition-transform">
                       Upgrade to Pro 💞
-                    </>
+                    </span>
                   )}
                 </Button>
               )}
