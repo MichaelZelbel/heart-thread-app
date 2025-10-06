@@ -13,6 +13,7 @@ import Account from "./pages/Account";
 import SelfProfile from "./pages/SelfProfile";
 import Pricing from "./pages/Pricing";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import EmailVerificationPending from "./pages/EmailVerificationPending";
 import NotFound from "./pages/NotFound";
 import Footer from "./components/Footer";
 import CookieConsent from "./components/CookieConsent";
@@ -30,14 +31,15 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/email-verification-pending" element={<EmailVerificationPending />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/partner/new" element={<PartnerWizard />} />
               <Route path="/partner/:id" element={<PartnerDetail />} />
               <Route path="/archive" element={<Archive />} />
               <Route path="/account" element={<Account />} />
               <Route path="/account/profile" element={<SelfProfile />} />
-        <Route path="/pricing" element={<Pricing />} />
-        <Route path="/payment-success" element={<PaymentSuccess />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/payment-success" element={<PaymentSuccess />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

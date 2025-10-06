@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { isTestUser } from "@/lib/auth-validation";
 
 import { MomentManager } from "@/components/MomentManager";
 import { ClaireChat } from "@/components/ClaireChat";
@@ -67,18 +68,22 @@ const Dashboard = () => {
     checkAuth();
   }, []);
   const checkAuth = async () => {
-    const {
-      data: {
-        session
-      }
-    } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
+    
     if (!session) {
       navigate("/auth");
       return;
     }
+
+    // Check email verification (except for test users)
+    if (!session.user.email_confirmed_at && !isTestUser(session.user.email || "")) {
+      navigate("/email-verification-pending");
+      return;
+    }
+
     await Promise.all([
-      loadProfile(session.user.id), 
-      loadPartners(session.user.id), 
+      loadProfile(session.user.id),
+      loadPartners(session.user.id),
       loadUpcomingEvents(session.user.id),
       loadMoments(session.user.id)
     ]);

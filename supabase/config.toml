@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.suggest-activity]
 verify_jwt = false
+
+[functions.validate-email-domain]
+verify_jwt = false
