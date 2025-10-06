@@ -159,7 +159,7 @@ const Pricing = () => {
           {/* Pro Plan */}
           <Card className="relative border-2 border-primary p-6 transition-all hover:shadow-2xl animate-fade-in" style={{ boxShadow: '0 8px 30px -4px hsl(340 75% 55% / 0.2)', animationDelay: '0.2s' }}>
             <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-              <Badge className="bg-gradient-to-r from-primary/20 to-secondary/20 text-primary border border-primary/30 px-5 py-1.5 rounded-full shadow-sm backdrop-blur-sm">
+              <Badge className="bg-gradient-to-r from-primary/90 to-secondary/80 text-primary-foreground border border-primary/20 px-5 py-1.5 rounded-full shadow-md">
                 ✨ Special launch offer
               </Badge>
             </div>
