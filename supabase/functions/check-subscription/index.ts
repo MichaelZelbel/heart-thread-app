@@ -40,19 +40,19 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    // Check if user has a pro_gift role - if so, skip Stripe check
+    // Check if user has a pro_gift or admin role - if so, skip Stripe check
     const { data: existingRole } = await supabaseClient
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .single();
     
-    if (existingRole?.role === 'pro_gift') {
-      logStep("User has pro_gift role, skipping Stripe check");
+    if (existingRole?.role === 'pro_gift' || existingRole?.role === 'admin') {
+      logStep(`User has ${existingRole.role} role, skipping Stripe check`);
       return new Response(JSON.stringify({ 
         subscribed: true,
-        role: 'pro_gift',
-        is_gifted: true
+        role: existingRole.role,
+        is_protected: true
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
