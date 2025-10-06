@@ -68,15 +68,42 @@ const Dashboard = () => {
     checkAuth();
   }, []);
   const checkAuth = async () => {
+    setLoading(true);
+
+    // If returning from OAuth, exchange the code for a session
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get('code');
+    const error_description = url.searchParams.get('error_description');
+
+    if (error_description) {
+      toast.error(decodeURIComponent(error_description));
+    }
+
+    if (code) {
+      try {
+        await supabase.auth.exchangeCodeForSession(code);
+        // Clean URL params after successful exchange
+        url.searchParams.delete('code');
+        url.searchParams.delete('state');
+        url.searchParams.delete('error');
+        url.searchParams.delete('error_description');
+        window.history.replaceState({}, document.title, url.pathname + (url.search ? `?${url.searchParams.toString()}` : ""));
+      } catch (e: any) {
+        toast.error(e?.message || 'Failed to complete sign-in');
+      }
+    }
+
     const { data: { session } } = await supabase.auth.getSession();
-    
+
     if (!session) {
+      setLoading(false);
       navigate("/auth");
       return;
     }
 
     // Check email verification (except for test users)
     if (!session.user.email_confirmed_at && !isTestUser(session.user.email || "")) {
+      setLoading(false);
       navigate("/email-verification-pending");
       return;
     }
