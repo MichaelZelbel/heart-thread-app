@@ -92,6 +92,30 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
+    // Special handling for Birthday events - ensure only one exists and sync with partner birthdate
+    if (eventType === "Birthday") {
+      // Check if another Birthday event already exists (only when creating new)
+      if (!editingEvent) {
+        const { data: existingBirthday } = await supabase
+          .from("events")
+          .select("id")
+          .eq("partner_id", partnerId)
+          .eq("event_type", "Birthday")
+          .maybeSingle();
+
+        if (existingBirthday) {
+          toast.error("A birthday already exists for this person. Please edit the existing one.");
+          return;
+        }
+      }
+
+      // Update partner's birthdate field
+      await supabase
+        .from("partners")
+        .update({ birthdate: parsedDate })
+        .eq("id", partnerId);
+    }
+
     const eventData = {
       title: title.trim(),
       event_date: parsedDate,

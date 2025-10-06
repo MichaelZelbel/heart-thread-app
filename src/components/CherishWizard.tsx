@@ -186,6 +186,23 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
         return;
       }
 
+      // Determine birthdate if creating a Birthday event
+      let birthdate = null;
+      if (wizardData.specialDay.day && wizardData.specialDay.month) {
+        const eventType = wizardData.specialDay.eventType === "Custom..." 
+          ? wizardData.specialDay.customEventType 
+          : wizardData.specialDay.eventType;
+        
+        if (eventType === "Birthday") {
+          const eventDate = new Date(
+            wizardData.specialDay.year || new Date().getFullYear(),
+            wizardData.specialDay.month,
+            wizardData.specialDay.day
+          );
+          birthdate = eventDate.toISOString().split('T')[0];
+        }
+      }
+
       // Create partner profile
       const { data: partner, error: partnerError } = await supabase
         .from("partners")
@@ -197,6 +214,7 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
           love_language_quality: wizardData.loveLanguages.quality,
           love_language_acts: wizardData.loveLanguages.acts,
           love_language_gifts: wizardData.loveLanguages.gifts,
+          birthdate: birthdate,
         })
         .select()
         .single();

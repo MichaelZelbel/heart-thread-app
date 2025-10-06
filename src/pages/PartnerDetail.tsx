@@ -78,7 +78,30 @@ const PartnerDetail = () => {
     setName(data.name);
     setRelationshipType(data.relationship_type || "partner");
     setNotes(data.notes || "");
-    setBirthdate(data.birthdate ? new Date(data.birthdate) : null);
+    
+    // Load birthdate from partner record, or sync from Birthday event if not set
+    if (data.birthdate) {
+      setBirthdate(new Date(data.birthdate));
+    } else {
+      // Check if there's a Birthday event and sync it to the birthdate field
+      const { data: birthdayEvent } = await supabase
+        .from("events")
+        .select("event_date")
+        .eq("partner_id", id)
+        .eq("event_type", "Birthday")
+        .maybeSingle();
+      
+      if (birthdayEvent) {
+        setBirthdate(new Date(birthdayEvent.event_date));
+        // Also update the partner record with this birthdate
+        await supabase
+          .from("partners")
+          .update({ birthdate: birthdayEvent.event_date })
+          .eq("id", id);
+      } else {
+        setBirthdate(null);
+      }
+    }
     
     // Handle gender identity - check if it's a custom value
     const standardGenders = ["Woman 💐", "Man 🌹", "Nonbinary 🌈", "Trans Woman 💖", "Trans Man 💙", "Prefer not to say 🙊"];
