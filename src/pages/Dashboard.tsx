@@ -98,7 +98,7 @@ const Dashboard = () => {
   const loadPartners = async (userId: string) => {
     const {
       data
-    } = await supabase.from("partners").select("id, name, photo_url").eq("user_id", userId).eq("archived", false).limit(5);
+    } = await supabase.from("partners").select("id, name, photo_url").eq("user_id", userId).eq("archived", false).neq("relationship_type", "self").limit(5);
     if (data) setPartners(data);
   };
 
@@ -129,7 +129,7 @@ const Dashboard = () => {
     } = await supabase.from("events").select("id, title, event_date, partner_id, is_recurring").eq("user_id", userId);
     const {
       data: partnersData
-    } = await supabase.from("partners").select("id, name, birthdate").eq("user_id", userId).eq("archived", false);
+    } = await supabase.from("partners").select("id, name, birthdate").eq("user_id", userId).eq("archived", false).neq("relationship_type", "self");
     if (!events && !partnersData) return;
     const partnerMap = new Map(partnersData?.map(p => [p.id, p.name]) || []);
     const occurrences: EventOccurrence[] = [];
