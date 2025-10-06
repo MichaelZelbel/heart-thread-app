@@ -402,7 +402,7 @@ const Dashboard = () => {
                         <div 
                           key={partner.id} 
                           className={cn(
-                            "flex items-center relative",
+                            "flex w-full items-center relative",
                             index === 0 && "md:pr-56" // Reserve space for the You chip on first row
                           )}
                         >
@@ -420,7 +420,7 @@ const Dashboard = () => {
                           
                           {/* Action buttons on last row */}
                           {index === partners.length - 1 && (
-                            <div className="hidden md:flex gap-2 shrink-0 pr-3">
+                            <div className="hidden md:flex gap-2 shrink-0 ml-auto pr-3">
                               <Button onClick={() => navigate("/partner/new")} size="sm" data-testid="add-partner-button">
                                 <Plus className="w-4 h-4 mr-2" />
                                 Add Cherished
