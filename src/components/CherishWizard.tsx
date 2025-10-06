@@ -150,7 +150,7 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
           email: wizardData.email,
           password: wizardData.password,
           options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
+            emailRedirectTo: `${window.location.origin}/email-verification-pending`,
             data: {
               display_name: wizardData.displayName || "User",
             },

@@ -16,20 +16,27 @@ const EmailVerificationPending = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Get user email from session
+    // Get user email from session or from pending local storage
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setEmail(session.user.email || "");
         
-        // If email is already verified, redirect to dashboard
+        // If email is already verified, redirect to dashboard after completing pending data
         if (session.user.email_confirmed_at) {
           checkAndCompletePendingCherish(session.user);
         } else {
           setChecking(false);
         }
       } else {
-        // No session, redirect to auth
-        navigate("/auth");
+        // No session yet — show pending page using stored email
+        const pending = localStorage.getItem("pendingCherishData");
+        if (pending) {
+          try {
+            const data = JSON.parse(pending);
+            if (data.email) setEmail(data.email);
+          } catch {}
+        }
+        setChecking(false);
       }
     });
 
@@ -69,6 +76,26 @@ const EmailVerificationPending = () => {
       setChecking(true);
       toast.loading("Completing your profile...");
       
+      // Ensure user profile exists
+      try {
+        const { data: existingProfile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!existingProfile) {
+          await supabase.from("profiles").insert({
+            id: user.id,
+            display_name: wizardData.displayName || (user.email?.split('@')[0] ?? "You"),
+            email: user.email,
+            email_verification_pending: false
+          });
+        }
+      } catch (e) {
+        console.error("Profile create/check failed", e);
+      }
+
       // Create partner profile
       const { data: partner, error: partnerError } = await supabase
         .from("partners")

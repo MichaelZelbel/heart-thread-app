@@ -85,7 +85,7 @@ const Auth = () => {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
+            emailRedirectTo: `${window.location.origin}/email-verification-pending`,
             data: {
               display_name: displayName,
             },
