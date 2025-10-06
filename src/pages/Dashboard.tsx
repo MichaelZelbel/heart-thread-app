@@ -406,22 +406,8 @@ const Dashboard = () => {
                           
                           {/* Header now contains the action buttons; none here */}
                         </div>
-                      ))}
-
-                      {/* Current user row at bottom */}
-                      <div 
-                        className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer"
-                        onClick={() => navigate("/account/profile")}
-                      >
-                        <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold shrink-0">
-                          {profile?.display_name?.charAt(0).toUpperCase() || "Y"}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium">{profile?.display_name || "You"} (You)</p>
-                        </div>
-                      </div>
+                       ))}
                     </div>
-
 
                     {partners.length >= 5 && (
                       <Button variant="ghost" className="w-full" onClick={() => navigate("/partners")}>
@@ -476,29 +462,13 @@ const Dashboard = () => {
 
           {/* Right Column */}
           <div className="space-y-6">
-            <Card className="shadow-soft animate-fade-in" style={{
-            animationDelay: "0.2s"
-          }}>
-              <CardHeader>
-                <CardTitle>All Events</CardTitle>
-                <CardDescription>Your full relationship calendar</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AllEventsCalendar />
-              </CardContent>
-            </Card>
-
             {isPro ? (
-              <div className="h-[800px] animate-fade-in" style={{
-            animationDelay: "0.3s"
-          }}>
+              <div className="h-[800px] animate-fade-in">
                 <ClaireChat compact={isMobile} prefillMessage={clairePrefillMessage} partnerId={partners[0]?.id} />
               </div>
             ) : (
-              <Card className="shadow-soft animate-fade-in" style={{
-            animationDelay: "0.3s"
-          }}>
-                <UpgradePrompt 
+              <Card className="shadow-soft animate-fade-in">
+                <UpgradePrompt
                   featureName="AI Chat with Claire"
                   description="Get personalized relationship advice and gift ideas from your AI companion, Claire."
                 />
