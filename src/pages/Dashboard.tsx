@@ -353,12 +353,12 @@ const Dashboard = () => {
           {/* Left Column */}
           <div className="space-y-6">
             <Card className="shadow-soft animate-fade-in">
-                <CardHeader className="flex items-center justify-between">
+                <CardHeader className="grid grid-cols-[1fr_auto] items-start gap-4">
                   <div>
                     <CardTitle>Your Cherished</CardTitle>
                     <CardDescription>People who make your heart full</CardDescription>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 shrink-0">
                     <Button onClick={() => navigate("/partner/new")} size="sm" data-testid="add-partner-button">
                       <Plus className="w-4 h-4 mr-2" />
                       Add Cherished
