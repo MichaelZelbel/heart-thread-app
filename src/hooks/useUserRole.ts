@@ -8,29 +8,17 @@ export const useUserRole = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUserRole = async () => {
+    const fetchUserRole = async (userId: string) => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          setRole(null);
-          setLoading(false);
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .order('role', { ascending: true })
-          .limit(1)
-          .maybeSingle();
+        const { data, error } = await supabase.rpc('get_user_role', {
+          _user_id: userId
+        });
 
         if (error) {
           console.error('Error fetching user role:', error);
-          setRole('free'); // Default to free on error
+          setRole('free');
         } else {
-          setRole(data?.role || 'free');
+          setRole(data || 'free');
         }
       } catch (error) {
         console.error('Error in fetchUserRole:', error);
@@ -40,7 +28,30 @@ export const useUserRole = () => {
       }
     };
 
-    fetchUserRole();
+    // Listen to auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          setLoading(true);
+          await fetchUserRole(session.user.id);
+        } else {
+          setRole(null);
+          setLoading(false);
+        }
+      }
+    );
+
+    // Initial fetch
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        fetchUserRole(user.id);
+      } else {
+        setRole(null);
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const isPro = role === 'pro' || role === 'pro_gift' || role === 'admin';
