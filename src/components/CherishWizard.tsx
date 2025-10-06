@@ -205,7 +205,7 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
       
       // Navigate after a moment
       setTimeout(() => {
-        navigate(`/partner/${partner.id}`);
+        navigate("/dashboard");
       }, 2000);
 
     } catch (error: any) {

@@ -402,15 +402,15 @@ const Dashboard = () => {
                         <div 
                           key={partner.id} 
                           className={cn(
-                            "flex items-center space-x-3 p-3 relative",
+                            "flex items-center relative",
                             index === 0 && "md:pr-56" // Reserve space for the You chip on first row
                           )}
                         >
                           <div 
-                            className="flex items-center space-x-3 rounded-lg hover:bg-muted transition-colors cursor-pointer p-3 -ml-3 flex-1 min-w-0"
+                            className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer flex-1 min-w-0"
                             onClick={() => navigate(`/partner/${partner.id}`)}
                           >
-                            <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold">
+                            <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold shrink-0">
                               {partner.name.charAt(0).toUpperCase()}
                             </div>
                             <div className="flex-1 min-w-0">
@@ -420,7 +420,7 @@ const Dashboard = () => {
                           
                           {/* Action buttons on last row */}
                           {index === partners.length - 1 && (
-                            <div className="hidden md:flex gap-2 ml-auto shrink-0">
+                            <div className="hidden md:flex gap-2 shrink-0 pr-3">
                               <Button onClick={() => navigate("/partner/new")} size="sm" data-testid="add-partner-button">
                                 <Plus className="w-4 h-4 mr-2" />
                                 Add Cherished
