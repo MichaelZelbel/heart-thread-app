@@ -76,6 +76,9 @@ const EmailVerificationPending = () => {
       setChecking(true);
       toast.loading("Completing your profile...");
       
+      // Clear pending data immediately to prevent duplicate processing
+      localStorage.removeItem("pendingCherishData");
+      
       // Ensure user profile exists
       try {
         const { data: existingProfile } = await supabase
@@ -94,6 +97,21 @@ const EmailVerificationPending = () => {
         }
       } catch (e) {
         console.error("Profile create/check failed", e);
+      }
+
+      // Check if partner already exists with this name to prevent duplicates
+      const { data: existingPartner } = await supabase
+        .from("partners")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("name", wizardData.nickname)
+        .maybeSingle();
+
+      if (existingPartner) {
+        // Partner already exists, just navigate to dashboard
+        toast.success("Welcome back to Cherishly 💕");
+        navigate("/dashboard");
+        return;
       }
 
       // Create partner profile
@@ -156,7 +174,6 @@ const EmailVerificationPending = () => {
         );
       }
 
-      localStorage.removeItem("pendingCherishData");
       toast.success("Profile complete! Welcome to Cherishly 💕");
       navigate("/dashboard");
     } catch (error: any) {
@@ -276,9 +293,6 @@ const EmailVerificationPending = () => {
                 )}
               </Button>
 
-              <Button variant="ghost" className="w-full" onClick={handleLogout}>
-                Back to Sign In
-              </Button>
             </div>
 
             {checking && (
