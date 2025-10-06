@@ -409,6 +409,19 @@ const Dashboard = () => {
                        ))}
                     </div>
 
+                    {/* Current user row at bottom */}
+                    <div 
+                      className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer"
+                      onClick={() => navigate("/account/profile")}
+                    >
+                      <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold shrink-0">
+                        {profile?.display_name?.charAt(0).toUpperCase() || "Y"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium">{profile?.display_name || "You"} (You)</p>
+                      </div>
+                    </div>
+
                     {partners.length >= 5 && (
                       <Button variant="ghost" className="w-full" onClick={() => navigate("/partners")}>
                         View All Cherished
