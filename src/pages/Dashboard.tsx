@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { AllEventsCalendar } from "@/components/AllEventsCalendar";
+
 import { MomentManager } from "@/components/MomentManager";
 import { ClaireChat } from "@/components/ClaireChat";
 import { ActivitySuggestion } from "@/components/ActivitySuggestion";
@@ -358,7 +358,7 @@ const Dashboard = () => {
                     <CardTitle>Your Cherished</CardTitle>
                     <CardDescription>People who make your heart full</CardDescription>
                   </div>
-                  <div className="hidden md:flex gap-2">
+                  <div className="flex gap-2">
                     <Button onClick={() => navigate("/partner/new")} size="sm" data-testid="add-partner-button">
                       <Plus className="w-4 h-4 mr-2" />
                       Add Cherished
