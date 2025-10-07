@@ -76,23 +76,21 @@ const Home = () => {
         <div className="absolute inset-0 bg-gradient-radial from-transparent via-transparent to-black/5 pointer-events-none" />
 
         {/* Hero Content - Centered */}
-        <div className="relative z-10 w-full max-w-4xl mx-auto text-center space-y-12 animate-fade-in">
+        <div className="relative z-10 w-full max-w-4xl mx-auto text-center flex flex-col items-center animate-fade-in">
+          {/* Cherry Avatar - Above Panel */}
+          <div className="mb-0 pointer-events-none">
+            <img
+              src={cherryAvatar}
+              alt="Cherry - your Cherishly companion"
+              className="w-56 md:w-72 lg:w-80 h-auto object-contain drop-shadow-2xl"
+              style={{
+                filter: 'drop-shadow(0 10px 40px rgba(0,0,0,0.2))',
+              }}
+            />
+          </div>
+
           {/* Text Content with Glassy Panel */}
-          <div className="relative overflow-visible bg-white/40 backdrop-blur-xl rounded-3xl border border-white/60 shadow-2xl">
-            {/* Cherry Avatar - Peeking Over Top */}
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-full pointer-events-none">
-              <img
-                src={cherryAvatar}
-                alt="Cherry - your Cherishly companion"
-                className="w-48 md:w-64 lg:w-72 h-auto object-contain drop-shadow-2xl"
-                style={{
-                  filter: 'drop-shadow(0 10px 40px rgba(0,0,0,0.15))',
-                  transform: 'translateY(35%) translateX(-50%)',
-                  position: 'relative',
-                  left: '50%',
-                }}
-              />
-            </div>
+          <div className="relative -mt-8 md:-mt-12 overflow-visible bg-white/40 backdrop-blur-xl rounded-3xl border border-white/60 shadow-2xl w-full">
             <div className="space-y-6 px-6 md:px-12 py-12 overflow-visible">
               {/* Headline */}
               <h1 
@@ -133,7 +131,7 @@ const Home = () => {
           </div>
 
           {/* Hero Illustration */}
-          <div className="relative animate-fade-in px-4">
+          <div className="relative animate-fade-in px-4 mt-12">
             <div className="relative max-w-2xl mx-auto">
               <img
                 src={heroImage}
