@@ -90,7 +90,7 @@ const Home = () => {
           </div>
 
           {/* Text Content with Glassy Panel */}
-          <div className="relative mt-4 md:mt-6 overflow-visible bg-white/40 backdrop-blur-xl rounded-3xl border border-white/60 shadow-2xl w-full">
+          <div className="relative -mt-6 md:-mt-10 overflow-visible bg-white/40 backdrop-blur-xl rounded-3xl border border-white/60 shadow-2xl w-full">
             <div className="space-y-6 px-6 md:px-12 py-12 overflow-visible">
               {/* Headline */}
               <h1 
