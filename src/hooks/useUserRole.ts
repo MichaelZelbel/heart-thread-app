@@ -10,9 +10,11 @@ export const useUserRole = () => {
   useEffect(() => {
     const fetchUserRole = async (userId: string) => {
       try {
-        const { data, error } = await supabase.rpc('get_user_role', {
-          _user_id: userId
+        const rpcPromise = supabase.rpc('get_user_role', { _user_id: userId });
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('get_user_role timeout')), 8000);
         });
+        const { data, error } = await Promise.race([rpcPromise, timeoutPromise]) as any;
 
         if (error) {
           console.error('Error fetching user role:', error);
@@ -29,17 +31,19 @@ export const useUserRole = () => {
     };
 
     // Listen to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          setLoading(true);
-          await fetchUserRole(session.user.id);
-        } else {
-          setRole(null);
-          setLoading(false);
-        }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setLoading(true);
+        const uid = session.user.id;
+        // Defer Supabase calls with setTimeout to avoid deadlocks
+        setTimeout(() => {
+          fetchUserRole(uid);
+        }, 0);
+      } else {
+        setRole(null);
+        setLoading(false);
       }
-    );
+    });
 
     // Initial fetch
     supabase.auth.getUser().then(({ data: { user } }) => {
