@@ -62,14 +62,16 @@ const Home = () => {
               style={{
                 left: `${(i * 9) % 100}%`,
                 top: `${100 + (i * 6)}%`,
-                width: `${12 + (i % 4) * 8}px`,
-                height: `${12 + (i % 4) * 8}px`,
+                width: `${24 + (i % 4) * 16}px`,
+                height: `${24 + (i % 4) * 16}px`,
                 animationDelay: `${i * 0.2}s`,
                 animationDuration: `${5 + (i % 3) * 1.5}s`,
               }}
               fill="currentColor"
             />
           ))}
+          {/* Mask to hide hearts under header */}
+          <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-[#FFD9E8] via-[#FFD9E8] to-transparent z-10 pointer-events-none" />
         </div>
 
         {/* Vignette Shadow */}
