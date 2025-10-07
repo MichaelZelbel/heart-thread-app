@@ -78,11 +78,11 @@ const Home = () => {
         {/* Hero Content - Centered */}
         <div className="relative z-10 w-full max-w-4xl mx-auto text-center flex flex-col items-center animate-fade-in">
           {/* Cherry Avatar - Above Panel */}
-          <div className="mb-0 pointer-events-none">
+          <div className="relative z-0 mb-0 pointer-events-none">
             <img
               src={cherryAvatar}
               alt="Cherry - your Cherishly companion"
-              className="w-56 md:w-72 lg:w-80 h-auto object-contain drop-shadow-2xl"
+              className="w-44 md:w-72 lg:w-80 h-auto object-contain drop-shadow-2xl"
               style={{
                 filter: 'drop-shadow(0 10px 40px rgba(0,0,0,0.2))',
               }}
@@ -90,7 +90,10 @@ const Home = () => {
           </div>
 
           {/* Text Content with Glassy Panel */}
-          <div className="relative -mt-6 md:-mt-10 overflow-visible bg-white/40 backdrop-blur-xl rounded-3xl border border-white/60 shadow-2xl w-full">
+          <div className="relative z-10 -mt-8 sm:-mt-10 md:-mt-12 lg:-mt-14 overflow-visible bg-white/40 backdrop-blur-xl rounded-3xl border border-white/60 shadow-2xl w-full">
+            {/* Subtle blend edge at top */}
+            <div className="absolute -top-2 left-0 right-0 h-4 bg-gradient-to-b from-black/10 to-transparent dark:from-black/20 opacity-20 pointer-events-none rounded-t-3xl" />
+            
             <div className="space-y-6 px-6 md:px-12 py-12 overflow-visible">
               {/* Headline */}
               <h1 
