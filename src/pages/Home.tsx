@@ -90,7 +90,7 @@ const Home = () => {
           </div>
 
           {/* Text Content with Glassy Panel */}
-          <div className="relative -mt-8 md:-mt-12 overflow-visible bg-white/40 backdrop-blur-xl rounded-3xl border border-white/60 shadow-2xl w-full">
+          <div className="relative mt-4 md:mt-6 overflow-visible bg-white/40 backdrop-blur-xl rounded-3xl border border-white/60 shadow-2xl w-full">
             <div className="space-y-6 px-6 md:px-12 py-12 overflow-visible">
               {/* Headline */}
               <h1 
@@ -127,18 +127,6 @@ const Home = () => {
               <p className="text-sm text-gray-600/80 italic font-light">
                 Your little memory companion
               </p>
-            </div>
-          </div>
-
-          {/* Hero Illustration */}
-          <div className="relative animate-fade-in px-4 mt-12">
-            <div className="relative max-w-2xl mx-auto">
-              <img
-                src={heroImage}
-                alt="Couple holding hands surrounded by hearts and flowers"
-                className="w-full rounded-3xl shadow-elegant"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-primary/20 via-transparent to-transparent rounded-3xl pointer-events-none" />
             </div>
           </div>
         </div>
