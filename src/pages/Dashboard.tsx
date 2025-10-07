@@ -70,6 +70,13 @@ const Dashboard = () => {
   const checkAuth = async () => {
     setLoading(true);
 
+    // Small helper to prevent any promise from hanging forever
+    const withTimeout = <T,>(promise: Promise<T>, ms = 12000) =>
+      Promise.race([
+        promise,
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+      ]);
+
     try {
       // If returning from OAuth, exchange the code for a session
       const url = new URL(window.location.href);
@@ -82,7 +89,7 @@ const Dashboard = () => {
 
       if (code) {
         try {
-          await supabase.auth.exchangeCodeForSession(code);
+          await withTimeout(supabase.auth.exchangeCodeForSession(code));
           // Clean URL params after successful exchange
           url.searchParams.delete('code');
           url.searchParams.delete('state');
@@ -94,17 +101,27 @@ const Dashboard = () => {
         }
       }
 
-      // Add timeout protection for session check
-      const sessionPromise = supabase.auth.getSession();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Session check timeout')), 10000)
-      );
-
-      const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+      // Session check with timeout
+      const { data: { session } } = await withTimeout(supabase.auth.getSession(), 10000) as any;
 
       if (!session) {
         setLoading(false);
         navigate("/auth");
+        return;
+      }
+
+      // Proactively refresh if token is expired or close to expiry
+      try {
+        const expiresAtMs = session.expires_at ? session.expires_at * 1000 : 0;
+        if (!expiresAtMs || (expiresAtMs - Date.now()) < 60_000) {
+          await withTimeout(supabase.auth.refreshSession(), 8000);
+        }
+      } catch (e) {
+        console.warn('Token refresh failed, forcing re-auth:', e);
+        await supabase.auth.signOut();
+        setLoading(false);
+        toast.error('Session expired. Please sign in again.');
+        navigate('/auth');
         return;
       }
 
@@ -115,12 +132,23 @@ const Dashboard = () => {
         return;
       }
 
-      await Promise.all([
-        loadProfile(session.user.id),
-        loadPartners(session.user.id),
-        loadUpcomingEvents(session.user.id),
-        loadMoments(session.user.id)
+      // Load dashboard data with per-call timeouts. Never block the UI forever.
+      const uid = session.user.id;
+      const results = await Promise.allSettled([
+        withTimeout(loadProfile(uid), 8000),
+        withTimeout(loadPartners(uid), 8000),
+        withTimeout(loadUpcomingEvents(uid), 8000),
+        withTimeout(loadMoments(uid), 8000),
       ]);
+
+      const failed = results.some(r => r.status === 'rejected');
+      if (failed) {
+        console.warn('Some dashboard data failed to load');
+        toast('Some data took too long to load', {
+          description: 'You can keep using the app—try refreshing if something looks off.',
+        });
+      }
+
       setLoading(false);
     } catch (error: any) {
       console.error('Auth check failed:', error);
