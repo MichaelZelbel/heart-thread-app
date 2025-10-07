@@ -70,51 +70,66 @@ const Dashboard = () => {
   const checkAuth = async () => {
     setLoading(true);
 
-    // If returning from OAuth, exchange the code for a session
-    const url = new URL(window.location.href);
-    const code = url.searchParams.get('code');
-    const error_description = url.searchParams.get('error_description');
+    try {
+      // If returning from OAuth, exchange the code for a session
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get('code');
+      const error_description = url.searchParams.get('error_description');
 
-    if (error_description) {
-      toast.error(decodeURIComponent(error_description));
-    }
-
-    if (code) {
-      try {
-        await supabase.auth.exchangeCodeForSession(code);
-        // Clean URL params after successful exchange
-        url.searchParams.delete('code');
-        url.searchParams.delete('state');
-        url.searchParams.delete('error');
-        url.searchParams.delete('error_description');
-        window.history.replaceState({}, document.title, url.pathname + (url.search ? `?${url.searchParams.toString()}` : ""));
-      } catch (e: any) {
-        toast.error(e?.message || 'Failed to complete sign-in');
+      if (error_description) {
+        toast.error(decodeURIComponent(error_description));
       }
-    }
 
-    const { data: { session } } = await supabase.auth.getSession();
+      if (code) {
+        try {
+          await supabase.auth.exchangeCodeForSession(code);
+          // Clean URL params after successful exchange
+          url.searchParams.delete('code');
+          url.searchParams.delete('state');
+          url.searchParams.delete('error');
+          url.searchParams.delete('error_description');
+          window.history.replaceState({}, document.title, url.pathname + (url.search ? `?${url.searchParams.toString()}` : ""));
+        } catch (e: any) {
+          toast.error(e?.message || 'Failed to complete sign-in');
+        }
+      }
 
-    if (!session) {
+      // Add timeout protection for session check
+      const sessionPromise = supabase.auth.getSession();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Session check timeout')), 10000)
+      );
+
+      const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+
+      if (!session) {
+        setLoading(false);
+        navigate("/auth");
+        return;
+      }
+
+      // Check email verification (except for test users)
+      if (!session.user.email_confirmed_at && !isTestUser(session.user.email || "")) {
+        setLoading(false);
+        navigate("/email-verification-pending");
+        return;
+      }
+
+      await Promise.all([
+        loadProfile(session.user.id),
+        loadPartners(session.user.id),
+        loadUpcomingEvents(session.user.id),
+        loadMoments(session.user.id)
+      ]);
       setLoading(false);
+    } catch (error: any) {
+      console.error('Auth check failed:', error);
+      // On timeout or error, sign out and redirect to force fresh login
+      await supabase.auth.signOut();
+      setLoading(false);
+      toast.error('Session expired. Please sign in again.');
       navigate("/auth");
-      return;
     }
-
-    // Check email verification (except for test users)
-    if (!session.user.email_confirmed_at && !isTestUser(session.user.email || "")) {
-      setLoading(false);
-      navigate("/email-verification-pending");
-      return;
-    }
-
-    await Promise.all([
-      loadProfile(session.user.id),
-      loadPartners(session.user.id),
-      loadUpcomingEvents(session.user.id),
-      loadMoments(session.user.id)
-    ]);
-    setLoading(false);
   };
   const loadProfile = async (userId: string) => {
     const {
