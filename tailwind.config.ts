@@ -111,14 +111,11 @@ export default {
         "float-heart": {
           "0%": {
             transform: "translateY(0) rotate(0deg)",
-            opacity: "0.2"
-          },
-          "50%": {
-            opacity: "0.4"
+            opacity: "0.3"
           },
           "100%": {
             transform: "translateY(-100vh) rotate(180deg)",
-            opacity: "0"
+            opacity: "0.3"
           }
         }
       },
