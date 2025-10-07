@@ -7,6 +7,7 @@ import { Heart, Calendar, Users } from "lucide-react";
 import { CherishWizard } from "@/components/CherishWizard";
 import heroImage from "@/assets/cherishly-hero.jpg";
 import cherishlyLogo from "@/assets/cherishly-logo.png";
+import cherryAvatar from "@/assets/cherry.webp";
 
 const Home = () => {
   const [showWizard, setShowWizard] = useState(false);
@@ -76,8 +77,22 @@ const Home = () => {
 
         {/* Hero Content - Centered */}
         <div className="relative z-10 w-full max-w-4xl mx-auto text-center space-y-12 animate-fade-in">
+          {/* Cherry Avatar - Behind Hero Box */}
+          <div className="absolute left-1/2 -translate-x-1/2 -top-8 md:-top-16 z-0 pointer-events-none">
+            <img
+              src={cherryAvatar}
+              alt="Cherry - your Cherishly companion"
+              className="w-44 md:w-72 lg:w-80 h-auto object-contain drop-shadow-2xl"
+              style={{
+                filter: 'drop-shadow(0 10px 40px rgba(0,0,0,0.15))',
+              }}
+            />
+            {/* Subtle gradient blend at bottom */}
+            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white/60 to-transparent pointer-events-none" />
+          </div>
+
           {/* Text Content with Glassy Panel */}
-          <div className="overflow-visible bg-white/40 backdrop-blur-xl rounded-3xl border border-white/60 shadow-2xl">
+          <div className="relative z-10 overflow-visible bg-white/40 backdrop-blur-xl rounded-3xl border border-white/60 shadow-2xl">
             <div className="space-y-6 px-6 md:px-12 py-12 overflow-visible">
               {/* Headline */}
               <h1 
