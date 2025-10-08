@@ -82,15 +82,19 @@ export const ClaireChat = ({ partnerId, compact = false, prefillMessage = "" }: 
     loadChatHistory();
   }, [partnerId, prefillMessage]);
 
-  // Auto-scroll to bottom when messages change or loading completes
+  // Auto-scroll to bottom within the ScrollArea viewport when messages change or loading completes
   useEffect(() => {
-    const scrollToBottom = () => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const root = scrollRef.current;
+    if (!root) return;
+
+    const doScroll = () => {
+      const viewport = root.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement | null;
+      if (viewport) {
+        viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+      }
     };
-    
-    // Use setTimeout to ensure DOM has updated
-    const timeoutId = setTimeout(scrollToBottom, 100);
-    
+
+    const timeoutId = setTimeout(doScroll, 50);
     return () => clearTimeout(timeoutId);
   }, [messages, loadingHistory]);
 
