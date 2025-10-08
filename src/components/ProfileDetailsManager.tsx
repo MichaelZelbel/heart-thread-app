@@ -51,6 +51,20 @@ interface CategoryConfig {
   valueSuggestions?: string[];
 }
 
+// Platform-specific URL placeholders for Links category
+const LINK_PLACEHOLDERS: Record<string, string> = {
+  "TikTok": "https://www.tiktok.com/@username",
+  "Instagram": "https://instagram.com/username",
+  "Twitter/X": "https://x.com/username",
+  "Telegram": "https://t.me/username",
+  "VRChat": "https://vrchat.com/home/user/usr_abcdef",
+  "Snapchat": "https://www.snapchat.com/add/username",
+  "Twitch": "https://twitch.tv/username",
+  "YouTube": "https://youtube.com/@username",
+  "Facebook": "https://facebook.com/username",
+  "LinkedIn": "https://linkedin.com/in/username",
+};
+
 const CATEGORIES: CategoryConfig[] = [
   {
     id: "body",
@@ -71,7 +85,7 @@ const CATEGORIES: CategoryConfig[] = [
     label: "Links",
     explainer: "Where to find them online when you're not together.",
     emptyState: "Add a link to their social profile or favorite place online.",
-    labelSuggestions: ["TikTok", "Instagram", "Discord", "WhatsApp", "Twitter/X", "Facebook", "VRChat", "Steam", "Snapchat", "OnlyFans"],
+    labelSuggestions: ["TikTok", "Instagram", "Twitter/X", "Telegram", "VRChat", "Snapchat", "Twitch", "YouTube", "Facebook", "LinkedIn"],
   },
   {
     id: "nicknames",
@@ -289,7 +303,11 @@ function SortableItem({
                 <Input
                   value={editValue}
                   onChange={(e) => onEditValueChange(e.target.value)}
-                  placeholder={category.id === "links" ? "https://example.com" : "Value"}
+                  placeholder={
+                    category.id === "links" 
+                      ? (LINK_PLACEHOLDERS[detail.label] || "https://example.com")
+                      : "Value"
+                  }
                   className="h-9"
                   aria-invalid={category.id === "links" && editUrlError ? "true" : "false"}
                   aria-describedby={category.id === "links" && editUrlError ? "url-error" : undefined}
@@ -395,26 +413,29 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
   useEffect(() => {
     if (category.id === "links" && newValue.trim()) {
       if (!isValidURL(newValue)) {
-        setNewUrlError("Please enter a valid URL (e.g., https://example.com).");
+        const exampleUrl = LINK_PLACEHOLDERS[newLabel] || "https://instagram.com/username";
+        setNewUrlError(`Please enter a valid URL (e.g., ${exampleUrl}).`);
       } else {
         setNewUrlError("");
       }
     } else {
       setNewUrlError("");
     }
-  }, [newValue, category.id]);
+  }, [newValue, category.id, newLabel]);
 
   useEffect(() => {
-    if (category.id === "links" && editValue.trim()) {
+    if (category.id === "links" && editValue.trim() && editingId) {
       if (!isValidURL(editValue)) {
-        setEditUrlError("Please enter a valid URL (e.g., https://example.com).");
+        const detail = details.find(d => d.id === editingId);
+        const exampleUrl = detail ? (LINK_PLACEHOLDERS[detail.label] || "https://instagram.com/username") : "https://instagram.com/username";
+        setEditUrlError(`Please enter a valid URL (e.g., ${exampleUrl}).`);
       } else {
         setEditUrlError("");
       }
     } else {
       setEditUrlError("");
     }
-  }, [editValue, category.id]);
+  }, [editValue, category.id, editingId, details]);
 
   // Check if this category is Pro-only
   const isProCategory = ['relationship', 'favorites', 'friends_family'].includes(category.id);
@@ -778,7 +799,7 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
                   onChange={(e) => setNewValue(e.target.value)}
                   placeholder={
                     category.id === "links" 
-                      ? "https://example.com" 
+                      ? (LINK_PLACEHOLDERS[newLabel] || "https://example.com")
                       : category.valueOnly 
                         ? `e.g., ${category.label === "Nicknames" ? "Sweetie" : "Value"}` 
                         : "Value"
@@ -805,17 +826,10 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
               <Plus className="w-4 h-4" />
             </Button>
           </div>
-          {category.id === "links" && (
-            <div className="space-y-1">
-              {newUrlError && (
-                <p id="new-url-error" className="text-xs text-destructive px-1">
-                  {newUrlError}
-                </p>
-              )}
-              <p className="text-xs text-muted-foreground px-1">
-                Enter the full link, including https://
-              </p>
-            </div>
+          {category.id === "links" && newUrlError && (
+            <p id="new-url-error" className="text-xs text-destructive px-1">
+              {newUrlError}
+            </p>
           )}
         </div>
       </CardContent>
