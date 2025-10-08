@@ -122,7 +122,7 @@ const CATEGORIES: CategoryConfig[] = [
     explainer: "What kind of connection you share — poly, mono, long-distance, or something uniquely yours.",
     emptyState: "Define your bond — add a relationship detail.",
     valueOnly: true,
-    valueSuggestions: ["Poly", "Monogamous", "Open", "Long Distance", "VR Relationship", "Casual", "Committed", "Situationship", "Exploring", "Toys"],
+    valueSuggestions: ["Poly", "Monogamous", "Open Relationship", "Long Distance", "VR Relationship", "Casual", "Committed", "Situationship", "Exploring"],
   },
 ];
 
