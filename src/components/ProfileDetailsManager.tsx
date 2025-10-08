@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Edit2, Trash2, GripVertical, Check, X } from "lucide-react";
+import { Plus, Edit2, Trash2, GripVertical, Check, X, AlertCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -122,6 +123,7 @@ interface SortableItemProps {
   isEditing: boolean;
   editLabel: string;
   editValue: string;
+  editUrlError: string;
   onEditLabelChange: (value: string) => void;
   onEditValueChange: (value: string) => void;
   onSave: () => void;
@@ -130,12 +132,57 @@ interface SortableItemProps {
   onDelete: () => void;
 }
 
+// URL validation function
+const isValidURL = (value: string): boolean => {
+  if (!value.trim()) return false;
+  
+  // Auto-prepend https:// if no scheme
+  const urlToTest = value.startsWith("http://") || value.startsWith("https://") 
+    ? value 
+    : `https://${value}`;
+  
+  try {
+    const url = new URL(urlToTest);
+    // Check for valid hostname (must have at least one dot and valid characters)
+    return /^([\w-]+\.)+[\w-]+(\/[\w\-._~:/?#[\]@!$&'()*+,;=]*)?$/.test(url.host + url.pathname + url.search + url.hash);
+  } catch {
+    return false;
+  }
+};
+
+// URL normalization function
+const normalizeURL = (value: string): string => {
+  let normalized = value.trim();
+  
+  // Add https:// if no scheme present
+  if (!normalized.startsWith("http://") && !normalized.startsWith("https://")) {
+    normalized = `https://${normalized}`;
+  }
+  
+  try {
+    const url = new URL(normalized);
+    // Lowercase scheme and host, preserve path/query
+    url.protocol = url.protocol.toLowerCase();
+    url.host = url.host.toLowerCase();
+    
+    // Remove trailing slash only if it's just the root path
+    if (url.pathname === '/' && !url.search && !url.hash) {
+      return `${url.protocol}//${url.host}`;
+    }
+    
+    return url.toString();
+  } catch {
+    return normalized;
+  }
+};
+
 function SortableItem({
   detail,
   category,
   isEditing,
   editLabel,
   editValue,
+  editUrlError,
   onEditLabelChange,
   onEditValueChange,
   onSave,
@@ -160,6 +207,7 @@ function SortableItem({
 
   const renderValue = () => {
     if (category.id === "links" && !isEditing) {
+      const isValid = isValidURL(detail.value);
       const url = detail.value.startsWith("http://") || detail.value.startsWith("https://")
         ? detail.value
         : `https://${detail.value}`;
@@ -176,16 +224,44 @@ function SortableItem({
       
       const linkText = detail.label || getDomain(url);
       
+      // Show warning icon for invalid URLs
+      if (!isValid) {
+        return (
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground truncate">{detail.value}</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>This doesn't look like a valid URL. Edit to fix.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        );
+      }
+      
       return (
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary hover:underline truncate block"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {linkText}
-        </a>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline truncate block"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {linkText}
+              </a>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="max-w-xs truncate">{url}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       );
     }
     return <span className="break-words">{detail.value}</span>;
@@ -199,36 +275,48 @@ function SortableItem({
     >
       {isEditing ? (
         <>
-          <div className="flex-1 flex gap-2">
-            {!category.valueOnly && (
-              <Input
-                value={editLabel}
-                onChange={(e) => onEditLabelChange(e.target.value)}
-                placeholder="Label"
-                className="h-9 w-1/3"
-              />
+          <div className="flex-1 flex flex-col gap-1">
+            <div className="flex gap-2">
+              {!category.valueOnly && (
+                <Input
+                  value={editLabel}
+                  onChange={(e) => onEditLabelChange(e.target.value)}
+                  placeholder="Label"
+                  className="h-9 w-1/4"
+                />
+              )}
+              <div className="flex-1">
+                <Input
+                  value={editValue}
+                  onChange={(e) => onEditValueChange(e.target.value)}
+                  placeholder={category.id === "links" ? "https://example.com" : "Value"}
+                  className="h-9"
+                  aria-invalid={category.id === "links" && editUrlError ? "true" : "false"}
+                  aria-describedby={category.id === "links" && editUrlError ? "url-error" : undefined}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (!editUrlError) onSave();
+                    } else if (e.key === "Escape") {
+                      e.preventDefault();
+                      onCancel();
+                    }
+                  }}
+                  autoFocus
+                />
+              </div>
+            </div>
+            {category.id === "links" && editUrlError && (
+              <p id="url-error" className="text-xs text-destructive px-1">
+                {editUrlError}
+              </p>
             )}
-            <Input
-              value={editValue}
-              onChange={(e) => onEditValueChange(e.target.value)}
-              placeholder="Value"
-              className={`h-9 ${category.valueOnly ? 'flex-1' : 'flex-1'}`}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  onSave();
-                } else if (e.key === "Escape") {
-                  e.preventDefault();
-                  onCancel();
-                }
-              }}
-              autoFocus
-            />
           </div>
           <Button
             size="icon"
             variant="ghost"
             onClick={onSave}
+            disabled={category.id === "links" && !!editUrlError}
             className="h-9 w-9 shrink-0"
             aria-label="Save changes"
           >
@@ -295,11 +383,38 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
   const [loading, setLoading] = useState(true);
   const [newLabel, setNewLabel] = useState("");
   const [newValue, setNewValue] = useState("");
+  const [newUrlError, setNewUrlError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState("");
   const [editValue, setEditValue] = useState("");
+  const [editUrlError, setEditUrlError] = useState("");
   const [customLabel, setCustomLabel] = useState(false);
   const [customValue, setCustomValue] = useState(false);
+
+  // Validate URL when value changes for Links category
+  useEffect(() => {
+    if (category.id === "links" && newValue.trim()) {
+      if (!isValidURL(newValue)) {
+        setNewUrlError("Please enter a valid URL (e.g., https://example.com).");
+      } else {
+        setNewUrlError("");
+      }
+    } else {
+      setNewUrlError("");
+    }
+  }, [newValue, category.id]);
+
+  useEffect(() => {
+    if (category.id === "links" && editValue.trim()) {
+      if (!isValidURL(editValue)) {
+        setEditUrlError("Please enter a valid URL (e.g., https://example.com).");
+      } else {
+        setEditUrlError("");
+      }
+    } else {
+      setEditUrlError("");
+    }
+  }, [editValue, category.id]);
 
   // Check if this category is Pro-only
   const isProCategory = ['relationship', 'favorites', 'friends_family'].includes(category.id);
@@ -348,6 +463,12 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
       return;
     }
 
+    // Validate URL for links category
+    if (category.id === "links" && newUrlError) {
+      toast.error(newUrlError);
+      return;
+    }
+
     try {
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) {
@@ -358,9 +479,9 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
       const maxPosition = details.length > 0 ? Math.max(...details.map(d => d.position)) : -1;
 
       let finalValue = newValue.trim();
-      // Auto-prefix https:// for links if not present
-      if (category.id === "links" && !finalValue.startsWith("http://") && !finalValue.startsWith("https://")) {
-        finalValue = `https://${finalValue}`;
+      // Normalize URL for links
+      if (category.id === "links") {
+        finalValue = normalizeURL(finalValue);
       }
 
       const { error } = await supabase
@@ -378,6 +499,7 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
 
       setNewLabel("");
       setNewValue("");
+      setNewUrlError("");
       setCustomLabel(false);
       setCustomValue(false);
       await loadDetails();
@@ -411,11 +533,17 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
       return;
     }
 
+    // Validate URL for links category
+    if (category.id === "links" && editUrlError) {
+      toast.error(editUrlError);
+      return;
+    }
+
     try {
       let finalValue = editValue.trim();
-      // Auto-prefix https:// for links if not present
-      if (category.id === "links" && !finalValue.startsWith("http://") && !finalValue.startsWith("https://")) {
-        finalValue = `https://${finalValue}`;
+      // Normalize URL for links
+      if (category.id === "links") {
+        finalValue = normalizeURL(finalValue);
       }
 
       const { error } = await supabase
@@ -431,6 +559,7 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
       setEditingId(null);
       setEditLabel("");
       setEditValue("");
+      setEditUrlError("");
       await loadDetails();
       toast.success("Updated!");
     } catch (error) {
@@ -533,6 +662,7 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
                     isEditing={editingId === detail.id}
                     editLabel={editLabel}
                     editValue={editValue}
+                    editUrlError={editUrlError}
                     onEditLabelChange={setEditLabel}
                     onEditValueChange={setEditValue}
                     onSave={() => saveEdit(detail.id)}
@@ -546,38 +676,93 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
           </DndContext>
         )}
 
-        <div className="flex gap-2 pt-2">
-          {!category.valueOnly && (
-            category.labelSuggestions ? (
-              customLabel ? (
+        <div className="space-y-2 pt-2">
+          <div className="flex gap-2">
+            {!category.valueOnly && (
+              category.labelSuggestions ? (
+                customLabel ? (
+                  <Input
+                    value={newLabel}
+                    onChange={(e) => setNewLabel(e.target.value)}
+                    placeholder="Custom label"
+                    className="w-1/4"
+                    onBlur={() => {
+                      if (!newLabel.trim()) {
+                        setCustomLabel(false);
+                      }
+                    }}
+                  />
+                ) : (
+                  <Select
+                    value={newLabel}
+                    onValueChange={(value) => {
+                      if (value === "custom") {
+                        setCustomLabel(true);
+                        setNewLabel("");
+                      } else {
+                        setNewLabel(value);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-1/4">
+                      <SelectValue placeholder="Label" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {category.labelSuggestions.map((suggestion) => (
+                        <SelectItem key={suggestion} value={suggestion}>
+                          {suggestion}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="custom">Custom...</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )
+              ) : (
                 <Input
                   value={newLabel}
                   onChange={(e) => setNewLabel(e.target.value)}
-                  placeholder="Custom label"
-                  className="w-1/3"
+                  placeholder="Label"
+                  className="w-1/4"
+                />
+              )
+            )}
+            {category.valueSuggestions ? (
+              customValue ? (
+                <Input
+                  value={newValue}
+                  onChange={(e) => setNewValue(e.target.value)}
+                  placeholder="Custom value"
+                  className="flex-1"
                   onBlur={() => {
-                    if (!newLabel.trim()) {
-                      setCustomLabel(false);
+                    if (!newValue.trim()) {
+                      setCustomValue(false);
                     }
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (!newUrlError) handleAdd();
+                    }
+                  }}
+                  autoFocus
                 />
               ) : (
                 <Select
-                  value={newLabel}
+                  value={newValue}
                   onValueChange={(value) => {
                     if (value === "custom") {
-                      setCustomLabel(true);
-                      setNewLabel("");
+                      setCustomValue(true);
+                      setNewValue("");
                     } else {
-                      setNewLabel(value);
+                      setNewValue(value);
                     }
                   }}
                 >
-                  <SelectTrigger className="w-1/3">
-                    <SelectValue placeholder="Label" />
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select or type custom" />
                   </SelectTrigger>
                   <SelectContent>
-                    {category.labelSuggestions.map((suggestion) => (
+                    {category.valueSuggestions.map((suggestion) => (
                       <SelectItem key={suggestion} value={suggestion}>
                         {suggestion}
                       </SelectItem>
@@ -587,76 +772,51 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
                 </Select>
               )
             ) : (
-              <Input
-                value={newLabel}
-                onChange={(e) => setNewLabel(e.target.value)}
-                placeholder="Label"
-                className="w-1/3"
-              />
-            )
+              <div className="flex-1">
+                <Input
+                  value={newValue}
+                  onChange={(e) => setNewValue(e.target.value)}
+                  placeholder={
+                    category.id === "links" 
+                      ? "https://example.com" 
+                      : category.valueOnly 
+                        ? `e.g., ${category.label === "Nicknames" ? "Sweetie" : "Value"}` 
+                        : "Value"
+                  }
+                  className="flex-1"
+                  aria-invalid={category.id === "links" && newUrlError ? "true" : "false"}
+                  aria-describedby={category.id === "links" && newUrlError ? "new-url-error" : undefined}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (!newUrlError) handleAdd();
+                    }
+                  }}
+                />
+              </div>
+            )}
+            <Button 
+              onClick={handleAdd} 
+              size="icon" 
+              className="shrink-0"
+              disabled={category.id === "links" && (!!newUrlError || !newValue.trim())}
+              aria-label="Add new item"
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
+          {category.id === "links" && (
+            <div className="space-y-1">
+              {newUrlError && (
+                <p id="new-url-error" className="text-xs text-destructive px-1">
+                  {newUrlError}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground px-1">
+                Enter the full link, including https://
+              </p>
+            </div>
           )}
-          {category.valueSuggestions ? (
-            customValue ? (
-              <Input
-                value={newValue}
-                onChange={(e) => setNewValue(e.target.value)}
-                placeholder="Custom value"
-                className="flex-1"
-                onBlur={() => {
-                  if (!newValue.trim()) {
-                    setCustomValue(false);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleAdd();
-                  }
-                }}
-                autoFocus
-              />
-            ) : (
-              <Select
-                value={newValue}
-                onValueChange={(value) => {
-                  if (value === "custom") {
-                    setCustomValue(true);
-                    setNewValue("");
-                  } else {
-                    setNewValue(value);
-                  }
-                }}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Select or type custom" />
-                </SelectTrigger>
-                <SelectContent>
-                  {category.valueSuggestions.map((suggestion) => (
-                    <SelectItem key={suggestion} value={suggestion}>
-                      {suggestion}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="custom">Custom...</SelectItem>
-                </SelectContent>
-              </Select>
-            )
-          ) : (
-            <Input
-              value={newValue}
-              onChange={(e) => setNewValue(e.target.value)}
-              placeholder={category.valueOnly ? `e.g., ${category.label === "Nicknames" ? "Sweetie" : "Value"}` : "Value"}
-              className="flex-1"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleAdd();
-                }
-              }}
-            />
-          )}
-          <Button onClick={handleAdd} size="icon" className="shrink-0">
-            <Plus className="w-4 h-4" />
-          </Button>
         </div>
       </CardContent>
     </Card>
