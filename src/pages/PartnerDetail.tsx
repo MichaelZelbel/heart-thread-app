@@ -310,11 +310,11 @@ const PartnerDetail = () => {
           <p className="text-muted-foreground">Edit partner details</p>
         </div>
 
-        <Tabs defaultValue="calendar" className="space-y-6">
+        <Tabs defaultValue="details" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="moments">Moments</TabsTrigger>
-            <TabsTrigger value="details">Details</TabsTrigger>
           </TabsList>
 
           <TabsContent value="calendar" className="space-y-6">
