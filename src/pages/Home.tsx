@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,11 +8,17 @@ import { CherishWizard } from "@/components/CherishWizard";
 import heroImage from "@/assets/cherishly-hero.jpg";
 import cherishlyLogo from "@/assets/cherishly-logo.png";
 import cherryAvatar from "@/assets/cherry.webp";
+import leoAvatar from "@/assets/leo-avatar.webp";
 
 const Home = () => {
   const [showWizard, setShowWizard] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigate = useNavigate();
+  
+  // Randomly select avatar on component mount
+  const selectedAvatar = useMemo(() => {
+    return Math.random() < 0.5 ? cherryAvatar : leoAvatar;
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -79,11 +85,11 @@ const Home = () => {
 
         {/* Hero Content - Centered */}
         <div className="relative z-10 w-full max-w-4xl mx-auto text-center flex flex-col items-center animate-fade-in">
-          {/* Cherry Avatar - Above Panel */}
+          {/* Avatar - Above Panel */}
           <div className="relative z-20 mb-0 pointer-events-none">
             <img
-              src={cherryAvatar}
-              alt="Cherry - your Cherishly companion"
+              src={selectedAvatar}
+              alt="Your Cherishly companion"
               className="block w-44 md:w-72 lg:w-80 h-auto object-contain drop-shadow-2xl"
               style={{
                 filter: 'drop-shadow(0 10px 40px rgba(0,0,0,0.2))',
