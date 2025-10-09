@@ -16,6 +16,9 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import EmailVerificationPending from "./pages/EmailVerificationPending";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import CookiesPolicy from "./pages/CookiesPolicy";
 import Footer from "./components/Footer";
 import CookieConsent from "./components/CookieConsent";
 
@@ -42,6 +45,9 @@ const App = () => (
               <Route path="/admin" element={<Admin />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/payment-success" element={<PaymentSuccess />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/cookies" element={<CookiesPolicy />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

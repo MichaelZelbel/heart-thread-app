@@ -8,27 +8,21 @@ const Footer = () => {
           {/* Legal Links */}
           <div className="flex flex-wrap justify-center gap-4 text-sm">
             <a
-              href="https://www.privacypolicies.com/live/c31c597d-3b2e-4647-9f97-0fa112857bf3"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/privacy"
               className="text-muted-foreground hover:text-foreground transition-colors underline"
             >
               Privacy Policy
             </a>
             <span className="text-muted-foreground">•</span>
             <a
-              href="https://www.privacypolicies.com/live/f038b7e6-ea73-4cd2-9a8c-313a4373595e"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/terms"
               className="text-muted-foreground hover:text-foreground transition-colors underline"
             >
               Terms of Service
             </a>
             <span className="text-muted-foreground">•</span>
             <a
-              href="https://www.privacypolicies.com/live/9d62cd6c-3001-4c0f-bc51-a44ae87f40d8"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/cookies"
               className="text-muted-foreground hover:text-foreground transition-colors underline"
             >
               Cookies Policy
