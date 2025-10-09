@@ -9,6 +9,9 @@ import heroImage from "@/assets/cherishly-hero.jpg";
 import cherishlyLogo from "@/assets/cherishly-logo.png";
 import cherryAvatar from "@/assets/cherry.webp";
 import leoAvatar from "@/assets/leo-avatar.webp";
+import leoMessageReceivedAvatar from "@/assets/leo-message-received.webp";
+import cheeryLeoHuggingAvatar from "@/assets/cheery-leo-hugging.webp";
+import cherryLeoGlowingHeartAvatar from "@/assets/cherry-leo-glowing-heart.webp";
 
 const Home = () => {
   const [showWizard, setShowWizard] = useState(false);
@@ -17,7 +20,8 @@ const Home = () => {
   
   // Randomly select avatar on component mount
   const selectedAvatar = useMemo(() => {
-    return Math.random() < 0.5 ? cherryAvatar : leoAvatar;
+    const avatars = [cherryAvatar, leoAvatar, leoMessageReceivedAvatar, cheeryLeoHuggingAvatar, cherryLeoGlowingHeartAvatar];
+    return avatars[Math.floor(Math.random() * avatars.length)];
   }, []);
 
   useEffect(() => {
