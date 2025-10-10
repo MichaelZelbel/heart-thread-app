@@ -421,6 +421,9 @@ const Dashboard = () => {
                 </>
               ) : (
                 <div className="pt-2">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Capture and cherish your favorite memories together.
+                  </p>
                   <Button asChild size="lg" className="w-full gap-2">
                     <Link to="/pricing">
                       <Sparkles className="w-4 h-4" />
