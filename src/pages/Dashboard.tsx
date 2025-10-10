@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Heart, Plus, Calendar, Sparkles, LogOut, User, Settings, GripVertical } from "lucide-react";
+import { Heart, Plus, Calendar, Sparkles, LogOut, User, Settings, GripVertical, Edit2, Archive, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -73,9 +73,12 @@ interface MomentSummary {
 interface SortablePartnerProps {
   partner: Partner;
   onClick: () => void;
+  onEdit: () => void;
+  onArchive: () => void;
+  onDelete: () => void;
 }
 
-function SortablePartner({ partner, onClick }: SortablePartnerProps) {
+function SortablePartner({ partner, onClick, onEdit, onArchive, onDelete }: SortablePartnerProps) {
   const {
     attributes,
     listeners,
@@ -95,27 +98,63 @@ function SortablePartner({ partner, onClick }: SortablePartnerProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center w-full"
+      className="flex items-center gap-2 p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
     >
       <div
         {...attributes}
         {...listeners}
-        className="cursor-grab active:cursor-grabbing p-2 shrink-0 hover:bg-muted rounded"
+        className="cursor-grab active:cursor-grabbing p-1 shrink-0"
         aria-label="Drag to reorder"
       >
         <GripVertical className="w-5 h-5 text-muted-foreground" />
       </div>
       <div
-        className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer flex-1 min-w-0"
+        className="flex items-center space-x-3 flex-1 min-w-0 cursor-pointer"
         onClick={onClick}
       >
-        <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold shrink-0">
+        <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold shrink-0">
           {partner.name.charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-medium">{partner.name}</p>
         </div>
       </div>
+      <Button
+        size="icon"
+        variant="ghost"
+        onClick={(e) => {
+          e.stopPropagation();
+          onEdit();
+        }}
+        className="h-9 w-9 shrink-0"
+        aria-label="Edit partner"
+      >
+        <Edit2 className="w-4 h-4" />
+      </Button>
+      <Button
+        size="icon"
+        variant="ghost"
+        onClick={(e) => {
+          e.stopPropagation();
+          onArchive();
+        }}
+        className="h-9 w-9 shrink-0"
+        aria-label="Archive partner"
+      >
+        <Archive className="w-4 h-4" />
+      </Button>
+      <Button
+        size="icon"
+        variant="ghost"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        className="h-9 w-9 shrink-0 text-destructive hover:text-destructive"
+        aria-label="Delete partner"
+      >
+        <Trash2 className="w-4 h-4" />
+      </Button>
     </div>
   );
 }
@@ -269,6 +308,54 @@ const Dashboard = () => {
     );
 
     await Promise.all(updates);
+  };
+
+  const handleEditPartner = (partnerId: string) => {
+    navigate(`/partner/${partnerId}`);
+  };
+
+  const handleArchivePartner = async (partnerId: string, partnerName: string) => {
+    const { error } = await supabase
+      .from("partners")
+      .update({ archived: true })
+      .eq("id", partnerId);
+
+    if (error) {
+      toast.error("Failed to archive partner");
+      return;
+    }
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (session) {
+      loadPartners(session.user.id);
+    }
+    toast.success(`${partnerName} archived`);
+  };
+
+  const handleDeletePartner = async (partnerId: string, partnerName: string) => {
+    if (!confirm(`Are you sure you want to delete ${partnerName}? This action cannot be undone.`)) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from("partners")
+      .delete()
+      .eq("id", partnerId);
+
+    if (error) {
+      toast.error("Failed to delete partner");
+      return;
+    }
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (session) {
+      loadPartners(session.user.id);
+    }
+    toast.success(`${partnerName} deleted`);
   };
 
   const loadMoments = async (userId: string) => {
@@ -589,6 +676,9 @@ const Dashboard = () => {
                               key={partner.id}
                               partner={partner}
                               onClick={() => navigate(`/partner/${partner.id}`)}
+                              onEdit={() => handleEditPartner(partner.id)}
+                              onArchive={() => handleArchivePartner(partner.id, partner.name)}
+                              onDelete={() => handleDeletePartner(partner.id, partner.name)}
                             />
                           ))}
                         </div>
