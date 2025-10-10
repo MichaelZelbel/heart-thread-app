@@ -296,10 +296,15 @@ const Dashboard = () => {
             <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">CHERISHLY</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/pricing")}>
-              <Sparkles className="w-4 h-4 mr-2" />
-              Pricing
-            </Button>
+            {!isPro && !roleLoading && (
+              <Button 
+                size="sm" 
+                onClick={() => navigate("/pricing")}
+                className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white"
+              >
+                Unlock the full magic 💖
+              </Button>
+            )}
             <Button variant="ghost" size="sm" onClick={() => navigate("/account")}>
               <User className="w-4 h-4 mr-2" />
               Account

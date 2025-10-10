@@ -27,6 +27,13 @@ const Footer = () => {
             >
               Cookies Policy
             </a>
+            <span className="text-muted-foreground">•</span>
+            <a
+              href="/pricing"
+              className="text-muted-foreground hover:text-foreground transition-colors underline"
+            >
+              Pricing
+            </a>
           </div>
 
           {/* Contact Line */}
