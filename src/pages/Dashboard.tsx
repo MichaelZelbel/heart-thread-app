@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Heart, Plus, Calendar, Sparkles, LogOut, User } from "lucide-react";
+import { Heart, Plus, Calendar, Sparkles, LogOut, User, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -311,7 +311,7 @@ const Dashboard = () => {
               Profile
             </Button>
             <Button variant="ghost" size="sm" onClick={() => navigate("/account")}>
-              <User className="w-4 h-4 mr-2" />
+              <Settings className="w-4 h-4 mr-2" />
               Account
             </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout}>
