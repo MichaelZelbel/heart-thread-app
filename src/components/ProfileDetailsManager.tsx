@@ -89,8 +89,8 @@ const CATEGORIES: CategoryConfig[] = [
   },
   {
     id: "nicknames",
-    label: "Nicknames",
-    explainer: "How you call them when it's just the two of you.",
+    label: "Our Words & Sweet Names",
+    explainer: "Think pet names, inside jokes, names for their car, pets, body parts — even their plushies.",
     emptyState: "Add your first nickname — sweet, silly, or special.",
     valueOnly: true,
   },
@@ -801,7 +801,7 @@ export const ProfileDetailsManager = ({ partnerId, category }: ProfileDetailsMan
                     category.id === "links" 
                       ? (LINK_PLACEHOLDERS[newLabel] || "https://example.com")
                       : category.valueOnly 
-                        ? `e.g., ${category.label === "Nicknames" ? "Sweetie" : "Value"}` 
+                        ? `e.g., ${category.label === "Our Words & Sweet Names" ? "Sweetie" : "Value"}` 
                         : "Value"
                   }
                   className="flex-1"
