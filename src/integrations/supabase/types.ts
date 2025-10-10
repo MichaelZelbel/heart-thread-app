@@ -312,6 +312,7 @@ export type Database = {
           chat_history: string | null
           country: string | null
           created_at: string
+          display_order: number
           gender_identity: string | null
           id: string
           love_language_acts: number | null
@@ -333,6 +334,7 @@ export type Database = {
           chat_history?: string | null
           country?: string | null
           created_at?: string
+          display_order?: number
           gender_identity?: string | null
           id?: string
           love_language_acts?: number | null
@@ -354,6 +356,7 @@ export type Database = {
           chat_history?: string | null
           country?: string | null
           created_at?: string
+          display_order?: number
           gender_identity?: string | null
           id?: string
           love_language_acts?: number | null

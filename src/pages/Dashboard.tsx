@@ -3,12 +3,29 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Heart, Plus, Calendar, Sparkles, LogOut, User, Settings } from "lucide-react";
+import { Heart, Plus, Calendar, Sparkles, LogOut, User, Settings, GripVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { isTestUser } from "@/lib/auth-validation";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 import { MomentManager } from "@/components/MomentManager";
 import { ClaireChat } from "@/components/ClaireChat";
@@ -31,6 +48,7 @@ interface Partner {
   id: string;
   name: string;
   photo_url: string | null;
+  display_order: number;
 }
 interface Event {
   id: string;
@@ -50,6 +68,56 @@ interface MomentSummary {
   title: string | null;
   moment_date: string;
   partner_ids: string[];
+}
+
+interface SortablePartnerProps {
+  partner: Partner;
+  onClick: () => void;
+}
+
+function SortablePartner({ partner, onClick }: SortablePartnerProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: partner.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center w-full"
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing p-2 shrink-0 hover:bg-muted rounded"
+        aria-label="Drag to reorder"
+      >
+        <GripVertical className="w-5 h-5 text-muted-foreground" />
+      </div>
+      <div
+        className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer flex-1 min-w-0"
+        onClick={onClick}
+      >
+        <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold shrink-0">
+          {partner.name.charAt(0).toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium">{partner.name}</p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const Dashboard = () => {
@@ -168,8 +236,39 @@ const Dashboard = () => {
   const loadPartners = async (userId: string) => {
     const {
       data
-    } = await supabase.from("partners").select("id, name, photo_url").eq("user_id", userId).eq("archived", false).neq("relationship_type", "self").limit(5);
+    } = await supabase.from("partners").select("id, name, photo_url, display_order").eq("user_id", userId).eq("archived", false).neq("relationship_type", "self").order("display_order", { ascending: true }).limit(5);
     if (data) setPartners(data);
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = partners.findIndex((partner) => partner.id === active.id);
+    const newIndex = partners.findIndex((partner) => partner.id === over.id);
+
+    const reorderedPartners = arrayMove(partners, oldIndex, newIndex);
+    setPartners(reorderedPartners);
+
+    // Update positions in database
+    const updates = reorderedPartners.map((partner, index) =>
+      supabase
+        .from("partners")
+        .update({ display_order: index })
+        .eq("id", partner.id)
+    );
+
+    await Promise.all(updates);
   };
 
   const loadMoments = async (userId: string) => {
@@ -474,31 +573,27 @@ const Dashboard = () => {
                   <>
                     {/* Current user row will be shown at the bottom of the list */}
 
-                    {/* Cherished list */}
-                    <div className="space-y-3">
-                      {partners.map((partner, index) => (
-                        <div 
-                          key={partner.id} 
-                          className={cn(
-                            "flex w-full items-center",
-                          )}
-                        >
-                          <div 
-                            className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer flex-1 min-w-0"
-                            onClick={() => navigate(`/partner/${partner.id}`)}
-                          >
-                            <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold shrink-0">
-                              {partner.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium">{partner.name}</p>
-                            </div>
-                          </div>
-                          
-                          {/* Header now contains the action buttons; none here */}
+                    {/* Cherished list with drag and drop */}
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <SortableContext
+                        items={partners.map(p => p.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="space-y-2">
+                          {partners.map((partner) => (
+                            <SortablePartner
+                              key={partner.id}
+                              partner={partner}
+                              onClick={() => navigate(`/partner/${partner.id}`)}
+                            />
+                          ))}
                         </div>
-                       ))}
-                    </div>
+                      </SortableContext>
+                    </DndContext>
 
                     {partners.length >= 5 && (
                       <Button variant="ghost" className="w-full" onClick={() => navigate("/partners")}>
