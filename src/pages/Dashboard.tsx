@@ -363,7 +363,10 @@ const Dashboard = () => {
           </div>
 
           <Card 
-            className="shadow-soft hover:shadow-glow transition-shadow animate-scale-in cursor-pointer" 
+            className={cn(
+              "shadow-soft hover:shadow-glow transition-shadow animate-scale-in cursor-pointer",
+              !isPro && "bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20"
+            )}
             style={{ animationDelay: "0.2s" }}
             onClick={() => isPro && setShowMomentsDialog(true)}
           >
@@ -417,10 +420,14 @@ const Dashboard = () => {
                   )}
                 </>
               ) : (
-                <UpgradePrompt 
-                  featureName="Moments"
-                  description="Capture and cherish your favorite memories together."
-                />
+                <div className="pt-2">
+                  <Button asChild size="lg" className="w-full gap-2">
+                    <Link to="/pricing">
+                      <Sparkles className="w-4 h-4" />
+                      Upgrade to Pro
+                    </Link>
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
