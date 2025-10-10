@@ -417,10 +417,14 @@ const Dashboard = () => {
                   )}
                 </>
               ) : (
-                <UpgradePrompt
-                  featureName="Moments"
-                  description="Capture and cherish your favorite memories together."
-                />
+                <div className="py-4">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Capture and cherish your favorite memories together.
+                  </p>
+                  <Button size="sm" asChild className="w-full">
+                    <Link to="/pricing">Upgrade to Pro</Link>
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
