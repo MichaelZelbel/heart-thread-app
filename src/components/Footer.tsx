@@ -31,18 +31,19 @@ const Footer = () => {
 
           {/* Contact Line */}
           <p className="text-sm text-muted-foreground">
-            Questions or feedback? Reach out at{" "}
+            Questions or feedback? Reach us anytime at{" "}
             <a
               href="mailto:support@cherishly.ai"
               className="text-foreground hover:text-primary transition-colors underline"
             >
               support@cherishly.ai
             </a>
+            {" "}💗
           </p>
 
           {/* Business Line */}
           <p className="text-sm text-muted-foreground">
-            © {currentYear} by Michael Zelbel. All rights reserved.
+            © {currentYear} by Zelbel Ltd. All rights reserved.
           </p>
         </div>
       </div>
