@@ -367,23 +367,26 @@ const Dashboard = () => {
             style={{ animationDelay: "0.2s" }}
             onClick={() => isPro && setShowMomentsDialog(true)}
           >
-            {isPro ? (
-              <>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Sparkles className="w-5 h-5 text-accent" />
-                      <span>Moments</span>
-                    </div>
-                    <Button size="sm" variant="ghost" onClick={(e) => {
-                      e.stopPropagation();
-                      setShowMomentsDialog(true);
-                    }}>
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Sparkles className="w-5 h-5 text-accent" />
+                  <span>Moments</span>
+                  {!isPro && <Badge variant="secondary" className="text-xs">Pro</Badge>}
+                </div>
+                {isPro && (
+                  <Button size="sm" variant="ghost" onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMomentsDialog(true);
+                  }}>
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isPro ? (
+                <>
                   <div className="text-4xl font-bold text-accent mb-2">
                     {totalMoments}
                   </div>
@@ -412,14 +415,18 @@ const Dashboard = () => {
                       })}
                     </div>
                   )}
-                </CardContent>
-              </>
-            ) : (
-              <UpgradePrompt
-                featureName="Moments"
-                description="Capture and cherish your favorite memories together."
-              />
-            )}
+                </>
+              ) : (
+                <div className="py-4">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Capture and cherish your favorite memories together.
+                  </p>
+                  <Button size="sm" asChild className="w-full">
+                    <Link to="/pricing">Upgrade to Pro</Link>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
           </Card>
         </div>
 
