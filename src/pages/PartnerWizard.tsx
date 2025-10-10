@@ -9,9 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Save, Loader2, Plus, X } from "lucide-react";
 import { LoveLanguageHeartRatings } from "@/components/LoveLanguageHeartRatings";
 import cherishlyLogo from "@/assets/cherishly-logo.png";
+
+const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const days = Array.from({ length: 31 }, (_, i) => i + 1);
+const years = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);
 const PartnerWizard = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
@@ -19,11 +23,16 @@ const PartnerWizard = () => {
   const totalSteps = 4;
 
   // Form state
-  const [name, setName] = useState("");
-  const [relationshipType, setRelationshipType] = useState("partner");
-  const [genderIdentity, setGenderIdentity] = useState("");
-  const [customGender, setCustomGender] = useState("");
-  const [country, setCountry] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [specialDay, setSpecialDay] = useState({
+    day: null as number | null,
+    month: null as number | null,
+    year: null as number | null,
+    eventType: "Birthday",
+    customEventType: ""
+  });
+  const [likes, setLikes] = useState<string[]>([]);
+  const [dislikes, setDislikes] = useState<string[]>([]);
   const [loveLanguages, setLoveLanguages] = useState({
     physical: 3,
     words: 3,
@@ -32,7 +41,6 @@ const PartnerWizard = () => {
     gifts: 3
   });
   const [notes, setNotes] = useState("");
-  const [chatHistory, setChatHistory] = useState("");
   useEffect(() => {
     checkAuth();
   }, []);
@@ -47,8 +55,8 @@ const PartnerWizard = () => {
     }
   };
   const handleNext = () => {
-    if (currentStep === 1 && !name.trim()) {
-      toast.error("Cherished name is required");
+    if (currentStep === 1 && !nickname.trim()) {
+      toast.error("Please enter a nickname");
       return;
     }
     if (currentStep < totalSteps) {
@@ -63,8 +71,8 @@ const PartnerWizard = () => {
     }
   };
   const handleSave = async () => {
-    if (!name.trim()) {
-      toast.error("Cherished name is required");
+    if (!nickname.trim()) {
+      toast.error("Nickname is required");
       return;
     }
     setLoading(true);
@@ -75,31 +83,108 @@ const PartnerWizard = () => {
         }
       } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
-      const finalGenderIdentity = genderIdentity === "Custom ✨" ? customGender.trim() : genderIdentity;
-      
-      const {
-        error
-      } = await supabase.from("partners").insert({
-        user_id: session.user.id,
-        name: name.trim(),
-        relationship_type: relationshipType,
-        gender_identity: finalGenderIdentity || null,
-        country: country || null,
-        love_language_physical: loveLanguages.physical,
-        love_language_words: loveLanguages.words,
-        love_language_quality: loveLanguages.quality,
-        love_language_acts: loveLanguages.acts,
-        love_language_gifts: loveLanguages.gifts,
-        notes: notes.trim() || null,
-        chat_history: chatHistory.trim() || null
-      });
-      if (error) throw error;
-      toast.success(`${name} added to your cherished!`);
+
+      // Determine birthdate if creating a Birthday event
+      let birthdate = null;
+      if (specialDay.day && specialDay.month) {
+        const eventType = specialDay.eventType === "Custom..." 
+          ? specialDay.customEventType 
+          : specialDay.eventType;
+        
+        if (eventType === "Birthday") {
+          const eventDate = new Date(
+            specialDay.year || new Date().getFullYear(),
+            specialDay.month,
+            specialDay.day
+          );
+          birthdate = eventDate.toISOString().split('T')[0];
+        }
+      }
+
+      // Create partner profile
+      const { data: partner, error: partnerError } = await supabase
+        .from("partners")
+        .insert({
+          user_id: session.user.id,
+          name: nickname.trim(),
+          love_language_physical: loveLanguages.physical,
+          love_language_words: loveLanguages.words,
+          love_language_quality: loveLanguages.quality,
+          love_language_acts: loveLanguages.acts,
+          love_language_gifts: loveLanguages.gifts,
+          birthdate: birthdate,
+          notes: notes.trim() || null,
+        })
+        .select()
+        .single();
+
+      if (partnerError) throw partnerError;
+
+      // Create event if date is provided
+      if (specialDay.day && specialDay.month) {
+        const eventDate = new Date(
+          specialDay.year || new Date().getFullYear(),
+          specialDay.month,
+          specialDay.day
+        );
+        
+        const eventType = specialDay.eventType === "Custom..." 
+          ? specialDay.customEventType 
+          : specialDay.eventType;
+
+        await supabase.from("events").insert({
+          user_id: session.user.id,
+          partner_id: partner.id,
+          event_date: eventDate.toISOString().split('T')[0],
+          event_type: eventType || "custom",
+          title: eventType || "Special Day",
+          is_recurring: true,
+        });
+      }
+
+      // Add likes
+      if (likes.length > 0) {
+        const likesData = likes.map((like, index) => ({
+          partner_id: partner.id,
+          item: like,
+          position: index,
+        }));
+        await supabase.from("partner_likes").insert(likesData);
+      }
+
+      // Add dislikes
+      if (dislikes.length > 0) {
+        const dislikesData = dislikes.map((dislike, index) => ({
+          partner_id: partner.id,
+          item: dislike,
+          position: index,
+        }));
+        await supabase.from("partner_dislikes").insert(dislikesData);
+      }
+
+      toast.success(`${nickname} added to your cherished!`);
       navigate("/dashboard");
     } catch (error: any) {
       toast.error(error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const addItem = (field: 'likes' | 'dislikes', value: string) => {
+    if (!value.trim()) return;
+    if (field === 'likes') {
+      setLikes([...likes, value.trim()]);
+    } else {
+      setDislikes([...dislikes, value.trim()]);
+    }
+  };
+
+  const removeItem = (field: 'likes' | 'dislikes', index: number) => {
+    if (field === 'likes') {
+      setLikes(likes.filter((_, i) => i !== index));
+    } else {
+      setDislikes(dislikes.filter((_, i) => i !== index));
     }
   };
   const progress = currentStep / totalSteps * 100;
@@ -131,152 +216,157 @@ const PartnerWizard = () => {
         <Card className="shadow-soft animate-scale-in">
           <CardHeader>
             <CardTitle>
-              {currentStep === 1 && "Basic Information"}
-              {currentStep === 2 && "Love Languages"}
-              {currentStep === 3 && "Additional Details"}
+              {currentStep === 1 && "Who do you cherish?"}
+              {currentStep === 2 && "Do they have a special day?"}
+              {currentStep === 3 && "Tell us what makes them light up"}
               {currentStep === 4 && "Notes & Memories"}
             </CardTitle>
-            
+            <CardDescription>
+              {currentStep === 1 && "Start simple — what do you call them?"}
+              {currentStep === 2 && "Cherish the moments that matter — birthdays, anniversaries, or first 'I love you's."}
+              {currentStep === 3 && "Share what they love, what they dislike, and how they receive love best."}
+              {currentStep === 4 && "These notes are completely private and secure"}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {currentStep === 1 && <div className="space-y-4">
-                <p className="text-sm text-muted-foreground mb-4">
-                  A few gentle details — nothing personal, just what makes them <em>them</em> 💗
-                </p>
+            {/* Step 1: Nickname */}
+            {currentStep === 1 && (
+              <div className="space-y-2">
+                <Label htmlFor="nickname">Nickname</Label>
+                <Input
+                  id="nickname"
+                  placeholder="Sweetie, Alex, Mom..."
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  autoFocus
+                  data-testid="what-do-you-call-them"
+                />
+              </div>
+            )}
+
+            {/* Step 2: Special Day */}
+            {currentStep === 2 && (
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">
-                    Name / Nickname <span className="text-destructive">*</span>
-                  </Label>
-                  <Input 
-                    id="name" 
-                    placeholder="What do you call them?" 
-                    value={name} 
-                    onChange={e => setName(e.target.value)} 
-                    required 
-                    data-testid="what-do-you-call-them" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="relationshipType">Relationship Type</Label>
-                  <Select value={relationshipType} onValueChange={setRelationshipType}>
-                    <SelectTrigger id="relationshipType">
-                      <SelectValue placeholder="Select type" />
+                  <Label>Event Type</Label>
+                  <Select
+                    value={specialDay.eventType}
+                    onValueChange={(val) => setSpecialDay({ ...specialDay, eventType: val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select event type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="partner">Partner</SelectItem>
-                      <SelectItem value="crush">Crush</SelectItem>
-                      <SelectItem value="friend">Friend</SelectItem>
-                      <SelectItem value="family">Family</SelectItem>
-                      <SelectItem value="colleague">Colleague</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="Birthday">Birthday</SelectItem>
+                      <SelectItem value="Anniversary">Anniversary</SelectItem>
+                      <SelectItem value="Day We Met">Day We Met</SelectItem>
+                      <SelectItem value="First 'I Love You'">First 'I Love You'</SelectItem>
+                      <SelectItem value="Special Day">Special Day</SelectItem>
+                      <SelectItem value="Custom...">Custom...</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="genderIdentity">How do they identify, if you'd like to share? 💕</Label>
-                  <Select value={genderIdentity} onValueChange={setGenderIdentity}>
-                    <SelectTrigger id="genderIdentity">
-                      <SelectValue placeholder="Optional — skip if you prefer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Woman 💐">Woman 💐</SelectItem>
-                      <SelectItem value="Man 🌹">Man 🌹</SelectItem>
-                      <SelectItem value="Nonbinary 🌈">Nonbinary 🌈</SelectItem>
-                      <SelectItem value="Trans Woman 💖">Trans Woman 💖</SelectItem>
-                      <SelectItem value="Trans Man 💙">Trans Man 💙</SelectItem>
-                      <SelectItem value="Prefer not to say 🙊">Prefer not to say 🙊</SelectItem>
-                      <SelectItem value="Custom ✨">Custom ✨</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    This helps Cherishly personalize messages and suggestions — totally optional.
-                  </p>
-                  {genderIdentity === "Custom ✨" && (
-                    <Input 
-                      placeholder="Type anything that fits — we love unique identities! 🌸"
-                      value={customGender}
-                      onChange={e => setCustomGender(e.target.value)}
-                      className="mt-2"
+                  
+                  {specialDay.eventType === "Custom..." && (
+                    <Input
+                      placeholder="Enter custom event name"
+                      value={specialDay.customEventType || ""}
+                      onChange={(e) => setSpecialDay({ ...specialDay, customEventType: e.target.value })}
                     />
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="country">Where in the world do they live? 🌍</Label>
-                  <Select value={country} onValueChange={setCountry}>
-                    <SelectTrigger id="country">
-                      <SelectValue placeholder="Optional — skip if you prefer" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
-                      <SelectItem value="United States">United States 🇺🇸</SelectItem>
-                      <SelectItem value="United Kingdom">United Kingdom 🇬🇧</SelectItem>
-                      <SelectItem value="Canada">Canada 🇨🇦</SelectItem>
-                      <SelectItem value="Australia">Australia 🇦🇺</SelectItem>
-                      <SelectItem value="Germany">Germany 🇩🇪</SelectItem>
-                      <SelectItem value="France">France 🇫🇷</SelectItem>
-                      <SelectItem value="Spain">Spain 🇪🇸</SelectItem>
-                      <SelectItem value="Italy">Italy 🇮🇹</SelectItem>
-                      <SelectItem value="Netherlands">Netherlands 🇳🇱</SelectItem>
-                      <SelectItem value="Sweden">Sweden 🇸🇪</SelectItem>
-                      <SelectItem value="Norway">Norway 🇳🇴</SelectItem>
-                      <SelectItem value="Denmark">Denmark 🇩🇰</SelectItem>
-                      <SelectItem value="Finland">Finland 🇫🇮</SelectItem>
-                      <SelectItem value="Belgium">Belgium 🇧🇪</SelectItem>
-                      <SelectItem value="Switzerland">Switzerland 🇨🇭</SelectItem>
-                      <SelectItem value="Austria">Austria 🇦🇹</SelectItem>
-                      <SelectItem value="Poland">Poland 🇵🇱</SelectItem>
-                      <SelectItem value="Portugal">Portugal 🇵🇹</SelectItem>
-                      <SelectItem value="Greece">Greece 🇬🇷</SelectItem>
-                      <SelectItem value="Ireland">Ireland 🇮🇪</SelectItem>
-                      <SelectItem value="Japan">Japan 🇯🇵</SelectItem>
-                      <SelectItem value="South Korea">South Korea 🇰🇷</SelectItem>
-                      <SelectItem value="China">China 🇨🇳</SelectItem>
-                      <SelectItem value="India">India 🇮🇳</SelectItem>
-                      <SelectItem value="Singapore">Singapore 🇸🇬</SelectItem>
-                      <SelectItem value="Malaysia">Malaysia 🇲🇾</SelectItem>
-                      <SelectItem value="Thailand">Thailand 🇹🇭</SelectItem>
-                      <SelectItem value="Philippines">Philippines 🇵🇭</SelectItem>
-                      <SelectItem value="Indonesia">Indonesia 🇮🇩</SelectItem>
-                      <SelectItem value="Vietnam">Vietnam 🇻🇳</SelectItem>
-                      <SelectItem value="New Zealand">New Zealand 🇳🇿</SelectItem>
-                      <SelectItem value="Brazil">Brazil 🇧🇷</SelectItem>
-                      <SelectItem value="Mexico">Mexico 🇲🇽</SelectItem>
-                      <SelectItem value="Argentina">Argentina 🇦🇷</SelectItem>
-                      <SelectItem value="Chile">Chile 🇨🇱</SelectItem>
-                      <SelectItem value="Colombia">Colombia 🇨🇴</SelectItem>
-                      <SelectItem value="South Africa">South Africa 🇿🇦</SelectItem>
-                      <SelectItem value="Egypt">Egypt 🇪🇬</SelectItem>
-                      <SelectItem value="Nigeria">Nigeria 🇳🇬</SelectItem>
-                      <SelectItem value="Kenya">Kenya 🇰🇪</SelectItem>
-                      <SelectItem value="Israel">Israel 🇮🇱</SelectItem>
-                      <SelectItem value="United Arab Emirates">United Arab Emirates 🇦🇪</SelectItem>
-                      <SelectItem value="Saudi Arabia">Saudi Arabia 🇸🇦</SelectItem>
-                      <SelectItem value="Turkey">Turkey 🇹🇷</SelectItem>
-                      <SelectItem value="Russia">Russia 🇷🇺</SelectItem>
-                      <SelectItem value="Ukraine">Ukraine 🇺🇦</SelectItem>
-                      <SelectItem value="Czech Republic">Czech Republic 🇨🇿</SelectItem>
-                      <SelectItem value="Hungary">Hungary 🇭🇺</SelectItem>
-                      <SelectItem value="Romania">Romania 🇷🇴</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    So reminders and ideas fit their local time and vibe.
-                  </p>
-                </div>
-              </div>}
 
-            {currentStep === 2 && <LoveLanguageHeartRatings values={loveLanguages} onChange={setLoveLanguages} />}
-
-            {currentStep === 3 && <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="chatHistory">Chat History (optional)</Label>
-                  <Textarea id="chatHistory" placeholder="Paste important chat logs or messages here..." value={chatHistory} onChange={e => setChatHistory(e.target.value)} rows={8} />
-                  <p className="text-xs text-muted-foreground">
-                    A private space to store meaningful conversations
-                  </p>
+                  <Label>Date</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Select
+                      value={specialDay.month?.toString()}
+                      onValueChange={(val) => setSpecialDay({ ...specialDay, month: parseInt(val) })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Month" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {months.map((m, idx) => (
+                          <SelectItem key={idx} value={idx.toString()}>
+                            {m}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={specialDay.day?.toString()}
+                      onValueChange={(val) => setSpecialDay({ ...specialDay, day: parseInt(val) })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Day" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {days.map((d) => (
+                          <SelectItem key={d} value={d.toString()}>
+                            {d}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={specialDay.year?.toString() || "none"}
+                      onValueChange={(val) => setSpecialDay({ ...specialDay, year: val === "none" ? null : parseInt(val) })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Year (opt)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No year</SelectItem>
+                        {years.map((y) => (
+                          <SelectItem key={y} value={y.toString()}>
+                            {y}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              </div>}
+              </div>
+            )}
+
+            {/* Step 3: Details */}
+            {currentStep === 3 && (
+              <div className="space-y-6">
+                {/* Likes */}
+                <DetailSection
+                  title="Things they love"
+                  placeholder="e.g., Chocolate cake"
+                  items={likes}
+                  onAdd={(value) => addItem('likes', value)}
+                  onRemove={(index) => removeItem('likes', index)}
+                />
+
+                {/* Dislikes */}
+                <DetailSection
+                  title="Things they dislike"
+                  placeholder="e.g., Loud noises"
+                  items={dislikes}
+                  onAdd={(value) => addItem('dislikes', value)}
+                  onRemove={(index) => removeItem('dislikes', index)}
+                />
+
+                {/* Love Languages */}
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">How do they like to receive love?</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Rate what matters most to them — 1 to 5 hearts each.
+                    </p>
+                  </div>
+                  <LoveLanguageHeartRatings
+                    values={loveLanguages}
+                    onChange={setLoveLanguages}
+                  />
+                </div>
+              </div>
+            )}
 
             {currentStep === 4 && <div className="space-y-4">
                 <div className="space-y-2">
@@ -294,22 +384,104 @@ const PartnerWizard = () => {
                 {currentStep === 1 ? "Cancel" : "Back"}
               </Button>
 
-              {currentStep < totalSteps ? <Button onClick={handleNext}>
-                  Next
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button> : <Button onClick={handleSave} disabled={loading} data-testid="partner-wizard-save-button">
-                  {loading ? <>
+              {currentStep < totalSteps ? (
+                <div className="flex gap-2">
+                  {currentStep === 2 && (
+                    <Button variant="ghost" onClick={() => setCurrentStep(currentStep + 1)}>
+                      Skip this step
+                    </Button>
+                  )}
+                  <Button onClick={handleNext}>
+                    Next
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              ) : (
+                <Button onClick={handleSave} disabled={loading} data-testid="partner-wizard-save-button">
+                  {loading ? (
+                    <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Saving...
-                    </> : <>
+                    </>
+                  ) : (
+                    <>
                       <Save className="w-4 h-4 mr-2" />
                       Save Cherished
-                    </>}
-                </Button>}
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
       </main>
     </div>;
 };
+
+// Helper component for detail sections in step 3
+interface DetailSectionProps {
+  title: string;
+  placeholder: string;
+  items: string[];
+  onAdd: (value: string) => void;
+  onRemove: (index: number) => void;
+}
+
+const DetailSection = ({ title, placeholder, items, onAdd, onRemove }: DetailSectionProps) => {
+  const [inputValue, setInputValue] = useState("");
+
+  const handleAdd = () => {
+    if (inputValue.trim()) {
+      onAdd(inputValue);
+      setInputValue("");
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <Label className="text-sm font-medium">{title}</Label>
+      
+      {items.length > 0 && (
+        <div className="space-y-2">
+          {items.map((item, index) => (
+            <div key={index} className="flex items-center gap-2 p-2 rounded-lg border bg-card/50">
+              <span className="flex-1 text-sm">{item}</span>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => onRemove(index)}
+                className="h-7 w-7 shrink-0"
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <Input
+          placeholder={placeholder}
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleAdd();
+            }
+          }}
+          className="text-sm"
+        />
+        <Button onClick={handleAdd} size="icon" className="shrink-0">
+          <Plus className="w-4 h-4" />
+        </Button>
+      </div>
+      
+      {items.length === 0 && (
+        <p className="text-xs text-muted-foreground">Add 1-2 items to get started</p>
+      )}
+    </div>
+  );
+};
+
 export default PartnerWizard;
