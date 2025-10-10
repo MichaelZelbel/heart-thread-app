@@ -300,9 +300,10 @@ const Dashboard = () => {
               <Button 
                 size="sm" 
                 onClick={() => navigate("/pricing")}
-                className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white"
+                className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white flex items-center gap-2"
               >
-                Unlock the full magic 💖
+                <span>Unlock the full magic</span>
+                <span>🤍</span>
               </Button>
             )}
             <Button variant="ghost" size="sm" onClick={() => navigate("/account")}>
