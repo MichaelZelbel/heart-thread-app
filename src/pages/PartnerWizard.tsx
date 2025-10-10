@@ -163,7 +163,7 @@ const PartnerWizard = () => {
       }
 
       toast.success(`${nickname} added to your cherished!`);
-      navigate("/dashboard");
+      navigate(`/partner/${partner.id}`);
     } catch (error: any) {
       toast.error(error.message);
     } finally {
