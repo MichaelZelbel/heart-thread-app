@@ -342,7 +342,7 @@ const PrivacyPolicy = () => {
               <p>If you have any questions about this Privacy Policy, You can contact us:</p>
 
               <ul>
-                <li>By email: <a href="mailto:michael@lotuslovelabs.com">michael@lotuslovelabs.com</a></li>
+                <li>By email: <a href="mailto:support@cherishly.ai">support@cherishly.ai</a></li>
               </ul>
 
               <div className="mt-12 pt-8 border-t text-sm text-muted-foreground not-prose">

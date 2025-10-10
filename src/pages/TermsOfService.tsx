@@ -236,7 +236,7 @@ const TermsOfService = () => {
               <p>If you have any questions about these Terms and Conditions, You can contact us:</p>
 
               <ul>
-                <li>By email: <a href="mailto:michael@zelbel.de">michael@zelbel.de</a></li>
+                <li>By email: <a href="mailto:support@cherishly.ai">support@cherishly.ai</a></li>
               </ul>
 
               <div className="mt-12 pt-8 border-t text-sm text-muted-foreground not-prose">

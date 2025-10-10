@@ -33,10 +33,10 @@ const Footer = () => {
           <p className="text-sm text-muted-foreground">
             Questions or feedback? Reach out at{" "}
             <a
-              href="mailto:michael@lotuslovelabs.com"
+              href="mailto:support@cherishly.ai"
               className="text-foreground hover:text-primary transition-colors underline"
             >
-              michael@lotuslovelabs.com
+              support@cherishly.ai
             </a>
           </p>
 
