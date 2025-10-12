@@ -320,6 +320,12 @@ export type Database = {
           love_language_physical: number | null
           love_language_quality: number | null
           love_language_words: number | null
+          message_coach_custom_tone: string | null
+          message_coach_notes: string | null
+          message_coach_preset_tone: string | null
+          message_coach_transcript: string | null
+          message_coach_updated_at: string | null
+          message_coach_use_default_tone: boolean | null
           name: string
           notes: string | null
           photo_url: string | null
@@ -342,6 +348,12 @@ export type Database = {
           love_language_physical?: number | null
           love_language_quality?: number | null
           love_language_words?: number | null
+          message_coach_custom_tone?: string | null
+          message_coach_notes?: string | null
+          message_coach_preset_tone?: string | null
+          message_coach_transcript?: string | null
+          message_coach_updated_at?: string | null
+          message_coach_use_default_tone?: boolean | null
           name: string
           notes?: string | null
           photo_url?: string | null
@@ -364,6 +376,12 @@ export type Database = {
           love_language_physical?: number | null
           love_language_quality?: number | null
           love_language_words?: number | null
+          message_coach_custom_tone?: string | null
+          message_coach_notes?: string | null
+          message_coach_preset_tone?: string | null
+          message_coach_transcript?: string | null
+          message_coach_updated_at?: string | null
+          message_coach_use_default_tone?: boolean | null
           name?: string
           notes?: string | null
           photo_url?: string | null

@@ -16,9 +16,16 @@ interface ClaireChatProps {
   partnerId?: string;
   compact?: boolean;
   prefillMessage?: string;
+  messageCoachContext?: {
+    transcript: string;
+    notes: string;
+    presetTone: string;
+    customTone: string;
+    useDefaultTone: boolean;
+  };
 }
 
-export const ClaireChat = ({ partnerId, compact = false, prefillMessage = "" }: ClaireChatProps) => {
+export const ClaireChat = ({ partnerId, compact = false, prefillMessage = "", messageCoachContext }: ClaireChatProps) => {
   const [partnerName, setPartnerName] = useState<string>("");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -123,7 +130,11 @@ export const ClaireChat = ({ partnerId, compact = false, prefillMessage = "" }: 
       });
 
       const { data, error } = await supabase.functions.invoke('claire-chat', {
-        body: { message: userMessage, partnerId },
+        body: { 
+          message: userMessage, 
+          partnerId,
+          messageCoachContext 
+        },
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }

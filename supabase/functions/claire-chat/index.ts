@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, partnerId } = await req.json();
+    const { message, partnerId, messageCoachContext } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -197,6 +197,39 @@ serve(async (req) => {
       contextData += `\n**Current Page Context:** You're on the Dashboard. The user can ask about any of their cherished people.\n`;
     }
 
+    // Add Message Coach context if provided (NOT added to global context)
+    let messageCoachPrompt = '';
+    if (messageCoachContext && (messageCoachContext.transcript || messageCoachContext.notes)) {
+      messageCoachPrompt = '\n\n**Message Coach Context (Private - Only for this conversation):**\n';
+      
+      if (messageCoachContext.transcript) {
+        messageCoachPrompt += `\n**Recent Conversation/Reflection:**\n${messageCoachContext.transcript}\n`;
+      }
+      
+      if (messageCoachContext.notes) {
+        messageCoachPrompt += `\n**User's Intent/Notes:**\n${messageCoachContext.notes}\n`;
+      }
+
+      // Add tone guidance
+      const toneGuidance = [];
+      if (messageCoachContext.useDefaultTone) {
+        toneGuidance.push("Use the user's default tone (warm and authentic)");
+      } else {
+        if (messageCoachContext.presetTone) {
+          toneGuidance.push(`Tone: ${messageCoachContext.presetTone}`);
+        }
+        if (messageCoachContext.customTone) {
+          toneGuidance.push(`Custom tone style: ${messageCoachContext.customTone}`);
+        }
+      }
+
+      if (toneGuidance.length > 0) {
+        messageCoachPrompt += `\n**Tone Guidance:** ${toneGuidance.join(', ')}\n`;
+      }
+
+      messageCoachPrompt += '\n**Your Task:** Help the user craft a thoughtful reply based on the conversation/reflection and their intent. Provide 2-3 message suggestions they can use or adapt. Keep suggestions natural and aligned with their desired tone.\n';
+    }
+
     // Get current date and time
     const now = new Date();
     const currentDateTime = now.toLocaleString('en-US', { 
@@ -237,13 +270,17 @@ Always be warm, supportive, and respectful. Keep responses concise but meaningfu
 User's Context:${contextData}`;
 
     // Build messages array with conversation history
+    const userMessageWithContext = messageCoachPrompt 
+      ? `${messageCoachPrompt}\n\n${message}`
+      : message;
+
     const messages = [
       { role: 'system', content: systemPrompt },
       ...conversationHistory.map(msg => ({
         role: msg.role,
         content: msg.content
       })),
-      { role: 'user', content: message }
+      { role: 'user', content: userMessageWithContext }
     ];
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {

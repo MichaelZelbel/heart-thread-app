@@ -18,6 +18,7 @@ import { EventManager } from "@/components/EventManager";
 import { MomentManager } from "@/components/MomentManager";
 import { ProfileDetailsManager, CATEGORIES } from "@/components/ProfileDetailsManager";
 import { ClaireChat } from "@/components/ClaireChat";
+import { MessageCoach } from "@/components/MessageCoach";
 import { dateToYMDLocal } from "@/lib/utils";
 import { useUserRole } from "@/hooks/useUserRole";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
@@ -311,10 +312,11 @@ const PartnerDetail = () => {
         </div>
 
         <Tabs defaultValue="details" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="moments">Moments</TabsTrigger>
+            <TabsTrigger value="messageCoach">Message Coach</TabsTrigger>
           </TabsList>
 
           <TabsContent value="calendar" className="space-y-6">
@@ -336,6 +338,21 @@ const PartnerDetail = () => {
               <UpgradePrompt 
                 featureName="Moments Log"
                 description="Capture and organize your special memories with your cherished ones."
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="messageCoach" className="space-y-6">
+            {isPro ? (
+              <Card className="shadow-soft">
+                <CardContent className="pt-6">
+                  <MessageCoach partnerId={id!} partnerName={name} />
+                </CardContent>
+              </Card>
+            ) : (
+              <UpgradePrompt 
+                featureName="Message Coach"
+                description="Get AI-powered help crafting thoughtful messages with personalized tone and context."
               />
             )}
           </TabsContent>
