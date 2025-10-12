@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
-import { Info, X } from "lucide-react";
+import { Heart, Waves, Sparkles, Brain, Shield, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ClaireChat } from "./ClaireChat";
@@ -17,11 +17,11 @@ interface MessageCoachProps {
 }
 
 const TONE_PRESETS = [
-  { label: "Loving", value: "loving" },
-  { label: "Calm", value: "calm" },
-  { label: "Flirty", value: "flirty" },
-  { label: "Thoughtful", value: "thoughtful" },
-  { label: "Sincere", value: "sincere" }
+  { label: "Loving", value: "loving", icon: Heart },
+  { label: "Calm", value: "calm", icon: Waves },
+  { label: "Flirty", value: "flirty", icon: Sparkles },
+  { label: "Thoughtful", value: "thoughtful", icon: Brain },
+  { label: "Sincere", value: "sincere", icon: Shield }
 ];
 
 export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
@@ -29,7 +29,6 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
   const [notes, setNotes] = useState("");
   const [presetTone, setPresetTone] = useState("");
   const [customTone, setCustomTone] = useState("");
-  const [useDefaultTone, setUseDefaultTone] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
   
@@ -51,7 +50,7 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
     try {
       const { data, error } = await supabase
         .from("partners")
-        .select("message_coach_transcript, message_coach_notes, message_coach_preset_tone, message_coach_custom_tone, message_coach_use_default_tone, message_coach_updated_at")
+        .select("message_coach_transcript, message_coach_notes, message_coach_preset_tone, message_coach_custom_tone, message_coach_updated_at")
         .eq("id", partnerId)
         .single();
 
@@ -62,7 +61,6 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
         setNotes(data.message_coach_notes || "");
         setPresetTone(data.message_coach_preset_tone || "");
         setCustomTone(data.message_coach_custom_tone || "");
-        setUseDefaultTone(data.message_coach_use_default_tone || false);
         setLastUpdated(data.message_coach_updated_at ? new Date(data.message_coach_updated_at) : null);
       }
     } catch (error) {
@@ -78,7 +76,6 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
     notes?: string;
     presetTone?: string;
     customTone?: string;
-    useDefaultTone?: boolean;
   }) => {
     try {
       const updateData: any = {
@@ -86,8 +83,8 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
       };
 
       if (dataToSave.transcript !== undefined) {
-        if (dataToSave.transcript.length > 3000) {
-          toast.error("Transcript exceeds 3,000 character limit");
+        if (dataToSave.transcript.length > 5000) {
+          toast.error("Transcript exceeds 5,000 character limit");
           return;
         }
         updateData.message_coach_transcript = dataToSave.transcript;
@@ -103,7 +100,6 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
 
       if (dataToSave.presetTone !== undefined) updateData.message_coach_preset_tone = dataToSave.presetTone;
       if (dataToSave.customTone !== undefined) updateData.message_coach_custom_tone = dataToSave.customTone;
-      if (dataToSave.useDefaultTone !== undefined) updateData.message_coach_use_default_tone = dataToSave.useDefaultTone;
 
       const { error } = await supabase
         .from("partners")
@@ -170,18 +166,6 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
 
   return (
     <div className="space-y-4">
-      {/* Privacy notice */}
-      <Card className="bg-muted/50 border-primary/20">
-        <CardContent className="pt-4 pb-3">
-          <div className="flex gap-2 items-start">
-            <Info className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
-            <p className="text-xs text-muted-foreground">
-              <strong>Private by design:</strong> These fields are saved to {partnerName} only and are used here to help craft replies. They are not added to your global memory.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
       <div className="grid md:grid-cols-2 gap-6">
         {/* Left column: Text inputs */}
         <div className="space-y-4">
@@ -191,20 +175,20 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
               id="transcript"
               value={transcript}
               onChange={(e) => {
-                const newValue = e.target.value.slice(0, 3000);
+                const newValue = e.target.value.slice(0, 5000);
                 setTranscript(newValue);
                 debouncedSave({ transcript: newValue });
               }}
               placeholder="Paste a chat excerpt, diary note, or anything you want help replying to…"
-              className="min-h-[200px] resize-none"
-              maxLength={3000}
+              className="min-h-[600px] resize-none"
+              maxLength={5000}
             />
             <div className="flex justify-between mt-1">
               <p className="text-xs text-muted-foreground">
                 Saved to {partnerName} only. Not included in your global memory.
               </p>
               <p className="text-xs text-muted-foreground">
-                {transcript.length} / 3,000
+                {transcript.length} / 5,000
               </p>
             </div>
           </div>
@@ -262,7 +246,7 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
 
         {/* Right column: Claire chat + tone controls */}
         <div className="space-y-4">
-          <div className="h-[400px]">
+          <div className="h-[800px]">
             <ClaireChat 
               partnerId={partnerId}
               compact={false}
@@ -270,8 +254,7 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
                 transcript,
                 notes,
                 presetTone,
-                customTone,
-                useDefaultTone
+                customTone
               }}
             />
           </div>
@@ -281,20 +264,23 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
               <div>
                 <Label className="text-sm font-medium mb-2 block">Quick Tone</Label>
                 <div className="flex flex-wrap gap-2">
-                  {TONE_PRESETS.map((tone) => (
-                    <Button
-                      key={tone.value}
-                      variant={presetTone === tone.value ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        setPresetTone(tone.value);
-                        saveMessageCoachData({ presetTone: tone.value });
-                      }}
-                      disabled={useDefaultTone}
-                    >
-                      {tone.label}
-                    </Button>
-                  ))}
+                  {TONE_PRESETS.map((tone) => {
+                    const Icon = tone.icon;
+                    return (
+                      <Button
+                        key={tone.value}
+                        variant={presetTone === tone.value ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          setPresetTone(tone.value);
+                          saveMessageCoachData({ presetTone: tone.value });
+                        }}
+                      >
+                        <Icon className="w-4 h-4 mr-1" />
+                        {tone.label}
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -308,22 +294,7 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
                     debouncedSave({ customTone: e.target.value });
                   }}
                   placeholder="e.g., like George Clooney — confident, warm, simple words, never needy"
-                  disabled={useDefaultTone}
                 />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="useDefaultTone"
-                  checked={useDefaultTone}
-                  onCheckedChange={(checked) => {
-                    setUseDefaultTone(checked);
-                    saveMessageCoachData({ useDefaultTone: checked });
-                  }}
-                />
-                <Label htmlFor="useDefaultTone" className="text-sm font-normal cursor-pointer">
-                  Use my default tone
-                </Label>
               </div>
             </CardContent>
           </Card>

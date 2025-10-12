@@ -212,15 +212,11 @@ serve(async (req) => {
 
       // Add tone guidance
       const toneGuidance = [];
-      if (messageCoachContext.useDefaultTone) {
-        toneGuidance.push("Use the user's default tone (warm and authentic)");
-      } else {
-        if (messageCoachContext.presetTone) {
-          toneGuidance.push(`Tone: ${messageCoachContext.presetTone}`);
-        }
-        if (messageCoachContext.customTone) {
-          toneGuidance.push(`Custom tone style: ${messageCoachContext.customTone}`);
-        }
+      if (messageCoachContext.presetTone) {
+        toneGuidance.push(`Tone: ${messageCoachContext.presetTone}`);
+      }
+      if (messageCoachContext.customTone) {
+        toneGuidance.push(`Custom tone style: ${messageCoachContext.customTone}`);
       }
 
       if (toneGuidance.length > 0) {

@@ -21,7 +21,6 @@ interface ClaireChatProps {
     notes: string;
     presetTone: string;
     customTone: string;
-    useDefaultTone: boolean;
   };
 }
 
