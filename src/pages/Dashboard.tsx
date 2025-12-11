@@ -278,7 +278,7 @@ const Dashboard = () => {
   const loadPartners = async (userId: string) => {
     const {
       data
-    } = await supabase.from("partners").select("id, name, photo_url, display_order").eq("user_id", userId).eq("archived", false).neq("relationship_type", "self").order("display_order", { ascending: true }).limit(5);
+    } = await supabase.from("partners").select("id, name, photo_url, display_order").eq("user_id", userId).eq("archived", false).neq("relationship_type", "self").order("display_order", { ascending: true });
     if (data) setPartners(data);
   };
 
@@ -688,11 +688,6 @@ const Dashboard = () => {
                       </SortableContext>
                     </DndContext>
 
-                    {partners.length >= 5 && (
-                      <Button variant="ghost" className="w-full" onClick={() => navigate("/partners")}>
-                        View All Cherished
-                      </Button>
-                    )}
                   </>
                 )}
               </CardContent>
