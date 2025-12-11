@@ -132,7 +132,7 @@ const PartnerDetail = () => {
     notes?: string;
     birthdate?: Date | null;
     loveLanguages?: LoveLanguages;
-  }) => {
+  }, showToast = false) => {
     if (!id) return;
 
     const { data: { session } } = await supabase.auth.getSession();
@@ -214,7 +214,9 @@ const PartnerDetail = () => {
       }
     }
 
-    toast.success("Saved");
+    if (showToast) {
+      toast.success("Saved");
+    }
   }, [id, name]);
 
   // Debounced save for text fields
@@ -404,7 +406,13 @@ const PartnerDetail = () => {
                     const newNotes = e.target.value;
                     setNotes(newNotes);
                     debouncedSave({ notes: newNotes });
-                  }} 
+                  }}
+                  onBlur={() => {
+                    if (saveTimeoutRef.current) {
+                      clearTimeout(saveTimeoutRef.current);
+                    }
+                    savePartnerData({ notes }, true);
+                  }}
                   placeholder="Special memories, preferences, important details..." 
                   rows={6} 
                   className="resize-none" 
@@ -429,7 +437,13 @@ const PartnerDetail = () => {
                       const newName = e.target.value;
                       setName(newName);
                       debouncedSave({ name: newName });
-                    }} 
+                    }}
+                    onBlur={() => {
+                      if (saveTimeoutRef.current) {
+                        clearTimeout(saveTimeoutRef.current);
+                      }
+                      savePartnerData({ name }, true);
+                    }}
                     placeholder="What do you call them?" 
                     data-testid="what-do-you-call-them" 
                   />
@@ -492,6 +506,12 @@ const PartnerDetail = () => {
                         const newCustomGender = e.target.value;
                         setCustomGender(newCustomGender);
                         debouncedSave({ genderIdentity: newCustomGender });
+                      }}
+                      onBlur={() => {
+                        if (saveTimeoutRef.current) {
+                          clearTimeout(saveTimeoutRef.current);
+                        }
+                        savePartnerData({ genderIdentity: customGender }, true);
                       }}
                       className="mt-2"
                     />

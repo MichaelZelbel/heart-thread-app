@@ -134,7 +134,7 @@ const SelfProfile = () => {
     notes?: string;
     birthdate?: Date | null;
     loveLanguages?: LoveLanguages;
-  }) => {
+  }, showToast = false) => {
     if (!selfPartnerId) return;
 
     const { data: { session } } = await supabase.auth.getSession();
@@ -173,7 +173,9 @@ const SelfProfile = () => {
       return;
     }
 
-    toast.success("Saved");
+    if (showToast) {
+      toast.success("Saved");
+    }
   }, [selfPartnerId]);
 
   const debouncedSave = useCallback((dataToSave: any) => {
@@ -290,7 +292,13 @@ const SelfProfile = () => {
                     const newNotes = e.target.value;
                     setNotes(newNotes);
                     debouncedSave({ notes: newNotes });
-                  }} 
+                  }}
+                  onBlur={() => {
+                    if (saveTimeoutRef.current) {
+                      clearTimeout(saveTimeoutRef.current);
+                    }
+                    saveSelfProfile({ notes }, true);
+                  }}
                   placeholder="Personal reflections, goals, things to remember about yourself..." 
                   rows={6} 
                   className="resize-none" 
@@ -315,7 +323,13 @@ const SelfProfile = () => {
                       const newName = e.target.value;
                       setName(newName);
                       debouncedSave({ name: newName });
-                    }} 
+                    }}
+                    onBlur={() => {
+                      if (saveTimeoutRef.current) {
+                        clearTimeout(saveTimeoutRef.current);
+                      }
+                      saveSelfProfile({ name }, true);
+                    }}
                     placeholder="Your name" 
                   />
                 </div>
@@ -352,6 +366,12 @@ const SelfProfile = () => {
                         const newCustomGender = e.target.value;
                         setCustomGender(newCustomGender);
                         debouncedSave({ genderIdentity: newCustomGender });
+                      }}
+                      onBlur={() => {
+                        if (saveTimeoutRef.current) {
+                          clearTimeout(saveTimeoutRef.current);
+                        }
+                        saveSelfProfile({ genderIdentity: customGender }, true);
                       }}
                       className="mt-2"
                     />

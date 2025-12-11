@@ -76,7 +76,7 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
     notes?: string;
     presetTone?: string;
     customTone?: string;
-  }) => {
+  }, showToast = false) => {
     try {
       const updateData: any = {
         message_coach_updated_at: new Date().toISOString()
@@ -109,7 +109,9 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
       if (error) throw error;
 
       setLastUpdated(new Date());
-      toast.success("Saved");
+      if (showToast) {
+        toast.success("Saved");
+      }
     } catch (error) {
       console.error("Error saving message coach data:", error);
       toast.error("Failed to save");
@@ -179,6 +181,12 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
                 setTranscript(newValue);
                 debouncedSave({ transcript: newValue });
               }}
+              onBlur={() => {
+                if (saveTimeoutRef.current) {
+                  clearTimeout(saveTimeoutRef.current);
+                }
+                saveMessageCoachData({ transcript }, true);
+              }}
               placeholder="Paste a chat excerpt, diary note, or anything you want help replying to…"
               className="min-h-[600px] resize-none"
               maxLength={5000}
@@ -202,6 +210,12 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
                 const newValue = e.target.value.slice(0, 800);
                 setNotes(newValue);
                 debouncedSave({ notes: newValue });
+              }}
+              onBlur={() => {
+                if (saveTimeoutRef.current) {
+                  clearTimeout(saveTimeoutRef.current);
+                }
+                saveMessageCoachData({ notes }, true);
               }}
               placeholder="What do you want to express? Any constraints or do/don't?"
               className="min-h-[120px] resize-none"
@@ -292,6 +306,12 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
                   onChange={(e) => {
                     setCustomTone(e.target.value);
                     debouncedSave({ customTone: e.target.value });
+                  }}
+                  onBlur={() => {
+                    if (saveTimeoutRef.current) {
+                      clearTimeout(saveTimeoutRef.current);
+                    }
+                    saveMessageCoachData({ customTone }, true);
                   }}
                   placeholder="e.g., like George Clooney — confident, warm, simple words, never needy"
                 />
