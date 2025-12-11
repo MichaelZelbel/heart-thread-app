@@ -53,12 +53,20 @@ export const ClaireChat = ({ partnerId, compact = false, prefillMessage = "", me
           }
         }
 
-        // Load ALL chat history for the user (continuous conversation)
-        const { data: historyData } = await supabase
+        // Load chat history - filter by partnerId if provided, otherwise load general chat (partner_id is null)
+        let query = supabase
           .from('claire_chat_messages')
           .select('*')
           .eq('user_id', session.user.id)
           .order('created_at', { ascending: true });
+
+        if (partnerId) {
+          query = query.eq('partner_id', partnerId);
+        } else {
+          query = query.is('partner_id', null);
+        }
+
+        const { data: historyData } = await query;
 
         if (historyData && historyData.length > 0) {
           setMessages(historyData.map(msg => ({
@@ -66,9 +74,10 @@ export const ClaireChat = ({ partnerId, compact = false, prefillMessage = "", me
             content: msg.content
           })));
         } else {
-          // Show welcome message if no history
-          const welcomeMsg = partnerId && partnerName
-            ? `Hi! I'm here to help you connect even more deeply with ${partnerName}. 💗 I can suggest thoughtful activities, gift ideas, conversation starters, and more based on what you've shared about them. What would you like to explore?`
+          // Show welcome message if no history - use partner name if already loaded
+          const displayName = partnerId ? (partnerName || "your cherished one") : null;
+          const welcomeMsg = displayName
+            ? `Hi! I'm here to help you connect even more deeply with ${displayName}. 💗 I can suggest thoughtful activities, gift ideas, conversation starters, and more based on what you've shared about them. What would you like to explore?`
             : "Hi! I'm Claire, your heart companion. 💕 I'm here to help you strengthen your relationships with thoughtful suggestions, gift ideas, and conversation starters. What would you like to explore today?";
           
           setMessages([{ role: 'assistant', content: welcomeMsg }]);
