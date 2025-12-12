@@ -202,7 +202,7 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
           </div>
 
           <div>
-            <Label htmlFor="notes">Your Notes or Intent</Label>
+            <Label htmlFor="notes">Your General Intent</Label>
             <Textarea
               id="notes"
               value={notes}
