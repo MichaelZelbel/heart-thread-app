@@ -293,11 +293,11 @@ const SelfProfile = () => {
                     setNotes(newNotes);
                     debouncedSave({ notes: newNotes });
                   }}
-                  onBlur={() => {
+                  onBlur={(e) => {
                     if (saveTimeoutRef.current) {
                       clearTimeout(saveTimeoutRef.current);
                     }
-                    saveSelfProfile({ notes }, true);
+                    saveSelfProfile({ notes: e.target.value }, true);
                   }}
                   placeholder="Personal reflections, goals, things to remember about yourself..." 
                   rows={6} 
@@ -324,11 +324,11 @@ const SelfProfile = () => {
                       setName(newName);
                       debouncedSave({ name: newName });
                     }}
-                    onBlur={() => {
+                    onBlur={(e) => {
                       if (saveTimeoutRef.current) {
                         clearTimeout(saveTimeoutRef.current);
                       }
-                      saveSelfProfile({ name }, true);
+                      saveSelfProfile({ name: e.target.value }, true);
                     }}
                     placeholder="Your name" 
                   />
@@ -367,11 +367,11 @@ const SelfProfile = () => {
                         setCustomGender(newCustomGender);
                         debouncedSave({ genderIdentity: newCustomGender });
                       }}
-                      onBlur={() => {
+                      onBlur={(e) => {
                         if (saveTimeoutRef.current) {
                           clearTimeout(saveTimeoutRef.current);
                         }
-                        saveSelfProfile({ genderIdentity: customGender }, true);
+                        saveSelfProfile({ genderIdentity: e.target.value }, true);
                       }}
                       className="mt-2"
                     />
