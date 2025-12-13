@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heart, ArrowLeft, Archive, Trash2 } from "lucide-react";
+import { CherishedSwitcher } from "@/components/CherishedSwitcher";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { LoveLanguageHeartRatings } from "@/components/LoveLanguageHeartRatings";
@@ -287,10 +288,14 @@ const PartnerDetail = () => {
   return <div className="min-h-screen bg-gradient-soft">
       <nav className="bg-card border-b border-border shadow-soft">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Dashboard
+            </Button>
+            <div className="h-6 w-px bg-border" />
+            <CherishedSwitcher currentPartnerId={id!} currentPartnerName={name} />
+          </div>
           <div className="flex gap-2">
             <Button onClick={handleArchive} variant="outline">
               <Archive className="w-4 h-4 mr-2" />
