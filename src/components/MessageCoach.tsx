@@ -181,11 +181,11 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
                 setTranscript(newValue);
                 debouncedSave({ transcript: newValue });
               }}
-              onBlur={() => {
+              onBlur={(e) => {
                 if (saveTimeoutRef.current) {
                   clearTimeout(saveTimeoutRef.current);
                 }
-                saveMessageCoachData({ transcript }, true);
+                saveMessageCoachData({ transcript: e.target.value }, true);
               }}
               placeholder="Paste a chat excerpt, diary note, or anything you want help replying to…"
               className="min-h-[600px] resize-none"
@@ -211,11 +211,11 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
                 setNotes(newValue);
                 debouncedSave({ notes: newValue });
               }}
-              onBlur={() => {
+              onBlur={(e) => {
                 if (saveTimeoutRef.current) {
                   clearTimeout(saveTimeoutRef.current);
                 }
-                saveMessageCoachData({ notes }, true);
+                saveMessageCoachData({ notes: e.target.value }, true);
               }}
               placeholder="What do you want to express? Any constraints or do/don't?"
               className="min-h-[120px] resize-none"
@@ -307,11 +307,11 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
                     setCustomTone(e.target.value);
                     debouncedSave({ customTone: e.target.value });
                   }}
-                  onBlur={() => {
+                  onBlur={(e) => {
                     if (saveTimeoutRef.current) {
                       clearTimeout(saveTimeoutRef.current);
                     }
-                    saveMessageCoachData({ customTone }, true);
+                    saveMessageCoachData({ customTone: e.target.value }, true);
                   }}
                   placeholder="e.g., like George Clooney — confident, warm, simple words, never needy"
                 />

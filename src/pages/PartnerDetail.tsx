@@ -407,11 +407,11 @@ const PartnerDetail = () => {
                     setNotes(newNotes);
                     debouncedSave({ notes: newNotes });
                   }}
-                  onBlur={() => {
+                  onBlur={(e) => {
                     if (saveTimeoutRef.current) {
                       clearTimeout(saveTimeoutRef.current);
                     }
-                    savePartnerData({ notes }, true);
+                    savePartnerData({ notes: e.target.value }, true);
                   }}
                   placeholder="Special memories, preferences, important details..." 
                   rows={6} 
@@ -438,11 +438,11 @@ const PartnerDetail = () => {
                       setName(newName);
                       debouncedSave({ name: newName });
                     }}
-                    onBlur={() => {
+                    onBlur={(e) => {
                       if (saveTimeoutRef.current) {
                         clearTimeout(saveTimeoutRef.current);
                       }
-                      savePartnerData({ name }, true);
+                      savePartnerData({ name: e.target.value }, true);
                     }}
                     placeholder="What do you call them?" 
                     data-testid="what-do-you-call-them" 
