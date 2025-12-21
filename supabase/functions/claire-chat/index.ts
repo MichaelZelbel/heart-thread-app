@@ -244,11 +244,19 @@ serve(async (req) => {
 
     console.log('Calling n8n webhook with payload:', JSON.stringify(n8nPayload, null, 2));
 
-    // Call n8n webhook
+    // Get webhook secret for authentication
+    const N8N_WEBHOOK_SECRET = Deno.env.get('N8N_WEBHOOK_SECRET');
+    if (!N8N_WEBHOOK_SECRET) {
+      console.error('N8N_WEBHOOK_SECRET is not configured');
+      throw new Error('Webhook authentication not configured');
+    }
+
+    // Call n8n webhook with secret header
     const response = await fetch(N8N_WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-Webhook-Secret': N8N_WEBHOOK_SECRET,
       },
       body: JSON.stringify(n8nPayload),
     });
