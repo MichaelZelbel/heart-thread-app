@@ -7,6 +7,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// n8n webhook URL for Claire Chat workflow
+const N8N_WEBHOOK_URL = 'https://n8n-cherishly.agentpool.cloud/webhook/claire';
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -14,13 +17,8 @@ serve(async (req) => {
 
   try {
     const { message, partnerId, messageCoachContext } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
-    }
 
     // Get authorization header
     const authHeader = req.headers.get('authorization');
@@ -45,7 +43,7 @@ serve(async (req) => {
       });
     }
 
-    // Fetch last 10 messages from chat history for context (across ALL conversations)
+    // Fetch last 10 messages from chat history for context
     const { data: chatHistory } = await supabase
       .from('claire_chat_messages')
       .select('role, content')
@@ -100,63 +98,70 @@ serve(async (req) => {
       .order('moment_date', { ascending: false })
       .limit(10);
 
-    // Build comprehensive markdown report for all partners
-    let contextData = '\n\n# User\'s Cherished People\n';
+    // Build comprehensive markdown context for all partners
+    let partnerContext = '\n\n# User\'s Cherished People\n';
+    let partnerName = '';
     
     if (partners?.length) {
+      // Get current partner name if viewing a specific partner
+      if (partnerId) {
+        const currentPartner = partners.find(p => p.id === partnerId);
+        partnerName = currentPartner?.name || '';
+      }
+
       partners.forEach(partner => {
-        contextData += `\n## ${partner.name}\n`;
+        partnerContext += `\n## ${partner.name}\n`;
         
         // Basic info
         if (partner.birthdate) {
-          contextData += `- **Birthdate:** ${partner.birthdate}\n`;
+          partnerContext += `- **Birthdate:** ${partner.birthdate}\n`;
         }
         
         // Love languages
-        contextData += `- **Love Languages (scale 1-5):**\n`;
-        contextData += `  - Physical Touch: ${partner.love_language_physical}\n`;
-        contextData += `  - Words of Affirmation: ${partner.love_language_words}\n`;
-        contextData += `  - Quality Time: ${partner.love_language_quality}\n`;
-        contextData += `  - Acts of Service: ${partner.love_language_acts}\n`;
-        contextData += `  - Gifts: ${partner.love_language_gifts}\n`;
+        partnerContext += `- **Love Languages (scale 1-5):**\n`;
+        partnerContext += `  - Physical Touch: ${partner.love_language_physical}\n`;
+        partnerContext += `  - Words of Affirmation: ${partner.love_language_words}\n`;
+        partnerContext += `  - Quality Time: ${partner.love_language_quality}\n`;
+        partnerContext += `  - Acts of Service: ${partner.love_language_acts}\n`;
+        partnerContext += `  - Gifts: ${partner.love_language_gifts}\n`;
         
         // Notes
         if (partner.notes) {
-          contextData += `\n**Notes:** ${partner.notes}\n`;
+          partnerContext += `\n**Notes:** ${partner.notes}\n`;
         }
         
         // Likes
         const partnerLikes = likes?.filter(l => l.partner_id === partner.id);
         if (partnerLikes?.length) {
-          contextData += `\n### Likes\n`;
+          partnerContext += `\n### Likes\n`;
           partnerLikes.forEach(like => {
             const tags = like.tags?.length ? ` [${like.tags.join(', ')}]` : '';
-            contextData += `- ${like.item}${tags}\n`;
+            partnerContext += `- ${like.item}${tags}\n`;
           });
         }
         
         // Dislikes
         const partnerDislikes = dislikes?.filter(d => d.partner_id === partner.id);
         if (partnerDislikes?.length) {
-          contextData += `\n### Dislikes\n`;
+          partnerContext += `\n### Dislikes\n`;
           partnerDislikes.forEach(dislike => {
             const tags = dislike.tags?.length ? ` [${dislike.tags.join(', ')}]` : '';
-            contextData += `- ${dislike.item}${tags}\n`;
+            partnerContext += `- ${dislike.item}${tags}\n`;
           });
         }
         
         // Profile Details
         const partnerDetails = profileDetails?.filter(d => d.partner_id === partner.id);
         if (partnerDetails?.length) {
-          contextData += `\n### Profile Details\n`;
+          partnerContext += `\n### Profile Details\n`;
           
           // Group by category
           const categories = [...new Set(partnerDetails.map(d => d.category))];
           categories.forEach(category => {
             const categoryDetails = partnerDetails.filter(d => d.category === category);
-            contextData += `\n**${category}:**\n`;
+            partnerContext += `\n**${category}:**\n`;
             categoryDetails.forEach(detail => {
-              contextData += `- ${detail.label}: ${detail.value}\n`;
+              partnerContext += `- ${detail.label}: ${detail.value}\n`;
             });
           });
         }
@@ -164,50 +169,50 @@ serve(async (req) => {
         // Events
         const partnerEvents = events?.filter(e => e.partner_id === partner.id);
         if (partnerEvents?.length) {
-          contextData += `\n### Important Dates & Events\n`;
+          partnerContext += `\n### Important Dates & Events\n`;
           partnerEvents.forEach(event => {
             const recurring = event.is_recurring ? ' (recurring)' : '';
             const eventType = event.event_type ? ` [${event.event_type}]` : '';
-            contextData += `- ${event.title} - ${event.event_date}${recurring}${eventType}\n`;
+            partnerContext += `- ${event.title} - ${event.event_date}${recurring}${eventType}\n`;
           });
         }
         
         // Moments
         const partnerMoments = moments?.filter(m => m.partner_ids?.includes(partner.id));
         if (partnerMoments?.length) {
-          contextData += `\n### Recent Moments\n`;
+          partnerContext += `\n### Recent Moments\n`;
           partnerMoments.forEach(moment => {
             if (moment.title) {
-              contextData += `- ${moment.title} - ${moment.moment_date}\n`;
+              partnerContext += `- ${moment.title} - ${moment.moment_date}\n`;
             }
           });
         }
         
-        contextData += '\n---\n';
+        partnerContext += '\n---\n';
       });
     } else {
-      contextData += '\nNo cherished people added yet.\n';
+      partnerContext += '\nNo cherished people added yet.\n';
     }
     
     // Add current page context
     if (partnerId && partners?.find(p => p.id === partnerId)) {
       const currentPartner = partners.find(p => p.id === partnerId);
-      contextData += `\n**Current Page Context:** You're viewing ${currentPartner?.name}'s detail page. Focus your suggestions on them.\n`;
+      partnerContext += `\n**Current Page Context:** You're viewing ${currentPartner?.name}'s detail page. Focus your suggestions on them.\n`;
     } else {
-      contextData += `\n**Current Page Context:** You're on the Dashboard. The user can ask about any of their cherished people.\n`;
+      partnerContext += `\n**Current Page Context:** You're on the Dashboard. The user can ask about any of their cherished people.\n`;
     }
 
-    // Add Message Coach context if provided (NOT added to global context)
-    let messageCoachPrompt = '';
+    // Build Message Coach context string
+    let messageCoachContextString = '';
     if (messageCoachContext && (messageCoachContext.transcript || messageCoachContext.notes)) {
-      messageCoachPrompt = '\n\n**Message Coach Context (Private - Only for this conversation):**\n';
+      messageCoachContextString = '\n\n**Message Coach Context (Private - Only for this conversation):**\n';
       
       if (messageCoachContext.transcript) {
-        messageCoachPrompt += `\n**Recent Conversation/Reflection:**\n${messageCoachContext.transcript}\n`;
+        messageCoachContextString += `\n**Recent Conversation/Reflection:**\n${messageCoachContext.transcript}\n`;
       }
       
       if (messageCoachContext.notes) {
-        messageCoachPrompt += `\n**User's Intent/Notes:**\n${messageCoachContext.notes}\n`;
+        messageCoachContextString += `\n**User's Intent/Notes:**\n${messageCoachContext.notes}\n`;
       }
 
       // Add tone guidance
@@ -220,92 +225,45 @@ serve(async (req) => {
       }
 
       if (toneGuidance.length > 0) {
-        messageCoachPrompt += `\n**Tone Guidance:** ${toneGuidance.join(', ')}\n`;
+        messageCoachContextString += `\n**Tone Guidance:** ${toneGuidance.join(', ')}\n`;
       }
 
-      messageCoachPrompt += '\n**Your Task:** Help the user craft a thoughtful reply based on the conversation/reflection and their intent. Provide 2-3 message suggestions they can use or adapt. Keep suggestions natural and aligned with their desired tone.\n';
+      messageCoachContextString += '\n**Your Task:** Help the user craft a thoughtful reply based on the conversation/reflection and their intent. Provide 2-3 message suggestions they can use or adapt. Keep suggestions natural and aligned with their desired tone.\n';
     }
 
-    // Get current date and time
-    const now = new Date();
-    const currentDateTime = now.toLocaleString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric', 
-      hour: '2-digit', 
-      minute: '2-digit',
-      timeZone: 'UTC',
-      timeZoneName: 'short'
-    });
+    // Prepare payload for n8n webhook
+    const n8nPayload = {
+      userId: user.id,
+      partnerId: partnerId || null,
+      partnerName: partnerName,
+      userMessage: message,
+      conversationHistory: conversationHistory,
+      partnerContext: partnerContext,
+      messageCoachContext: messageCoachContextString
+    };
 
-    const systemPrompt = `**IMPORTANT: The current date and time is ${currentDateTime}. Use this for all date calculations and time-sensitive suggestions.**
+    console.log('Calling n8n webhook with payload:', JSON.stringify(n8nPayload, null, 2));
 
-You are Claire, a warm and empathetic relationship coach. Your role is to help users strengthen their relationships through thoughtful suggestions.
-
-You have access to:
-1. The FULL conversation history with this user (you remember everything they've told you)
-2. Their saved information about their loved ones (cherished people), including:
-   - Names, birthdates, and important dates
-   - Love languages (how they prefer to receive love)
-   - Likes, dislikes, and preferences
-   - Profile details (favorite places, links, physical attributes)
-   - Recent moments and memories logged
-
-Based on this data, you provide:
-- Personalized gift ideas
-- Date and activity suggestions
-- Thoughtful message templates
-- Conversation starters
-- Follow-up questions to deepen understanding
-
-You also gently identify missing information that could help you give better suggestions (e.g., "I notice you haven't added their favorite restaurant—knowing that could help me suggest great date spots!").
-
-Always be warm, supportive, and respectful. Keep responses concise but meaningful. When the user is viewing a specific partner's page, focus your suggestions on that partner. Otherwise, help with any of their cherished relationships.
-
-User's Context:${contextData}`;
-
-    // Build messages array with conversation history
-    const userMessageWithContext = messageCoachPrompt 
-      ? `${messageCoachPrompt}\n\n${message}`
-      : message;
-
-    const messages = [
-      { role: 'system', content: systemPrompt },
-      ...conversationHistory.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      })),
-      { role: 'user', content: userMessageWithContext }
-    ];
-
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    // Call n8n webhook
+    const response = await fetch(N8N_WEBHOOK_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages
-      }),
+      body: JSON.stringify(n8nPayload),
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('n8n webhook error:', response.status, errorText);
+      
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "I'm getting too many requests right now. Please try again in a moment." }), {
           status: 429,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI service needs credits. Please contact support." }), {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      const errorText = await response.text();
-      console.error('AI gateway error:', response.status, errorText);
+      
       return new Response(JSON.stringify({ error: "Sorry, I'm having trouble thinking right now. Please try again." }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -313,7 +271,13 @@ User's Context:${contextData}`;
     }
 
     const data = await response.json();
-    const reply = data.choices[0].message.content;
+    console.log('n8n response:', JSON.stringify(data, null, 2));
+    
+    // Extract the reply from n8n response
+    // The response structure depends on how the "Respond to Webhook" node is configured
+    // Common patterns: data.output, data.text, data.message, or direct response
+    const reply = data.output || data.text || data.message || data.response || 
+                  (typeof data === 'string' ? data : JSON.stringify(data));
 
     return new Response(JSON.stringify({ reply }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
