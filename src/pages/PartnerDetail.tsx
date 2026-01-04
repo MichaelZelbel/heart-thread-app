@@ -23,6 +23,7 @@ import { ClaireChat } from "@/components/ClaireChat";
 import { MessageCoach } from "@/components/MessageCoach";
 import { ConversationCoach } from "@/components/ConversationCoach";
 import { CherishedDocuments } from "@/components/CherishedDocuments";
+import { ProfileReference } from "@/components/ProfileReference";
 import { dateToYMDLocal } from "@/lib/utils";
 import { useUserRole } from "@/hooks/useUserRole";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
@@ -385,210 +386,29 @@ const PartnerDetail = () => {
           {/* Profile & Preferences Tab */}
           <TabsContent value="profile" className="space-y-6">
             <Card className="shadow-soft">
-              <CardHeader>
-                <CardTitle>Profile & Preferences</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Everything that makes {name} unique
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Basic Information */}
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Name / Nickname *</Label>
-                    <Input 
-                      id="name" 
-                      value={name} 
-                      onChange={e => {
-                        const newName = e.target.value;
-                        setName(newName);
-                        debouncedSave({ name: newName });
-                      }}
-                      onBlur={(e) => {
-                        if (saveTimeoutRef.current) {
-                          clearTimeout(saveTimeoutRef.current);
-                        }
-                        savePartnerData({ name: e.target.value }, true);
-                      }}
-                      placeholder="What do you call them?" 
-                      data-testid="what-do-you-call-them" 
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="relationshipType">Relationship Type</Label>
-                    <Select 
-                      value={relationshipType} 
-                      onValueChange={(value) => {
-                        setRelationshipType(value);
-                        savePartnerData({ relationshipType: value });
-                      }}
-                    >
-                      <SelectTrigger id="relationshipType">
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="partner">Partner</SelectItem>
-                        <SelectItem value="crush">Crush</SelectItem>
-                        <SelectItem value="friend">Friend</SelectItem>
-                        <SelectItem value="family">Family</SelectItem>
-                        <SelectItem value="colleague">Colleague</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="birthdate">Birthday (optional)</Label>
-                    <BirthdatePicker 
-                      value={birthdate} 
-                      onChange={(newBirthdate) => {
-                        setBirthdate(newBirthdate);
-                        savePartnerData({ birthdate: newBirthdate });
-                      }} 
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="genderIdentity">How do they identify?</Label>
-                    <Select 
-                      value={genderIdentity} 
-                      onValueChange={(value) => {
-                        setGenderIdentity(value);
-                        const finalValue = value === "Custom ✨" ? customGender : value;
-                        if (value !== "Custom ✨") {
-                          savePartnerData({ genderIdentity: finalValue });
-                        }
-                      }}
-                    >
-                      <SelectTrigger id="genderIdentity">
-                        <SelectValue placeholder="Optional" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Woman 💐">Woman 💐</SelectItem>
-                        <SelectItem value="Man 🌹">Man 🌹</SelectItem>
-                        <SelectItem value="Nonbinary 🌈">Nonbinary 🌈</SelectItem>
-                        <SelectItem value="Trans Woman 💖">Trans Woman 💖</SelectItem>
-                        <SelectItem value="Trans Man 💙">Trans Man 💙</SelectItem>
-                        <SelectItem value="Prefer not to say 🙊">Prefer not to say 🙊</SelectItem>
-                        <SelectItem value="Custom ✨">Custom ✨</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {genderIdentity === "Custom ✨" && (
-                      <Input 
-                        placeholder="Type anything that fits"
-                        value={customGender}
-                        onChange={e => {
-                          const newCustomGender = e.target.value;
-                          setCustomGender(newCustomGender);
-                          debouncedSave({ genderIdentity: newCustomGender });
-                        }}
-                        onBlur={() => {
-                          if (saveTimeoutRef.current) {
-                            clearTimeout(saveTimeoutRef.current);
-                          }
-                          savePartnerData({ genderIdentity: customGender }, true);
-                        }}
-                        className="mt-2"
-                      />
-                    )}
-                  </div>
-                  <div>
-                    <Label htmlFor="country">Location</Label>
-                    <Select 
-                      value={country} 
-                      onValueChange={(value) => {
-                        setCountry(value);
-                        savePartnerData({ country: value });
-                      }}
-                    >
-                      <SelectTrigger id="country">
-                        <SelectValue placeholder="Optional" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[300px]">
-                        <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
-                        <SelectItem value="United States">United States 🇺🇸</SelectItem>
-                        <SelectItem value="United Kingdom">United Kingdom 🇬🇧</SelectItem>
-                        <SelectItem value="Canada">Canada 🇨🇦</SelectItem>
-                        <SelectItem value="Australia">Australia 🇦🇺</SelectItem>
-                        <SelectItem value="Germany">Germany 🇩🇪</SelectItem>
-                        <SelectItem value="France">France 🇫🇷</SelectItem>
-                        <SelectItem value="Spain">Spain 🇪🇸</SelectItem>
-                        <SelectItem value="Italy">Italy 🇮🇹</SelectItem>
-                        <SelectItem value="Netherlands">Netherlands 🇳🇱</SelectItem>
-                        <SelectItem value="Sweden">Sweden 🇸🇪</SelectItem>
-                        <SelectItem value="Norway">Norway 🇳🇴</SelectItem>
-                        <SelectItem value="Denmark">Denmark 🇩🇰</SelectItem>
-                        <SelectItem value="Finland">Finland 🇫🇮</SelectItem>
-                        <SelectItem value="Belgium">Belgium 🇧🇪</SelectItem>
-                        <SelectItem value="Switzerland">Switzerland 🇨🇭</SelectItem>
-                        <SelectItem value="Austria">Austria 🇦🇹</SelectItem>
-                        <SelectItem value="Poland">Poland 🇵🇱</SelectItem>
-                        <SelectItem value="Portugal">Portugal 🇵🇹</SelectItem>
-                        <SelectItem value="Greece">Greece 🇬🇷</SelectItem>
-                        <SelectItem value="Ireland">Ireland 🇮🇪</SelectItem>
-                        <SelectItem value="Japan">Japan 🇯🇵</SelectItem>
-                        <SelectItem value="South Korea">South Korea 🇰🇷</SelectItem>
-                        <SelectItem value="China">China 🇨🇳</SelectItem>
-                        <SelectItem value="India">India 🇮🇳</SelectItem>
-                        <SelectItem value="Singapore">Singapore 🇸🇬</SelectItem>
-                        <SelectItem value="Malaysia">Malaysia 🇲🇾</SelectItem>
-                        <SelectItem value="Thailand">Thailand 🇹🇭</SelectItem>
-                        <SelectItem value="Philippines">Philippines 🇵🇭</SelectItem>
-                        <SelectItem value="Indonesia">Indonesia 🇮🇩</SelectItem>
-                        <SelectItem value="Vietnam">Vietnam 🇻🇳</SelectItem>
-                        <SelectItem value="New Zealand">New Zealand 🇳🇿</SelectItem>
-                        <SelectItem value="Brazil">Brazil 🇧🇷</SelectItem>
-                        <SelectItem value="Mexico">Mexico 🇲🇽</SelectItem>
-                        <SelectItem value="Argentina">Argentina 🇦🇷</SelectItem>
-                        <SelectItem value="Chile">Chile 🇨🇱</SelectItem>
-                        <SelectItem value="Colombia">Colombia 🇨🇴</SelectItem>
-                        <SelectItem value="South Africa">South Africa 🇿🇦</SelectItem>
-                        <SelectItem value="Egypt">Egypt 🇪🇬</SelectItem>
-                        <SelectItem value="Nigeria">Nigeria 🇳🇬</SelectItem>
-                        <SelectItem value="Kenya">Kenya 🇰🇪</SelectItem>
-                        <SelectItem value="Israel">Israel 🇮🇱</SelectItem>
-                        <SelectItem value="United Arab Emirates">United Arab Emirates 🇦🇪</SelectItem>
-                        <SelectItem value="Saudi Arabia">Saudi Arabia 🇸🇦</SelectItem>
-                        <SelectItem value="Turkey">Turkey 🇹🇷</SelectItem>
-                        <SelectItem value="Russia">Russia 🇷🇺</SelectItem>
-                        <SelectItem value="Ukraine">Ukraine 🇺🇦</SelectItem>
-                        <SelectItem value="Czech Republic">Czech Republic 🇨🇿</SelectItem>
-                        <SelectItem value="Hungary">Hungary 🇭🇺</SelectItem>
-                        <SelectItem value="Romania">Romania 🇷🇴</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Likes & Dislikes */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <ItemManager partnerId={id!} type="likes" title="Likes" subtitle="Little things that make them light up." emptyState="No likes yet — Add your first like (e.g., Chocolate Cake)" />
-              <ItemManager partnerId={id!} type="dislikes" title="Dislikes" subtitle="Things to avoid—because you care." emptyState="No dislikes yet — Add your first dislike (e.g., Loud noises)" />
-            </div>
-
-            {/* Profile Details */}
-            <div className="grid md:grid-cols-2 gap-6">
-              {CATEGORIES.map((category) => (
-                <ProfileDetailsManager key={category.id} partnerId={id!} category={category} />
-              ))}
-            </div>
-
-            {/* Love Languages */}
-            <Card className="shadow-soft">
-              <CardHeader>
-                <CardTitle>Love Languages</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  How {name} prefers to give and receive love
-                </p>
-              </CardHeader>
-              <CardContent>
-                <LoveLanguageHeartRatings 
-                  values={loveLanguages} 
-                  onChange={(newValues) => {
-                    setLoveLanguages(newValues);
-                    savePartnerData({ loveLanguages: newValues });
-                  }} 
+              <CardContent className="pt-6">
+                <ProfileReference
+                  partnerId={id!}
+                  partnerName={name}
+                  name={name}
+                  setName={setName}
+                  relationshipType={relationshipType}
+                  setRelationshipType={setRelationshipType}
+                  birthdate={birthdate}
+                  setBirthdate={setBirthdate}
+                  genderIdentity={genderIdentity}
+                  setGenderIdentity={setGenderIdentity}
+                  customGender={customGender}
+                  setCustomGender={setCustomGender}
+                  country={country}
+                  setCountry={setCountry}
+                  notes={notes}
+                  setNotes={setNotes}
+                  loveLanguages={loveLanguages}
+                  setLoveLanguages={setLoveLanguages}
+                  onSave={savePartnerData}
+                  onDebouncedSave={debouncedSave}
+                  saveTimeoutRef={saveTimeoutRef}
                 />
               </CardContent>
             </Card>
