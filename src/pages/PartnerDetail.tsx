@@ -21,6 +21,7 @@ import { MomentManager } from "@/components/MomentManager";
 import { ProfileDetailsManager, CATEGORIES } from "@/components/ProfileDetailsManager";
 import { ClaireChat } from "@/components/ClaireChat";
 import { MessageCoach } from "@/components/MessageCoach";
+import { ConversationCoach } from "@/components/ConversationCoach";
 import { dateToYMDLocal } from "@/lib/utils";
 import { useUserRole } from "@/hooks/useUserRole";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
@@ -356,23 +357,8 @@ const PartnerDetail = () => {
           {/* Conversation Tab */}
           <TabsContent value="conversation" className="space-y-6">
             <Card className="shadow-soft">
-              <CardHeader>
-                <CardTitle>Conversation</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Chat with Claire about {name} or get help crafting messages
-                </p>
-              </CardHeader>
-              <CardContent>
-                {isPro ? (
-                  <div className="h-[500px]">
-                    <ClaireChat partnerId={id} compact={false} />
-                  </div>
-                ) : (
-                  <UpgradePrompt 
-                    featureName="AI Conversation with Claire"
-                    description="Get personalized relationship advice and help crafting thoughtful messages."
-                  />
-                )}
+              <CardContent className="pt-6">
+                <ConversationCoach partnerName={name} />
               </CardContent>
             </Card>
           </TabsContent>
