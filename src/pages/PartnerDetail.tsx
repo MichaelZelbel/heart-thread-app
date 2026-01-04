@@ -16,6 +16,7 @@ import { LoveLanguageHeartRatings } from "@/components/LoveLanguageHeartRatings"
 import { ItemManager } from "@/components/ItemManager";
 import { BirthdatePicker } from "@/components/BirthdatePicker";
 import { EventManager } from "@/components/EventManager";
+import { CherishedTimeline } from "@/components/CherishedTimeline";
 import { MomentManager } from "@/components/MomentManager";
 import { ProfileDetailsManager, CATEGORIES } from "@/components/ProfileDetailsManager";
 import { ClaireChat } from "@/components/ClaireChat";
@@ -338,13 +339,16 @@ const PartnerDetail = () => {
           <TabsContent value="timeline" className="space-y-6">
             <Card className="shadow-soft">
               <CardHeader>
-                <CardTitle>Timeline</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Heart className="w-5 h-5 text-primary" />
+                  Your Story with {name}
+                </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Key dates and milestones with {name}
+                  Every moment that matters, captured in time
                 </p>
               </CardHeader>
               <CardContent>
-                <EventManager partnerId={id!} partnerName={name} />
+                <CherishedTimeline partnerName={name} />
               </CardContent>
             </Card>
           </TabsContent>
