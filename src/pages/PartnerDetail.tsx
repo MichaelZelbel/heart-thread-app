@@ -318,78 +318,314 @@ const PartnerDetail = () => {
           <p className="text-muted-foreground">Edit partner details</p>
         </div>
 
-        <Tabs defaultValue="details" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="calendar">Calendar</TabsTrigger>
-            <TabsTrigger value="moments">Moments</TabsTrigger>
-            <TabsTrigger value="messageCoach">Message Coach</TabsTrigger>
+        <Tabs defaultValue="timeline" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="conversation">Conversation</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="insights" className="relative">
+              Insights
+              {!isPro && (
+                <span className="ml-1 text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
+                  Pro
+                </span>
+              )}
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="calendar" className="space-y-6">
+          {/* Timeline Tab */}
+          <TabsContent value="timeline" className="space-y-6">
             <Card className="shadow-soft">
-              <CardContent className="pt-6">
+              <CardHeader>
+                <CardTitle>Timeline</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Key dates and milestones with {name}
+                </p>
+              </CardHeader>
+              <CardContent>
                 <EventManager partnerId={id!} partnerName={name} />
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="moments" className="space-y-6">
-            {isPro ? (
-              <Card className="shadow-soft">
-                <CardContent className="pt-6">
-                  <MomentManager partnerId={id!} partnerName={name} />
-                </CardContent>
-              </Card>
-            ) : (
-              <UpgradePrompt 
-                featureName="Moments Log"
-                description="Capture and organize your special memories with your cherished ones."
-              />
-            )}
+          {/* Conversation Tab */}
+          <TabsContent value="conversation" className="space-y-6">
+            <Card className="shadow-soft">
+              <CardHeader>
+                <CardTitle>Conversation</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Chat with Claire about {name} or get help crafting messages
+                </p>
+              </CardHeader>
+              <CardContent>
+                {isPro ? (
+                  <div className="h-[500px]">
+                    <ClaireChat partnerId={id} compact={false} />
+                  </div>
+                ) : (
+                  <UpgradePrompt 
+                    featureName="AI Conversation with Claire"
+                    description="Get personalized relationship advice and help crafting thoughtful messages."
+                  />
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
-          <TabsContent value="messageCoach" className="space-y-6">
-            {isPro ? (
-              <Card className="shadow-soft">
-                <CardContent className="pt-6">
-                  <MessageCoach partnerId={id!} partnerName={name} />
-                </CardContent>
-              </Card>
-            ) : (
-              <UpgradePrompt 
-                featureName="Message Coach"
-                description="Get AI-powered help crafting thoughtful messages with personalized tone and context."
-              />
-            )}
-          </TabsContent>
-
-          <TabsContent value="details" className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-6">
-                <ItemManager partnerId={id!} type="likes" title="Likes" subtitle="Little things that make them light up." emptyState="No likes yet — Add your first like (e.g., Chocolate Cake)" />
-                <ItemManager partnerId={id!} type="dislikes" title="Dislikes" subtitle="Things to avoid—because you care." emptyState="No dislikes yet — Add your first dislike (e.g., Loud noises)" />
-              </div>
-              {isPro ? (
-                <div className="h-[600px]">
-                  <ClaireChat partnerId={id} compact={false} />
+          {/* Documents Tab */}
+          <TabsContent value="documents" className="space-y-6">
+            <Card className="shadow-soft">
+              <CardHeader>
+                <CardTitle>Documents</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Notes, memories, and important information about {name}
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <Label className="text-base font-medium">Notes & Thoughts</Label>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Personal notes, observations, and important details
+                  </p>
+                  <Textarea 
+                    value={notes} 
+                    onChange={e => {
+                      const newNotes = e.target.value;
+                      setNotes(newNotes);
+                      debouncedSave({ notes: newNotes });
+                    }}
+                    onBlur={(e) => {
+                      if (saveTimeoutRef.current) {
+                        clearTimeout(saveTimeoutRef.current);
+                      }
+                      savePartnerData({ notes: e.target.value }, true);
+                    }}
+                    placeholder="Special memories, preferences, important details..." 
+                    rows={6} 
+                    className="resize-none" 
+                  />
                 </div>
-              ) : (
-                <UpgradePrompt 
-                  featureName="AI Chat with Claire"
-                  description="Get personalized relationship advice and gift ideas from your AI companion, Claire."
-                />
-              )}
+
+                {isPro ? (
+                  <div>
+                    <Label className="text-base font-medium">Moments</Label>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Capture and organize special memories
+                    </p>
+                    <MomentManager partnerId={id!} partnerName={name} />
+                  </div>
+                ) : (
+                  <UpgradePrompt 
+                    featureName="Moments Log"
+                    description="Capture and organize your special memories with your cherished ones."
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Profile & Preferences Tab */}
+          <TabsContent value="profile" className="space-y-6">
+            <Card className="shadow-soft">
+              <CardHeader>
+                <CardTitle>Profile & Preferences</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Everything that makes {name} unique
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Basic Information */}
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="name">Name / Nickname *</Label>
+                    <Input 
+                      id="name" 
+                      value={name} 
+                      onChange={e => {
+                        const newName = e.target.value;
+                        setName(newName);
+                        debouncedSave({ name: newName });
+                      }}
+                      onBlur={(e) => {
+                        if (saveTimeoutRef.current) {
+                          clearTimeout(saveTimeoutRef.current);
+                        }
+                        savePartnerData({ name: e.target.value }, true);
+                      }}
+                      placeholder="What do you call them?" 
+                      data-testid="what-do-you-call-them" 
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="relationshipType">Relationship Type</Label>
+                    <Select 
+                      value={relationshipType} 
+                      onValueChange={(value) => {
+                        setRelationshipType(value);
+                        savePartnerData({ relationshipType: value });
+                      }}
+                    >
+                      <SelectTrigger id="relationshipType">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="partner">Partner</SelectItem>
+                        <SelectItem value="crush">Crush</SelectItem>
+                        <SelectItem value="friend">Friend</SelectItem>
+                        <SelectItem value="family">Family</SelectItem>
+                        <SelectItem value="colleague">Colleague</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="birthdate">Birthday (optional)</Label>
+                    <BirthdatePicker 
+                      value={birthdate} 
+                      onChange={(newBirthdate) => {
+                        setBirthdate(newBirthdate);
+                        savePartnerData({ birthdate: newBirthdate });
+                      }} 
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="genderIdentity">How do they identify?</Label>
+                    <Select 
+                      value={genderIdentity} 
+                      onValueChange={(value) => {
+                        setGenderIdentity(value);
+                        const finalValue = value === "Custom ✨" ? customGender : value;
+                        if (value !== "Custom ✨") {
+                          savePartnerData({ genderIdentity: finalValue });
+                        }
+                      }}
+                    >
+                      <SelectTrigger id="genderIdentity">
+                        <SelectValue placeholder="Optional" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Woman 💐">Woman 💐</SelectItem>
+                        <SelectItem value="Man 🌹">Man 🌹</SelectItem>
+                        <SelectItem value="Nonbinary 🌈">Nonbinary 🌈</SelectItem>
+                        <SelectItem value="Trans Woman 💖">Trans Woman 💖</SelectItem>
+                        <SelectItem value="Trans Man 💙">Trans Man 💙</SelectItem>
+                        <SelectItem value="Prefer not to say 🙊">Prefer not to say 🙊</SelectItem>
+                        <SelectItem value="Custom ✨">Custom ✨</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {genderIdentity === "Custom ✨" && (
+                      <Input 
+                        placeholder="Type anything that fits"
+                        value={customGender}
+                        onChange={e => {
+                          const newCustomGender = e.target.value;
+                          setCustomGender(newCustomGender);
+                          debouncedSave({ genderIdentity: newCustomGender });
+                        }}
+                        onBlur={() => {
+                          if (saveTimeoutRef.current) {
+                            clearTimeout(saveTimeoutRef.current);
+                          }
+                          savePartnerData({ genderIdentity: customGender }, true);
+                        }}
+                        className="mt-2"
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <Label htmlFor="country">Location</Label>
+                    <Select 
+                      value={country} 
+                      onValueChange={(value) => {
+                        setCountry(value);
+                        savePartnerData({ country: value });
+                      }}
+                    >
+                      <SelectTrigger id="country">
+                        <SelectValue placeholder="Optional" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                        <SelectItem value="United States">United States 🇺🇸</SelectItem>
+                        <SelectItem value="United Kingdom">United Kingdom 🇬🇧</SelectItem>
+                        <SelectItem value="Canada">Canada 🇨🇦</SelectItem>
+                        <SelectItem value="Australia">Australia 🇦🇺</SelectItem>
+                        <SelectItem value="Germany">Germany 🇩🇪</SelectItem>
+                        <SelectItem value="France">France 🇫🇷</SelectItem>
+                        <SelectItem value="Spain">Spain 🇪🇸</SelectItem>
+                        <SelectItem value="Italy">Italy 🇮🇹</SelectItem>
+                        <SelectItem value="Netherlands">Netherlands 🇳🇱</SelectItem>
+                        <SelectItem value="Sweden">Sweden 🇸🇪</SelectItem>
+                        <SelectItem value="Norway">Norway 🇳🇴</SelectItem>
+                        <SelectItem value="Denmark">Denmark 🇩🇰</SelectItem>
+                        <SelectItem value="Finland">Finland 🇫🇮</SelectItem>
+                        <SelectItem value="Belgium">Belgium 🇧🇪</SelectItem>
+                        <SelectItem value="Switzerland">Switzerland 🇨🇭</SelectItem>
+                        <SelectItem value="Austria">Austria 🇦🇹</SelectItem>
+                        <SelectItem value="Poland">Poland 🇵🇱</SelectItem>
+                        <SelectItem value="Portugal">Portugal 🇵🇹</SelectItem>
+                        <SelectItem value="Greece">Greece 🇬🇷</SelectItem>
+                        <SelectItem value="Ireland">Ireland 🇮🇪</SelectItem>
+                        <SelectItem value="Japan">Japan 🇯🇵</SelectItem>
+                        <SelectItem value="South Korea">South Korea 🇰🇷</SelectItem>
+                        <SelectItem value="China">China 🇨🇳</SelectItem>
+                        <SelectItem value="India">India 🇮🇳</SelectItem>
+                        <SelectItem value="Singapore">Singapore 🇸🇬</SelectItem>
+                        <SelectItem value="Malaysia">Malaysia 🇲🇾</SelectItem>
+                        <SelectItem value="Thailand">Thailand 🇹🇭</SelectItem>
+                        <SelectItem value="Philippines">Philippines 🇵🇭</SelectItem>
+                        <SelectItem value="Indonesia">Indonesia 🇮🇩</SelectItem>
+                        <SelectItem value="Vietnam">Vietnam 🇻🇳</SelectItem>
+                        <SelectItem value="New Zealand">New Zealand 🇳🇿</SelectItem>
+                        <SelectItem value="Brazil">Brazil 🇧🇷</SelectItem>
+                        <SelectItem value="Mexico">Mexico 🇲🇽</SelectItem>
+                        <SelectItem value="Argentina">Argentina 🇦🇷</SelectItem>
+                        <SelectItem value="Chile">Chile 🇨🇱</SelectItem>
+                        <SelectItem value="Colombia">Colombia 🇨🇴</SelectItem>
+                        <SelectItem value="South Africa">South Africa 🇿🇦</SelectItem>
+                        <SelectItem value="Egypt">Egypt 🇪🇬</SelectItem>
+                        <SelectItem value="Nigeria">Nigeria 🇳🇬</SelectItem>
+                        <SelectItem value="Kenya">Kenya 🇰🇪</SelectItem>
+                        <SelectItem value="Israel">Israel 🇮🇱</SelectItem>
+                        <SelectItem value="United Arab Emirates">United Arab Emirates 🇦🇪</SelectItem>
+                        <SelectItem value="Saudi Arabia">Saudi Arabia 🇸🇦</SelectItem>
+                        <SelectItem value="Turkey">Turkey 🇹🇷</SelectItem>
+                        <SelectItem value="Russia">Russia 🇷🇺</SelectItem>
+                        <SelectItem value="Ukraine">Ukraine 🇺🇦</SelectItem>
+                        <SelectItem value="Czech Republic">Czech Republic 🇨🇿</SelectItem>
+                        <SelectItem value="Hungary">Hungary 🇭🇺</SelectItem>
+                        <SelectItem value="Romania">Romania 🇷🇴</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Likes & Dislikes */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <ItemManager partnerId={id!} type="likes" title="Likes" subtitle="Little things that make them light up." emptyState="No likes yet — Add your first like (e.g., Chocolate Cake)" />
+              <ItemManager partnerId={id!} type="dislikes" title="Dislikes" subtitle="Things to avoid—because you care." emptyState="No dislikes yet — Add your first dislike (e.g., Loud noises)" />
             </div>
 
+            {/* Profile Details */}
             <div className="grid md:grid-cols-2 gap-6">
               {CATEGORIES.map((category) => (
                 <ProfileDetailsManager key={category.id} partnerId={id!} category={category} />
               ))}
             </div>
 
+            {/* Love Languages */}
             <Card className="shadow-soft">
-              <CardContent className="pt-6">
+              <CardHeader>
+                <CardTitle>Love Languages</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  How {name} prefers to give and receive love
+                </p>
+              </CardHeader>
+              <CardContent>
                 <LoveLanguageHeartRatings 
                   values={loveLanguages} 
                   onChange={(newValues) => {
@@ -399,214 +635,28 @@ const PartnerDetail = () => {
                 />
               </CardContent>
             </Card>
+          </TabsContent>
 
-            <Card className="shadow-soft">
-              <CardHeader>
-                <CardTitle>Notes & Thoughts</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Textarea 
-                  value={notes} 
-                  onChange={e => {
-                    const newNotes = e.target.value;
-                    setNotes(newNotes);
-                    debouncedSave({ notes: newNotes });
-                  }}
-                  onBlur={(e) => {
-                    if (saveTimeoutRef.current) {
-                      clearTimeout(saveTimeoutRef.current);
-                    }
-                    savePartnerData({ notes: e.target.value }, true);
-                  }}
-                  placeholder="Special memories, preferences, important details..." 
-                  rows={6} 
-                  className="resize-none" 
-                />
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-soft">
-              <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
-                <p className="text-sm text-muted-foreground mt-2">
-                  A few gentle details — nothing personal, just what makes them <em>them</em> 💗
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Name / Nickname *</Label>
-                  <Input 
-                    id="name" 
-                    value={name} 
-                    onChange={e => {
-                      const newName = e.target.value;
-                      setName(newName);
-                      debouncedSave({ name: newName });
-                    }}
-                    onBlur={(e) => {
-                      if (saveTimeoutRef.current) {
-                        clearTimeout(saveTimeoutRef.current);
-                      }
-                      savePartnerData({ name: e.target.value }, true);
-                    }}
-                    placeholder="What do you call them?" 
-                    data-testid="what-do-you-call-them" 
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="relationshipType">Relationship Type</Label>
-                  <Select 
-                    value={relationshipType} 
-                    onValueChange={(value) => {
-                      setRelationshipType(value);
-                      savePartnerData({ relationshipType: value });
-                    }}
-                  >
-                    <SelectTrigger id="relationshipType">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="partner">Partner</SelectItem>
-                      <SelectItem value="crush">Crush</SelectItem>
-                      <SelectItem value="friend">Friend</SelectItem>
-                      <SelectItem value="family">Family</SelectItem>
-                      <SelectItem value="colleague">Colleague</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="genderIdentity">How do they identify, if you'd like to share? 💕</Label>
-                  <Select 
-                    value={genderIdentity} 
-                    onValueChange={(value) => {
-                      setGenderIdentity(value);
-                      const finalValue = value === "Custom ✨" ? customGender : value;
-                      if (value !== "Custom ✨") {
-                        savePartnerData({ genderIdentity: finalValue });
-                      }
-                    }}
-                  >
-                    <SelectTrigger id="genderIdentity">
-                      <SelectValue placeholder="Optional — skip if you prefer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Woman 💐">Woman 💐</SelectItem>
-                      <SelectItem value="Man 🌹">Man 🌹</SelectItem>
-                      <SelectItem value="Nonbinary 🌈">Nonbinary 🌈</SelectItem>
-                      <SelectItem value="Trans Woman 💖">Trans Woman 💖</SelectItem>
-                      <SelectItem value="Trans Man 💙">Trans Man 💙</SelectItem>
-                      <SelectItem value="Prefer not to say 🙊">Prefer not to say 🙊</SelectItem>
-                      <SelectItem value="Custom ✨">Custom ✨</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    This helps Cherishly personalize messages and suggestions — totally optional.
+          {/* Insights Tab (Pro) */}
+          <TabsContent value="insights" className="space-y-6">
+            {isPro ? (
+              <Card className="shadow-soft">
+                <CardHeader>
+                  <CardTitle>Insights</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    AI-powered suggestions and relationship insights
                   </p>
-                  {genderIdentity === "Custom ✨" && (
-                    <Input 
-                      placeholder="Type anything that fits — we love unique identities! 🌸"
-                      value={customGender}
-                      onChange={e => {
-                        const newCustomGender = e.target.value;
-                        setCustomGender(newCustomGender);
-                        debouncedSave({ genderIdentity: newCustomGender });
-                      }}
-                      onBlur={() => {
-                        if (saveTimeoutRef.current) {
-                          clearTimeout(saveTimeoutRef.current);
-                        }
-                        savePartnerData({ genderIdentity: customGender }, true);
-                      }}
-                      className="mt-2"
-                    />
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="country">Where in the world do they live? 🌍</Label>
-                  <Select 
-                    value={country} 
-                    onValueChange={(value) => {
-                      setCountry(value);
-                      savePartnerData({ country: value });
-                    }}
-                  >
-                    <SelectTrigger id="country">
-                      <SelectValue placeholder="Optional — skip if you prefer" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
-                      <SelectItem value="United States">United States 🇺🇸</SelectItem>
-                      <SelectItem value="United Kingdom">United Kingdom 🇬🇧</SelectItem>
-                      <SelectItem value="Canada">Canada 🇨🇦</SelectItem>
-                      <SelectItem value="Australia">Australia 🇦🇺</SelectItem>
-                      <SelectItem value="Germany">Germany 🇩🇪</SelectItem>
-                      <SelectItem value="France">France 🇫🇷</SelectItem>
-                      <SelectItem value="Spain">Spain 🇪🇸</SelectItem>
-                      <SelectItem value="Italy">Italy 🇮🇹</SelectItem>
-                      <SelectItem value="Netherlands">Netherlands 🇳🇱</SelectItem>
-                      <SelectItem value="Sweden">Sweden 🇸🇪</SelectItem>
-                      <SelectItem value="Norway">Norway 🇳🇴</SelectItem>
-                      <SelectItem value="Denmark">Denmark 🇩🇰</SelectItem>
-                      <SelectItem value="Finland">Finland 🇫🇮</SelectItem>
-                      <SelectItem value="Belgium">Belgium 🇧🇪</SelectItem>
-                      <SelectItem value="Switzerland">Switzerland 🇨🇭</SelectItem>
-                      <SelectItem value="Austria">Austria 🇦🇹</SelectItem>
-                      <SelectItem value="Poland">Poland 🇵🇱</SelectItem>
-                      <SelectItem value="Portugal">Portugal 🇵🇹</SelectItem>
-                      <SelectItem value="Greece">Greece 🇬🇷</SelectItem>
-                      <SelectItem value="Ireland">Ireland 🇮🇪</SelectItem>
-                      <SelectItem value="Japan">Japan 🇯🇵</SelectItem>
-                      <SelectItem value="South Korea">South Korea 🇰🇷</SelectItem>
-                      <SelectItem value="China">China 🇨🇳</SelectItem>
-                      <SelectItem value="India">India 🇮🇳</SelectItem>
-                      <SelectItem value="Singapore">Singapore 🇸🇬</SelectItem>
-                      <SelectItem value="Malaysia">Malaysia 🇲🇾</SelectItem>
-                      <SelectItem value="Thailand">Thailand 🇹🇭</SelectItem>
-                      <SelectItem value="Philippines">Philippines 🇵🇭</SelectItem>
-                      <SelectItem value="Indonesia">Indonesia 🇮🇩</SelectItem>
-                      <SelectItem value="Vietnam">Vietnam 🇻🇳</SelectItem>
-                      <SelectItem value="New Zealand">New Zealand 🇳🇿</SelectItem>
-                      <SelectItem value="Brazil">Brazil 🇧🇷</SelectItem>
-                      <SelectItem value="Mexico">Mexico 🇲🇽</SelectItem>
-                      <SelectItem value="Argentina">Argentina 🇦🇷</SelectItem>
-                      <SelectItem value="Chile">Chile 🇨🇱</SelectItem>
-                      <SelectItem value="Colombia">Colombia 🇨🇴</SelectItem>
-                      <SelectItem value="South Africa">South Africa 🇿🇦</SelectItem>
-                      <SelectItem value="Egypt">Egypt 🇪🇬</SelectItem>
-                      <SelectItem value="Nigeria">Nigeria 🇳🇬</SelectItem>
-                      <SelectItem value="Kenya">Kenya 🇰🇪</SelectItem>
-                      <SelectItem value="Israel">Israel 🇮🇱</SelectItem>
-                      <SelectItem value="United Arab Emirates">United Arab Emirates 🇦🇪</SelectItem>
-                      <SelectItem value="Saudi Arabia">Saudi Arabia 🇸🇦</SelectItem>
-                      <SelectItem value="Turkey">Turkey 🇹🇷</SelectItem>
-                      <SelectItem value="Russia">Russia 🇷🇺</SelectItem>
-                      <SelectItem value="Ukraine">Ukraine 🇺🇦</SelectItem>
-                      <SelectItem value="Czech Republic">Czech Republic 🇨🇿</SelectItem>
-                      <SelectItem value="Hungary">Hungary 🇭🇺</SelectItem>
-                      <SelectItem value="Romania">Romania 🇷🇴</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    So reminders and ideas fit their local time and vibe.
-                  </p>
-                </div>
-                <div>
-                  <Label htmlFor="birthdate">Birthday (optional)</Label>
-                  <BirthdatePicker 
-                    value={birthdate} 
-                    onChange={(newBirthdate) => {
-                      setBirthdate(newBirthdate);
-                      savePartnerData({ birthdate: newBirthdate });
-                    }} 
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    We'll add their birthday to your Love Calendar
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+                </CardHeader>
+                <CardContent>
+                  <MessageCoach partnerId={id!} partnerName={name} />
+                </CardContent>
+              </Card>
+            ) : (
+              <UpgradePrompt 
+                featureName="Relationship Insights"
+                description="Get AI-powered insights and personalized suggestions to strengthen your connection."
+              />
+            )}
           </TabsContent>
         </Tabs>
       </main>
