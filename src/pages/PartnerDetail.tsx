@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Heart, ArrowLeft, Archive, Trash2 } from "lucide-react";
+import { Heart, ArrowLeft, Archive, Trash2, FileText } from "lucide-react";
 import { CherishedSwitcher } from "@/components/CherishedSwitcher";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -22,6 +22,7 @@ import { ProfileDetailsManager, CATEGORIES } from "@/components/ProfileDetailsMa
 import { ClaireChat } from "@/components/ClaireChat";
 import { MessageCoach } from "@/components/MessageCoach";
 import { ConversationCoach } from "@/components/ConversationCoach";
+import { CherishedDocuments } from "@/components/CherishedDocuments";
 import { dateToYMDLocal } from "@/lib/utils";
 import { useUserRole } from "@/hooks/useUserRole";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
@@ -367,50 +368,16 @@ const PartnerDetail = () => {
           <TabsContent value="documents" className="space-y-6">
             <Card className="shadow-soft">
               <CardHeader>
-                <CardTitle>Documents</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  Long-term Memory
+                </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Notes, memories, and important information about {name}
+                  Your personal notes and reflections that help Claire understand your relationship
                 </p>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <Label className="text-base font-medium">Notes & Thoughts</Label>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Personal notes, observations, and important details
-                  </p>
-                  <Textarea 
-                    value={notes} 
-                    onChange={e => {
-                      const newNotes = e.target.value;
-                      setNotes(newNotes);
-                      debouncedSave({ notes: newNotes });
-                    }}
-                    onBlur={(e) => {
-                      if (saveTimeoutRef.current) {
-                        clearTimeout(saveTimeoutRef.current);
-                      }
-                      savePartnerData({ notes: e.target.value }, true);
-                    }}
-                    placeholder="Special memories, preferences, important details..." 
-                    rows={6} 
-                    className="resize-none" 
-                  />
-                </div>
-
-                {isPro ? (
-                  <div>
-                    <Label className="text-base font-medium">Moments</Label>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Capture and organize special memories
-                    </p>
-                    <MomentManager partnerId={id!} partnerName={name} />
-                  </div>
-                ) : (
-                  <UpgradePrompt 
-                    featureName="Moments Log"
-                    description="Capture and organize your special memories with your cherished ones."
-                  />
-                )}
+              <CardContent>
+                <CherishedDocuments partnerName={name} />
               </CardContent>
             </Card>
           </TabsContent>
