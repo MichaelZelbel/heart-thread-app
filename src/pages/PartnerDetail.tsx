@@ -57,7 +57,15 @@ const PartnerDetail = () => {
     gifts: 3
   });
   
+  const [activeTab, setActiveTab] = useState("conversation");
+  const [conversationContext, setConversationContext] = useState("");
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Handle timeline "Ask Claire" action
+  const handleAskClaireFromTimeline = (context: string) => {
+    setConversationContext(context);
+    setActiveTab("conversation");
+  };
   useEffect(() => {
     loadPartnerData();
   }, [id]);
@@ -322,10 +330,10 @@ const PartnerDetail = () => {
           <p className="text-muted-foreground">Edit partner details</p>
         </div>
 
-        <Tabs defaultValue="timeline" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="conversation">Conversation</TabsTrigger>
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="insights" className="relative">
@@ -338,7 +346,16 @@ const PartnerDetail = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* Timeline Tab */}
+          {/* Conversation Tab (Primary Workspace) */}
+          <TabsContent value="conversation" className="space-y-6">
+            <Card className="shadow-soft">
+              <CardContent className="pt-6">
+                <ConversationCoach partnerName={name} initialContext={conversationContext} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Timeline Tab (Supporting Context) */}
           <TabsContent value="timeline" className="space-y-6">
             <Card className="shadow-soft">
               <CardHeader>
@@ -347,20 +364,11 @@ const PartnerDetail = () => {
                   Your Story with {name}
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Every moment that matters, captured in time
+                  What happened before — tap any moment to ask Claire about it
                 </p>
               </CardHeader>
               <CardContent>
-                <CherishedTimeline partnerName={name} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Conversation Tab */}
-          <TabsContent value="conversation" className="space-y-6">
-            <Card className="shadow-soft">
-              <CardContent className="pt-6">
-                <ConversationCoach partnerName={name} />
+                <CherishedTimeline partnerName={name} onAskClaire={handleAskClaireFromTimeline} />
               </CardContent>
             </Card>
           </TabsContent>

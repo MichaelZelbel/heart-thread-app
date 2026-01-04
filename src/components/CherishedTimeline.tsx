@@ -9,11 +9,13 @@ import {
   MapPin,
   Gift,
   Cake,
-  Plane
+  Plane,
+  MessageSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface TimelineItem {
@@ -29,6 +31,7 @@ interface TimelineItem {
 
 interface CherishedTimelineProps {
   partnerName: string;
+  onAskClaire?: (context: string) => void;
 }
 
 const PLACEHOLDER_TIMELINE: TimelineItem[] = [
@@ -150,8 +153,13 @@ const getTypeLabel = (type: TimelineItem["type"]) => {
   }
 };
 
-export const CherishedTimeline = ({ partnerName }: CherishedTimelineProps) => {
+export const CherishedTimeline = ({ partnerName, onAskClaire }: CherishedTimelineProps) => {
   const [viewMode, setViewMode] = useState<string>("detailed");
+
+  const handleAskAboutItem = (item: TimelineItem) => {
+    const contextSummary = `I want to reflect on "${item.title}" from ${item.date}. ${item.description || ""}`;
+    onAskClaire?.(contextSummary);
+  };
 
   const filteredItems = viewMode === "milestones" 
     ? PLACEHOLDER_TIMELINE.filter(item => item.type === "milestone")
@@ -295,6 +303,19 @@ export const CherishedTimeline = ({ partnerName }: CherishedTimelineProps) => {
                         <span className="text-xs text-muted-foreground/60">Photo memory</span>
                       </div>
                     </div>
+                  )}
+
+                  {/* Ask Claire Action */}
+                  {onAskClaire && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleAskAboutItem(item)}
+                      className="mt-2 h-7 text-xs gap-1.5 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <MessageSquare className="w-3 h-3" />
+                      Ask Claire about this
+                    </Button>
                   )}
                 </div>
               </div>

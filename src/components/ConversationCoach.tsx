@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 
 interface ConversationCoachProps {
   partnerName: string;
+  initialContext?: string;
 }
 
 const PLACEHOLDER_RESPONSE = `I can see this is a delicate situation. Based on what you've shared, here's a thoughtful way to approach this conversation:
@@ -34,12 +35,17 @@ const QUICK_ACTIONS = [
   { id: "playful", label: "More playful", icon: Smile, description: "Lighter mood" },
 ];
 
-export const ConversationCoach = ({ partnerName }: ConversationCoachProps) => {
-  const [context, setContext] = useState("");
+export const ConversationCoach = ({ partnerName, initialContext = "" }: ConversationCoachProps) => {
+  const [context, setContext] = useState(initialContext);
   const [showResponse, setShowResponse] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeAction, setActiveAction] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Update context when initialContext changes (from timeline navigation)
+  if (initialContext && context !== initialContext && !context.includes(initialContext)) {
+    setContext(initialContext);
+  }
 
   const handleAskClaire = () => {
     setIsLoading(true);
