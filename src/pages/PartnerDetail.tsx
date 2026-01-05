@@ -302,11 +302,7 @@ const PartnerDetail = () => {
         </div>
       </nav>
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="mb-8">
-          
-          
-        </div>
+<main className="container mx-auto px-4 py-8 max-w-4xl">
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
