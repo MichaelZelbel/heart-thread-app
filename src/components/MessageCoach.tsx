@@ -175,19 +175,6 @@ export const MessageCoach = ({ partnerId, partnerName, initialContext = "" }: Me
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-3 pb-3 border-b border-border/50">
-        <div className="p-2 rounded-full bg-primary/10">
-          <Heart className="w-4 h-4 text-primary" />
-        </div>
-        <div>
-          <h3 className="font-medium">Conversation with Claire</h3>
-          <p className="text-sm text-muted-foreground">
-            Ask questions, get advice, and craft the right words for {partnerName}
-          </p>
-        </div>
-      </div>
-
       <div className="grid md:grid-cols-2 gap-6">
         {/* Left column: Context + Intent */}
         <div className="space-y-4">
@@ -342,6 +329,7 @@ export const MessageCoach = ({ partnerId, partnerName, initialContext = "" }: Me
           <div className="h-[600px]">
             <ClaireChat 
               partnerId={partnerId}
+              partnerName={partnerName}
               compact={false}
               messageCoachContext={{
                 transcript,
