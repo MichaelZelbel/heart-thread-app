@@ -5,7 +5,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Switch } from "@/components/ui/switch";
 import { Heart, Waves, Sparkles, Brain, Shield, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -14,6 +13,7 @@ import { ClaireChat } from "./ClaireChat";
 interface MessageCoachProps {
   partnerId: string;
   partnerName: string;
+  initialContext?: string;
 }
 
 const TONE_PRESETS = [
@@ -24,15 +24,24 @@ const TONE_PRESETS = [
   { label: "Sincere", value: "sincere", icon: Shield }
 ];
 
-export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
+export const MessageCoach = ({ partnerId, partnerName, initialContext = "" }: MessageCoachProps) => {
   const [transcript, setTranscript] = useState("");
   const [notes, setNotes] = useState("");
   const [presetTone, setPresetTone] = useState("");
   const [customTone, setCustomTone] = useState("");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
+  const [contextFromTimeline, setContextFromTimeline] = useState("");
   
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Update context when initialContext changes (from timeline navigation)
+  useEffect(() => {
+    if (initialContext && initialContext !== contextFromTimeline) {
+      setTranscript(prev => initialContext + (prev ? "\n\n" + prev : ""));
+      setContextFromTimeline(initialContext);
+    }
+  }, [initialContext, contextFromTimeline]);
 
   useEffect(() => {
     loadMessageCoachData();
@@ -161,18 +170,36 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
   };
 
   if (loading) {
-    return <div className="p-4 text-center text-muted-foreground">Loading message coach...</div>;
+    return <div className="p-4 text-center text-muted-foreground">Loading...</div>;
   }
-
-  const isEmpty = !transcript && !notes;
 
   return (
     <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center gap-3 pb-3 border-b border-border/50">
+        <div className="p-2 rounded-full bg-primary/10">
+          <Heart className="w-4 h-4 text-primary" />
+        </div>
+        <div>
+          <h3 className="font-medium">Conversation with Claire</h3>
+          <p className="text-sm text-muted-foreground">
+            Ask questions, get advice, and craft the right words for {partnerName}
+          </p>
+        </div>
+      </div>
+
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Left column: Text inputs */}
+        {/* Left column: Context + Intent */}
         <div className="space-y-4">
+          {/* Context (optional) */}
           <div>
-            <Label htmlFor="transcript">Recent Conversation or Reflection</Label>
+            <Label htmlFor="transcript" className="flex items-center gap-2">
+              Context
+              <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+            </Label>
+            <p className="text-xs text-muted-foreground mt-1 mb-2">
+              Paste recent messages or describe the situation if helpful.
+            </p>
             <Textarea
               id="transcript"
               value={transcript}
@@ -187,13 +214,13 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
                 }
                 saveMessageCoachData({ transcript: e.target.value }, true);
               }}
-              placeholder="Paste a chat excerpt, diary note, or anything you want help replying to…"
-              className="min-h-[600px] resize-none"
+              placeholder="Paste a chat excerpt, diary note, or describe what's happening..."
+              className="min-h-[280px] resize-none"
               maxLength={5000}
             />
             <div className="flex justify-between mt-1">
               <p className="text-xs text-muted-foreground">
-                Saved to {partnerName} only. Not included in your global memory.
+                Saved to {partnerName} only
               </p>
               <p className="text-xs text-muted-foreground">
                 {transcript.length} / 5,000
@@ -201,8 +228,12 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
             </div>
           </div>
 
+          {/* Intent */}
           <div>
-            <Label htmlFor="notes">Your General Intent</Label>
+            <Label htmlFor="notes" className="flex items-center gap-2">
+              Your Intent
+              <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+            </Label>
             <Textarea
               id="notes"
               value={notes}
@@ -217,13 +248,13 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
                 }
                 saveMessageCoachData({ notes: e.target.value }, true);
               }}
-              placeholder="What do you want to express? Any constraints or do/don't?"
-              className="min-h-[120px] resize-none"
+              placeholder="What do you want to express or achieve?"
+              className="min-h-[100px] resize-none"
               maxLength={800}
             />
             <div className="flex justify-between mt-1">
               <p className="text-xs text-muted-foreground">
-                Saved to {partnerName} only.
+                Saved to {partnerName} only
               </p>
               <p className="text-xs text-muted-foreground">
                 {notes.length} / 800
@@ -231,48 +262,7 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
             </div>
           </div>
 
-          {lastUpdated && (
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Last updated: {formatLastUpdated()}</span>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-auto py-1 px-2 text-xs">
-                    <X className="w-3 h-3 mr-1" />
-                    Clear both fields
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Clear both fields?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete the transcript and notes for {partnerName}'s Message Coach. This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleClearFields}>Clear</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          )}
-        </div>
-
-        {/* Right column: Claire chat + tone controls */}
-        <div className="space-y-4">
-          <div className="h-[800px]">
-            <ClaireChat 
-              partnerId={partnerId}
-              compact={false}
-              messageCoachContext={{
-                transcript,
-                notes,
-                presetTone,
-                customTone
-              }}
-            />
-          </div>
-
+          {/* Tone Controls */}
           <Card>
             <CardContent className="pt-4 space-y-4">
               <div>
@@ -286,8 +276,9 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
                         variant={presetTone === tone.value ? "default" : "outline"}
                         size="sm"
                         onClick={() => {
-                          setPresetTone(tone.value);
-                          saveMessageCoachData({ presetTone: tone.value });
+                          const newTone = presetTone === tone.value ? "" : tone.value;
+                          setPresetTone(newTone);
+                          saveMessageCoachData({ presetTone: newTone });
                         }}
                       >
                         <Icon className="w-4 h-4 mr-1" />
@@ -313,23 +304,55 @@ export const MessageCoach = ({ partnerId, partnerName }: MessageCoachProps) => {
                     }
                     saveMessageCoachData({ customTone: e.target.value }, true);
                   }}
-                  placeholder="e.g., like George Clooney — confident, warm, simple words, never needy"
+                  placeholder="e.g., confident, warm, simple words"
                 />
               </div>
             </CardContent>
           </Card>
+
+          {lastUpdated && (
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Last updated: {formatLastUpdated()}</span>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-auto py-1 px-2 text-xs">
+                    <X className="w-3 h-3 mr-1" />
+                    Clear fields
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Clear context and intent?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete the context and intent for {partnerName}. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleClearFields}>Clear</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          )}
+        </div>
+
+        {/* Right column: Claire chat */}
+        <div className="space-y-4">
+          <div className="h-[600px]">
+            <ClaireChat 
+              partnerId={partnerId}
+              compact={false}
+              messageCoachContext={{
+                transcript,
+                notes,
+                presetTone,
+                customTone
+              }}
+            />
+          </div>
         </div>
       </div>
-
-      {isEmpty && (
-        <Card className="bg-muted/30 border-dashed">
-          <CardContent className="pt-6 pb-5 text-center">
-            <p className="text-sm text-muted-foreground">
-              Paste a snippet or write a short note to begin.
-            </p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };
