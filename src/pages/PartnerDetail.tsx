@@ -21,7 +21,6 @@ import { MomentManager } from "@/components/MomentManager";
 import { ProfileDetailsManager, CATEGORIES } from "@/components/ProfileDetailsManager";
 import { ClaireChat } from "@/components/ClaireChat";
 import { MessageCoach } from "@/components/MessageCoach";
-import { ConversationCoach } from "@/components/ConversationCoach";
 import { CherishedDocuments } from "@/components/CherishedDocuments";
 import { ProfileReference } from "@/components/ProfileReference";
 import { dateToYMDLocal } from "@/lib/utils";
@@ -331,28 +330,38 @@ const PartnerDetail = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="conversation">Conversation</TabsTrigger>
-            <TabsTrigger value="timeline">Timeline</TabsTrigger>
-            <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="insights" className="relative">
-              Insights
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="conversation" className="relative">
+              Conversation
               {!isPro && (
                 <span className="ml-1 text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
                   Pro
                 </span>
               )}
             </TabsTrigger>
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
 
-          {/* Conversation Tab (Primary Workspace) */}
+          {/* Conversation Tab (Primary Workspace with Claire) */}
           <TabsContent value="conversation" className="space-y-6">
-            <Card className="shadow-soft">
-              <CardContent className="pt-6">
-                <ConversationCoach partnerName={name} initialContext={conversationContext} />
-              </CardContent>
-            </Card>
+            {isPro ? (
+              <Card className="shadow-soft">
+                <CardContent className="pt-6">
+                  <MessageCoach 
+                    partnerId={id!} 
+                    partnerName={name} 
+                    initialContext={conversationContext}
+                  />
+                </CardContent>
+              </Card>
+            ) : (
+              <UpgradePrompt 
+                featureName="Conversation with Claire"
+                description="Get personalized advice, message coaching, and relationship insights from Claire."
+              />
+            )}
           </TabsContent>
 
           {/* Timeline Tab (Supporting Context) */}
@@ -422,27 +431,6 @@ const PartnerDetail = () => {
             </Card>
           </TabsContent>
 
-          {/* Insights Tab (Pro) */}
-          <TabsContent value="insights" className="space-y-6">
-            {isPro ? (
-              <Card className="shadow-soft">
-                <CardHeader>
-                  <CardTitle>Insights</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    AI-powered suggestions and relationship insights
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <MessageCoach partnerId={id!} partnerName={name} />
-                </CardContent>
-              </Card>
-            ) : (
-              <UpgradePrompt 
-                featureName="Relationship Insights"
-                description="Get AI-powered insights and personalized suggestions to strengthen your connection."
-              />
-            )}
-          </TabsContent>
         </Tabs>
       </main>
 
