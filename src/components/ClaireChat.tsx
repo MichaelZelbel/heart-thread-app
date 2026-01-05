@@ -14,6 +14,7 @@ interface Message {
 
 interface ClaireChatProps {
   partnerId?: string;
+  partnerName?: string;
   compact?: boolean;
   prefillMessage?: string;
   messageCoachContext?: {
@@ -24,8 +25,8 @@ interface ClaireChatProps {
   };
 }
 
-export const ClaireChat = ({ partnerId, compact = false, prefillMessage = "", messageCoachContext }: ClaireChatProps) => {
-  const [partnerName, setPartnerName] = useState<string>("");
+export const ClaireChat = ({ partnerId, partnerName: initialPartnerName, compact = false, prefillMessage = "", messageCoachContext }: ClaireChatProps) => {
+  const [partnerName, setPartnerName] = useState<string>(initialPartnerName || "");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
@@ -194,7 +195,7 @@ export const ClaireChat = ({ partnerId, compact = false, prefillMessage = "", me
             <div className="flex items-center space-x-2">
               <Sparkles className="w-5 h-5 text-primary" />
               <CardTitle className="text-base">
-                {partnerId ? "Chat with Claire 💗" : "Claire – Your Heart Companion"}
+                {partnerName ? `${partnerName}'s Claire 💗` : "Claire – Your Heart Companion"}
               </CardTitle>
             </div>
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
@@ -216,7 +217,7 @@ export const ClaireChat = ({ partnerId, compact = false, prefillMessage = "", me
           <div className="flex items-center space-x-2">
             <Sparkles className="w-5 h-5 text-primary" />
             <CardTitle className="text-base">
-              {partnerId ? "Chat with Claire 💗" : "Claire – Your Heart Companion"}
+              {partnerName ? `${partnerName}'s Claire 💗` : "Claire – Your Heart Companion"}
             </CardTitle>
           </div>
           {compact && (
