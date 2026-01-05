@@ -38,7 +38,9 @@ const PartnerDetail = () => {
     id
   } = useParams();
   const navigate = useNavigate();
-  const { isPro } = useUserRole();
+  const {
+    isPro
+  } = useUserRole();
   const [loading, setLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [name, setName] = useState("");
@@ -55,7 +57,6 @@ const PartnerDetail = () => {
     acts: 3,
     gifts: 3
   });
-  
   const [activeTab, setActiveTab] = useState("conversation");
   const [conversationContext, setConversationContext] = useState("");
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
@@ -91,31 +92,26 @@ const PartnerDetail = () => {
     setName(data.name);
     setRelationshipType(data.relationship_type || "partner");
     setNotes(data.notes || "");
-    
+
     // Load birthdate from partner record, or sync from Birthday event if not set
     if (data.birthdate) {
       setBirthdate(new Date(data.birthdate));
     } else {
       // Check if there's a Birthday event and sync it to the birthdate field
-      const { data: birthdayEvent } = await supabase
-        .from("events")
-        .select("event_date")
-        .eq("partner_id", id)
-        .eq("event_type", "Birthday")
-        .maybeSingle();
-      
+      const {
+        data: birthdayEvent
+      } = await supabase.from("events").select("event_date").eq("partner_id", id).eq("event_type", "Birthday").maybeSingle();
       if (birthdayEvent) {
         setBirthdate(new Date(birthdayEvent.event_date));
         // Also update the partner record with this birthdate
-        await supabase
-          .from("partners")
-          .update({ birthdate: birthdayEvent.event_date })
-          .eq("id", id);
+        await supabase.from("partners").update({
+          birthdate: birthdayEvent.event_date
+        }).eq("id", id);
       } else {
         setBirthdate(null);
       }
     }
-    
+
     // Handle gender identity - check if it's a custom value
     const standardGenders = ["Woman 💐", "Man 🌹", "Nonbinary 🌈", "Trans Woman 💖", "Trans Man 💙", "Prefer not to say 🙊"];
     if (data.gender_identity && !standardGenders.includes(data.gender_identity)) {
@@ -125,7 +121,6 @@ const PartnerDetail = () => {
       setGenderIdentity(data.gender_identity || "");
       setCustomGender("");
     }
-    
     setCountry(data.country || "");
     setLoveLanguages({
       physical: data.love_language_physical || 3,
@@ -146,13 +141,15 @@ const PartnerDetail = () => {
     loveLanguages?: LoveLanguages;
   }, showToast = false) => {
     if (!id) return;
-
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: {
+        session
+      }
+    } = await supabase.auth.getSession();
     if (!session) return;
 
     // Prepare update data
     const updateData: any = {};
-    
     if (dataToSave.name !== undefined) {
       if (!dataToSave.name.trim()) {
         toast.error("Partner name is required");
@@ -174,12 +171,9 @@ const PartnerDetail = () => {
       updateData.love_language_acts = dataToSave.loveLanguages.acts;
       updateData.love_language_gifts = dataToSave.loveLanguages.gifts;
     }
-
-    const { error } = await supabase
-      .from("partners")
-      .update(updateData)
-      .eq("id", id);
-
+    const {
+      error
+    } = await supabase.from("partners").update(updateData).eq("id", id);
     if (error) {
       toast.error("Failed to save changes");
       return;
@@ -189,43 +183,32 @@ const PartnerDetail = () => {
     if (dataToSave.birthdate !== undefined) {
       const currentBirthdate = dataToSave.birthdate;
       const currentName = dataToSave.name !== undefined ? dataToSave.name : name;
-      
       if (currentBirthdate) {
         const birthdateStr = dateToYMDLocal(currentBirthdate);
 
         // Check if Birthday event exists
-        const { data: existingEvent } = await supabase
-          .from("events")
-          .select("id")
-          .eq("partner_id", id)
-          .eq("event_type", "Birthday")
-          .single();
-          
+        const {
+          data: existingEvent
+        } = await supabase.from("events").select("id").eq("partner_id", id).eq("event_type", "Birthday").single();
         if (existingEvent) {
           // Update existing Birthday event
-          await supabase
-            .from("events")
-            .update({
-              event_date: birthdateStr,
-              title: `${currentName}'s Birthday`
-            })
-            .eq("id", existingEvent.id);
+          await supabase.from("events").update({
+            event_date: birthdateStr,
+            title: `${currentName}'s Birthday`
+          }).eq("id", existingEvent.id);
         } else {
           // Create new Birthday event
-          await supabase
-            .from("events")
-            .insert({
-              user_id: session.user.id,
-              partner_id: id,
-              title: `${currentName}'s Birthday`,
-              event_date: birthdateStr,
-              event_type: "Birthday",
-              is_recurring: true
-            });
+          await supabase.from("events").insert({
+            user_id: session.user.id,
+            partner_id: id,
+            title: `${currentName}'s Birthday`,
+            event_date: birthdateStr,
+            event_type: "Birthday",
+            is_recurring: true
+          });
         }
       }
     }
-
     if (showToast) {
       toast.success("Saved");
     }
@@ -236,7 +219,6 @@ const PartnerDetail = () => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
-    
     saveTimeoutRef.current = setTimeout(() => {
       savePartnerData(dataToSave);
     }, 1000); // 1 second debounce
@@ -322,22 +304,17 @@ const PartnerDetail = () => {
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2 flex items-center">
-            <Heart className="w-8 h-8 mr-3 text-primary" />
-            {name}
-          </h1>
-          <p className="text-muted-foreground">Edit partner details</p>
+          
+          
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="conversation" className="relative">
               Conversation
-              {!isPro && (
-                <span className="ml-1 text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
+              {!isPro && <span className="ml-1 text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
                   Pro
-                </span>
-              )}
+                </span>}
             </TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
@@ -346,22 +323,11 @@ const PartnerDetail = () => {
 
           {/* Conversation Tab (Primary Workspace with Claire) */}
           <TabsContent value="conversation" className="space-y-6">
-            {isPro ? (
-              <Card className="shadow-soft">
+            {isPro ? <Card className="shadow-soft">
                 <CardContent className="pt-6">
-                  <MessageCoach 
-                    partnerId={id!} 
-                    partnerName={name} 
-                    initialContext={conversationContext}
-                  />
+                  <MessageCoach partnerId={id!} partnerName={name} initialContext={conversationContext} />
                 </CardContent>
-              </Card>
-            ) : (
-              <UpgradePrompt 
-                featureName="Conversation with Claire"
-                description="Get personalized advice, message coaching, and relationship insights from Claire."
-              />
-            )}
+              </Card> : <UpgradePrompt featureName="Conversation with Claire" description="Get personalized advice, message coaching, and relationship insights from Claire." />}
           </TabsContent>
 
           {/* Timeline Tab (Supporting Context) */}
@@ -404,29 +370,7 @@ const PartnerDetail = () => {
           <TabsContent value="profile" className="space-y-6">
             <Card className="shadow-soft">
               <CardContent className="pt-6">
-                <ProfileReference
-                  partnerId={id!}
-                  partnerName={name}
-                  name={name}
-                  setName={setName}
-                  relationshipType={relationshipType}
-                  setRelationshipType={setRelationshipType}
-                  birthdate={birthdate}
-                  setBirthdate={setBirthdate}
-                  genderIdentity={genderIdentity}
-                  setGenderIdentity={setGenderIdentity}
-                  customGender={customGender}
-                  setCustomGender={setCustomGender}
-                  country={country}
-                  setCountry={setCountry}
-                  notes={notes}
-                  setNotes={setNotes}
-                  loveLanguages={loveLanguages}
-                  setLoveLanguages={setLoveLanguages}
-                  onSave={savePartnerData}
-                  onDebouncedSave={debouncedSave}
-                  saveTimeoutRef={saveTimeoutRef}
-                />
+                <ProfileReference partnerId={id!} partnerName={name} name={name} setName={setName} relationshipType={relationshipType} setRelationshipType={setRelationshipType} birthdate={birthdate} setBirthdate={setBirthdate} genderIdentity={genderIdentity} setGenderIdentity={setGenderIdentity} customGender={customGender} setCustomGender={setCustomGender} country={country} setCountry={setCountry} notes={notes} setNotes={setNotes} loveLanguages={loveLanguages} setLoveLanguages={setLoveLanguages} onSave={savePartnerData} onDebouncedSave={debouncedSave} saveTimeoutRef={saveTimeoutRef} />
               </CardContent>
             </Card>
           </TabsContent>
