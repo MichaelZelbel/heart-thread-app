@@ -167,6 +167,51 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_connections: {
+        Row: {
+          connected_partner_id: string
+          created_at: string
+          description: string | null
+          id: string
+          partner_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connected_partner_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          partner_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connected_partner_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          partner_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_connections_connected_partner_id_fkey"
+            columns: ["connected_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_connections_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_dislikes: {
         Row: {
           created_at: string

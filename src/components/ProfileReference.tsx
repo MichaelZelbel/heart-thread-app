@@ -108,31 +108,100 @@ export const ProfileReference = ({
     description: string;
   }>>([]);
 
-  // Load available cherished on mount
+  // Load available cherished and connections on mount
   useEffect(() => {
-    const loadCherished = async () => {
+    const loadData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const { data } = await supabase
+      // Load all partners
+      const { data: partners } = await supabase
         .from("partners")
         .select("id, name")
         .eq("user_id", session.user.id)
         .eq("archived", false)
         .order("name");
 
-      if (data) {
-        setAvailableCherished(data);
+      if (partners) {
+        setAvailableCherished(partners);
+
+        // Load connections where this partner is either side
+        const { data: connectionsData } = await supabase
+          .from("partner_connections")
+          .select("id, partner_id, connected_partner_id, description")
+          .eq("user_id", session.user.id)
+          .or(`partner_id.eq.${partnerId},connected_partner_id.eq.${partnerId}`);
+
+        if (connectionsData) {
+          // Map connections to display format - always show "the other person"
+          const mappedConnections = connectionsData.map(conn => {
+            // Determine which partner is "the other one" from current view
+            const isSource = conn.partner_id === partnerId;
+            const otherId = isSource ? conn.connected_partner_id : conn.partner_id;
+            const otherPartner = partners.find(p => p.id === otherId);
+
+            return {
+              id: conn.id,
+              cherishedId: otherId,
+              cherishedName: otherPartner?.name || "Unknown",
+              description: conn.description || "",
+            };
+          });
+
+          setConnections(mappedConnections);
+        }
       }
     };
 
-    loadCherished();
-  }, []);
+    loadData();
+  }, [partnerId]);
 
-  // Handle connection changes (placeholder - no persistence yet)
-  const handleConnectionsChange = (newConnections: typeof connections) => {
+  // Handle connection changes with database persistence
+  const handleConnectionsChange = async (newConnections: typeof connections) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    // Find added connections
+    const added = newConnections.filter(
+      nc => !connections.some(c => c.id === nc.id)
+    );
+
+    // Find removed connections
+    const removed = connections.filter(
+      c => !newConnections.some(nc => nc.id === c.id)
+    );
+
+    // Find updated connections (description changed)
+    const updated = newConnections.filter(nc => {
+      const existing = connections.find(c => c.id === nc.id);
+      return existing && existing.description !== nc.description;
+    });
+
+    // Insert new connections
+    for (const conn of added) {
+      await supabase.from("partner_connections").insert({
+        id: conn.id,
+        user_id: session.user.id,
+        partner_id: partnerId,
+        connected_partner_id: conn.cherishedId,
+        description: conn.description,
+      });
+    }
+
+    // Delete removed connections
+    for (const conn of removed) {
+      await supabase.from("partner_connections").delete().eq("id", conn.id);
+    }
+
+    // Update changed descriptions
+    for (const conn of updated) {
+      await supabase
+        .from("partner_connections")
+        .update({ description: conn.description })
+        .eq("id", conn.id);
+    }
+
     setConnections(newConnections);
-    // TODO: Persist to database when backend is implemented
   };
 
   return (
