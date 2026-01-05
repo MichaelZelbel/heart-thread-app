@@ -115,6 +115,13 @@ export const ConnectedRelationships = ({
                 ? truncateText(connection.description)
                 : connection.description;
 
+            // Always display "the other person" - never the current profile
+            // cherishedId/cherishedName represents the other end of the connection
+            const displayName = connection.cherishedName;
+
+            // Skip if somehow the connection references the current profile (self-reference guard)
+            if (connection.cherishedId === partnerId) return null;
+
             return (
               <div
                 key={connection.id}
@@ -122,7 +129,7 @@ export const ConnectedRelationships = ({
               >
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-sm text-foreground">
-                    {connection.cherishedName}
+                    {displayName}
                   </span>
                   <Button
                     variant="ghost"
