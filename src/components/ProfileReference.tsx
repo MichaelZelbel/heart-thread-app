@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { 
   User, 
   Heart, 
@@ -25,6 +26,8 @@ import {
 import { BirthdatePicker } from "@/components/BirthdatePicker";
 import { ItemManager } from "@/components/ItemManager";
 import { LoveLanguageHeartRatings } from "@/components/LoveLanguageHeartRatings";
+import { ConnectedRelationships } from "@/components/ConnectedRelationships";
+import { supabase } from "@/integrations/supabase/client";
 
 interface LoveLanguages {
   physical: number;
@@ -96,6 +99,42 @@ export const ProfileReference = ({
   onDebouncedSave,
   saveTimeoutRef,
 }: ProfileReferenceProps) => {
+  // State for available cherished and connections
+  const [availableCherished, setAvailableCherished] = useState<Array<{ id: string; name: string }>>([]);
+  const [connections, setConnections] = useState<Array<{
+    id: string;
+    cherishedId: string;
+    cherishedName: string;
+    description: string;
+  }>>([]);
+
+  // Load available cherished on mount
+  useEffect(() => {
+    const loadCherished = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data } = await supabase
+        .from("partners")
+        .select("id, name")
+        .eq("user_id", session.user.id)
+        .eq("archived", false)
+        .order("name");
+
+      if (data) {
+        setAvailableCherished(data);
+      }
+    };
+
+    loadCherished();
+  }, []);
+
+  // Handle connection changes (placeholder - no persistence yet)
+  const handleConnectionsChange = (newConnections: typeof connections) => {
+    setConnections(newConnections);
+    // TODO: Persist to database when backend is implemented
+  };
+
   return (
     <div className="space-y-8">
       {/* Section Header */}
@@ -287,6 +326,21 @@ export const ProfileReference = ({
             <p className="text-[11px] text-muted-foreground/60 mt-2">
               This information helps Claire give more thoughtful advice
             </p>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Connected Relationships */}
+      <section className="space-y-4">
+        <Card className="border-border/50 bg-muted/20">
+          <CardContent className="pt-4">
+            <ConnectedRelationships
+              partnerId={partnerId}
+              partnerName={partnerName}
+              availableCherished={availableCherished}
+              connections={connections}
+              onConnectionsChange={handleConnectionsChange}
+            />
           </CardContent>
         </Card>
       </section>
