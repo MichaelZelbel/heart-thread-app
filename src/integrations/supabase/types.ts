@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_allowance_periods: {
+        Row: {
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          period_end: string
+          period_start: string
+          source: string | null
+          tokens_granted: number | null
+          tokens_used: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          period_end: string
+          period_start: string
+          source?: string | null
+          tokens_granted?: number | null
+          tokens_used?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          period_end?: string
+          period_start?: string
+          source?: string | null
+          tokens_granted?: number | null
+          tokens_used?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_credit_settings: {
+        Row: {
+          description: string | null
+          key: string
+          value_int: number
+        }
+        Insert: {
+          description?: string | null
+          key: string
+          value_int: number
+        }
+        Update: {
+          description?: string | null
+          key?: string
+          value_int?: number
+        }
+        Relationships: []
+      }
       claire_chat_messages: {
         Row: {
           content: string
@@ -130,6 +187,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      llm_usage_events: {
+        Row: {
+          completion_tokens: number | null
+          created_at: string | null
+          credits_charged: number | null
+          feature: string | null
+          id: string
+          idempotency_key: string
+          metadata: Json | null
+          model: string | null
+          prompt_tokens: number | null
+          provider: string | null
+          total_tokens: number | null
+          user_id: string
+        }
+        Insert: {
+          completion_tokens?: number | null
+          created_at?: string | null
+          credits_charged?: number | null
+          feature?: string | null
+          id?: string
+          idempotency_key: string
+          metadata?: Json | null
+          model?: string | null
+          prompt_tokens?: number | null
+          provider?: string | null
+          total_tokens?: number | null
+          user_id: string
+        }
+        Update: {
+          completion_tokens?: number | null
+          created_at?: string | null
+          credits_charged?: number | null
+          feature?: string | null
+          id?: string
+          idempotency_key?: string
+          metadata?: Json | null
+          model?: string | null
+          prompt_tokens?: number | null
+          provider?: string | null
+          total_tokens?: number | null
+          user_id?: string
+        }
+        Relationships: []
       }
       moments: {
         Row: {
@@ -511,6 +613,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "free" | "pro" | "admin" | "pro_gift"
