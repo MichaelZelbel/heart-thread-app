@@ -595,7 +595,26 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_ai_allowance_current: {
+        Row: {
+          created_at: string | null
+          credits_granted: number | null
+          credits_used: number | null
+          id: string | null
+          metadata: Json | null
+          period_end: string | null
+          period_start: string | null
+          remaining_credits: number | null
+          remaining_tokens: number | null
+          source: string | null
+          tokens_granted: number | null
+          tokens_per_credit: number | null
+          tokens_used: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       assign_role_by_email: {
