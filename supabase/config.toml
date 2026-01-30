@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.validate-email-domain]
 verify_jwt = false
+
+[functions.ensure-token-allowance]
+verify_jwt = false
