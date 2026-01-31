@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sparkles, Send, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAICreditsGate } from "@/hooks/useAICreditsGate";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -34,6 +35,7 @@ export const ClaireChat = ({ partnerId, partnerName: initialPartnerName, compact
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const { checkCredits, refetchCredits } = useAICreditsGate();
 
   useEffect(() => {
     const loadChatHistory = async () => {
@@ -116,6 +118,7 @@ export const ClaireChat = ({ partnerId, partnerName: initialPartnerName, compact
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
+    if (!checkCredits()) return;
 
     const userMessage = input.trim();
     setInput("");
@@ -166,6 +169,9 @@ export const ClaireChat = ({ partnerId, partnerName: initialPartnerName, compact
           role: 'assistant',
           content: data.reply
         });
+        
+        // Update credits display after successful AI call
+        refetchCredits();
       } else {
         toast.error("I didn't get a response. Please try again.");
       }

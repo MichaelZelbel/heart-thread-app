@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Heart, RefreshCw, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAICreditsGate } from "@/hooks/useAICreditsGate";
 
 interface ActivitySuggestionProps {
   partnerId?: string;
@@ -22,9 +23,11 @@ export const ActivitySuggestion = ({
 }: ActivitySuggestionProps) => {
   const [suggestion, setSuggestion] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const { checkCredits, refetchCredits } = useAICreditsGate();
 
   const generateSuggestion = async () => {
     if (!hasPartners) return;
+    if (!checkCredits()) return;
     
     setIsLoading(true);
     try {
@@ -40,6 +43,8 @@ export const ActivitySuggestion = ({
       
       if (data?.suggestion) {
         setSuggestion(data.suggestion);
+        // Update credits display after successful AI call
+        refetchCredits();
       }
     } catch (error: any) {
       console.error('Error generating suggestion:', error);
