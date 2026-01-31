@@ -22,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { AICreditSettings } from "@/components/admin/AICreditSettings";
 
 type UserRole = 'free' | 'pro' | 'pro_gift' | 'admin';
 
@@ -390,6 +391,11 @@ export default function Admin() {
             </div>
           </CardContent>
         </Card>
+
+        {/* AI Credit Settings */}
+        <div className="mt-8">
+          <AICreditSettings />
+        </div>
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
