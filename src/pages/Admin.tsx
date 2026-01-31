@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { ArrowLeft, Search, Shield, Trash2 } from "lucide-react";
+import { ArrowLeft, Search, Shield, Trash2, Coins } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
@@ -23,6 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AICreditSettings } from "@/components/admin/AICreditSettings";
+import { UserTokenModal } from "@/components/admin/UserTokenModal";
 
 type UserRole = 'free' | 'pro' | 'pro_gift' | 'admin';
 
@@ -47,6 +48,7 @@ export default function Admin() {
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [tokenModalUser, setTokenModalUser] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     if (!roleLoading && !isAdmin) {
@@ -338,16 +340,27 @@ export default function Admin() {
                           {new Date(user.created_at).toLocaleDateString()}
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setUserToDelete(user.id);
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setTokenModalUser({ id: user.id, name: user.display_name })}
+                              title="Manage tokens"
+                            >
+                              <Coins className="h-4 w-4 text-primary" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setUserToDelete(user.id);
+                                setDeleteDialogOpen(true);
+                              }}
+                              title="Delete user"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -433,6 +446,16 @@ export default function Admin() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* User Token Modal */}
+        {tokenModalUser && (
+          <UserTokenModal
+            open={!!tokenModalUser}
+            onOpenChange={(open) => !open && setTokenModalUser(null)}
+            userId={tokenModalUser.id}
+            userName={tokenModalUser.name}
+          />
+        )}
       </div>
     </div>
   );
