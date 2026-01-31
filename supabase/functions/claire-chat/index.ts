@@ -9,6 +9,7 @@ const corsHeaders = {
 
 // n8n webhook URL for Claire Chat workflow
 const N8N_WEBHOOK_URL = 'https://n8n-cherishly.agentpool.cloud/webhook/claire';
+const FEATURE_NAME = 'claire_chat';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -286,6 +287,95 @@ serve(async (req) => {
     // Common patterns: data.output, data.text, data.message, or direct response
     const reply = data.output || data.text || data.message || data.response || 
                   (typeof data === 'string' ? data : JSON.stringify(data));
+
+    // Extract token usage from n8n response if available, otherwise estimate
+    // n8n workflow should return usage data like: { output: "...", usage: { prompt_tokens, completion_tokens, total_tokens } }
+    const usage = data.usage || {};
+    let promptTokens = usage.prompt_tokens || 0;
+    let completionTokens = usage.completion_tokens || 0;
+    let totalTokens = usage.total_tokens || 0;
+    const model = data.model || usage.model || 'google/gemini-2.5-flash';
+
+    // If no token data from n8n, estimate based on character count (~4 chars per token)
+    if (totalTokens === 0) {
+      const estimatedInputChars = message.length + partnerContext.length + messageCoachContextString.length;
+      const estimatedOutputChars = reply?.length || 0;
+      promptTokens = Math.ceil(estimatedInputChars / 4);
+      completionTokens = Math.ceil(estimatedOutputChars / 4);
+      totalTokens = promptTokens + completionTokens;
+      console.log(`Estimated tokens - prompt: ${promptTokens}, completion: ${completionTokens}, total: ${totalTokens}`);
+    }
+
+    // Get tokens_per_credit setting for credits calculation
+    const { data: settings } = await supabase
+      .from('ai_credit_settings')
+      .select('value_int')
+      .eq('key', 'tokens_per_credit')
+      .single();
+    
+    const tokensPerCredit = settings?.value_int || 200;
+    const creditsCharged = totalTokens / tokensPerCredit;
+
+    // Generate idempotency key
+    const timestamp = Date.now();
+    const idempotencyKey = `${FEATURE_NAME}_${user.id}_${timestamp}`;
+
+    // Insert usage event into llm_usage_events
+    const { error: usageError } = await supabase
+      .from('llm_usage_events')
+      .insert({
+        user_id: user.id,
+        idempotency_key: idempotencyKey,
+        feature: FEATURE_NAME,
+        model: model,
+        provider: 'n8n_workflow',
+        prompt_tokens: promptTokens,
+        completion_tokens: completionTokens,
+        total_tokens: totalTokens,
+        credits_charged: creditsCharged,
+        metadata: {
+          partner_id: partnerId || null,
+          estimated: !usage.total_tokens, // Flag if tokens were estimated
+        }
+      });
+
+    if (usageError) {
+      console.error('Error logging usage event:', usageError);
+      // Don't fail the request, just log the error
+    }
+
+    // Update tokens_used in the current ai_allowance_periods record
+    if (totalTokens > 0) {
+      const now = new Date();
+      
+      // Find the current period for the user
+      const { data: currentPeriod, error: periodError } = await supabase
+        .from('ai_allowance_periods')
+        .select('id, tokens_used')
+        .eq('user_id', user.id)
+        .lte('period_start', now.toISOString())
+        .gte('period_end', now.toISOString())
+        .order('period_start', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (periodError) {
+        console.error('Error finding current period:', periodError);
+      } else if (currentPeriod) {
+        const newTokensUsed = (currentPeriod.tokens_used || 0) + totalTokens;
+        
+        const { error: updateError } = await supabase
+          .from('ai_allowance_periods')
+          .update({ tokens_used: newTokensUsed, updated_at: now.toISOString() })
+          .eq('id', currentPeriod.id);
+
+        if (updateError) {
+          console.error('Error updating tokens_used:', updateError);
+        } else {
+          console.log(`Updated tokens_used for user ${user.id}: ${currentPeriod.tokens_used} -> ${newTokensUsed}`);
+        }
+      }
+    }
 
     return new Response(JSON.stringify({ reply }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

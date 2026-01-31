@@ -6,6 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const FEATURE_NAME = 'suggest_activity';
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -170,6 +172,83 @@ Return ONLY the suggestion text, nothing else.`;
 
     const data = await response.json();
     const suggestion = data.choices[0]?.message?.content || 'Try something thoughtful today 💕';
+
+    // Extract token usage from the API response
+    const usage = data.usage || {};
+    const promptTokens = usage.prompt_tokens || 0;
+    const completionTokens = usage.completion_tokens || 0;
+    const totalTokens = usage.total_tokens || (promptTokens + completionTokens);
+    const model = data.model || 'google/gemini-2.5-flash';
+
+    // Get tokens_per_credit setting for credits calculation
+    const { data: settings } = await supabase
+      .from('ai_credit_settings')
+      .select('value_int')
+      .eq('key', 'tokens_per_credit')
+      .single();
+    
+    const tokensPerCredit = settings?.value_int || 200;
+    const creditsCharged = totalTokens / tokensPerCredit;
+
+    // Generate idempotency key
+    const timestamp = Date.now();
+    const idempotencyKey = `${FEATURE_NAME}_${user.id}_${timestamp}`;
+
+    // Insert usage event into llm_usage_events
+    const { error: usageError } = await supabase
+      .from('llm_usage_events')
+      .insert({
+        user_id: user.id,
+        idempotency_key: idempotencyKey,
+        feature: FEATURE_NAME,
+        model: model,
+        provider: 'lovable_gateway',
+        prompt_tokens: promptTokens,
+        completion_tokens: completionTokens,
+        total_tokens: totalTokens,
+        credits_charged: creditsCharged,
+        metadata: {
+          partner_id: partnerId || null,
+        }
+      });
+
+    if (usageError) {
+      console.error('Error logging usage event:', usageError);
+      // Don't fail the request, just log the error
+    }
+
+    // Update tokens_used in the current ai_allowance_periods record
+    if (totalTokens > 0) {
+      const now = new Date();
+      
+      // Find the current period for the user
+      const { data: currentPeriod, error: periodError } = await supabase
+        .from('ai_allowance_periods')
+        .select('id, tokens_used')
+        .eq('user_id', user.id)
+        .lte('period_start', now.toISOString())
+        .gte('period_end', now.toISOString())
+        .order('period_start', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (periodError) {
+        console.error('Error finding current period:', periodError);
+      } else if (currentPeriod) {
+        const newTokensUsed = (currentPeriod.tokens_used || 0) + totalTokens;
+        
+        const { error: updateError } = await supabase
+          .from('ai_allowance_periods')
+          .update({ tokens_used: newTokensUsed, updated_at: now.toISOString() })
+          .eq('id', currentPeriod.id);
+
+        if (updateError) {
+          console.error('Error updating tokens_used:', updateError);
+        } else {
+          console.log(`Updated tokens_used for user ${user.id}: ${currentPeriod.tokens_used} -> ${newTokensUsed}`);
+        }
+      }
+    }
 
     return new Response(
       JSON.stringify({ suggestion }),
