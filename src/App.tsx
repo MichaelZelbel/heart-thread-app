@@ -22,6 +22,14 @@ import CookiesPolicy from "./pages/CookiesPolicy";
 import Footer from "./components/Footer";
 import CookieConsent from "./components/CookieConsent";
 
+// Blog Admin
+import { BlogAdminLayout } from "./components/blog/BlogAdminLayout";
+import BlogAdminDashboard from "./pages/blog/admin/BlogAdminDashboard";
+import BlogAdminPosts from "./pages/blog/admin/BlogAdminPosts";
+import BlogAdminCategories from "./pages/blog/admin/BlogAdminCategories";
+import BlogAdminTags from "./pages/blog/admin/BlogAdminTags";
+import BlogAdminMedia from "./pages/blog/admin/BlogAdminMedia";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -48,6 +56,16 @@ const App = () => (
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="/cookies" element={<CookiesPolicy />} />
+              
+              {/* Blog Admin Routes */}
+              <Route path="/blog/admin" element={<BlogAdminLayout />}>
+                <Route index element={<BlogAdminDashboard />} />
+                <Route path="posts" element={<BlogAdminPosts />} />
+                <Route path="categories" element={<BlogAdminCategories />} />
+                <Route path="tags" element={<BlogAdminTags />} />
+                <Route path="media" element={<BlogAdminMedia />} />
+              </Route>
+              
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
