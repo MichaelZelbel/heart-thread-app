@@ -29,6 +29,7 @@ import BlogAdminPosts from "./pages/blog/admin/BlogAdminPosts";
 import BlogAdminCategories from "./pages/blog/admin/BlogAdminCategories";
 import BlogAdminTags from "./pages/blog/admin/BlogAdminTags";
 import BlogAdminMedia from "./pages/blog/admin/BlogAdminMedia";
+import BlogPostEditor from "./pages/blog/admin/BlogPostEditor";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +62,8 @@ const App = () => (
               <Route path="/blog/admin" element={<BlogAdminLayout />}>
                 <Route index element={<BlogAdminDashboard />} />
                 <Route path="posts" element={<BlogAdminPosts />} />
+                <Route path="posts/new" element={<BlogPostEditor />} />
+                <Route path="posts/:id" element={<BlogPostEditor />} />
                 <Route path="categories" element={<BlogAdminCategories />} />
                 <Route path="tags" element={<BlogAdminTags />} />
                 <Route path="media" element={<BlogAdminMedia />} />
