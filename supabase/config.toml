@@ -26,3 +26,12 @@ verify_jwt = false
 
 [functions.ensure-token-allowance]
 verify_jwt = false
+
+[functions.admin-get-users]
+verify_jwt = true
+
+[functions.admin-delete-users]
+verify_jwt = true
+
+[functions.blog-api]
+verify_jwt = false
