@@ -122,13 +122,20 @@ export default function BlogPost() {
   return (
     <>
       <BlogSEO
-        title={`${seoTitle} | Blog`}
+        title={`${seoTitle} | Cherishly Blog`}
         description={seoDescription}
         canonical={`/blog/${post.slug}`}
         ogImage={ogImage}
         ogType="article"
         publishedTime={post.published_at || undefined}
         author={post.author?.display_name}
+        articleData={{
+          headline: post.title,
+          datePublished: post.published_at || new Date().toISOString(),
+          author: post.author?.display_name,
+          image: ogImage,
+          description: seoDescription,
+        }}
       />
       <BlogLayout showBackLink>
         <article className="max-w-none">
