@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -31,54 +32,68 @@ import BlogAdminTags from "./pages/blog/admin/BlogAdminTags";
 import BlogAdminMedia from "./pages/blog/admin/BlogAdminMedia";
 import BlogPostEditor from "./pages/blog/admin/BlogPostEditor";
 
+// Public Blog
+import BlogList from "./pages/blog/BlogList";
+import BlogPost from "./pages/blog/BlogPost";
+import BlogCategory from "./pages/blog/BlogCategory";
+import BlogTag from "./pages/blog/BlogTag";
+
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <div className="flex flex-col min-h-screen">
-          <div className="flex-1">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/email-verification-pending" element={<EmailVerificationPending />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/partner/new" element={<PartnerWizard />} />
-              <Route path="/partner/:id" element={<PartnerDetail />} />
-              <Route path="/archive" element={<Archive />} />
-              <Route path="/account" element={<Account />} />
-              <Route path="/account/profile" element={<SelfProfile />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/payment-success" element={<PaymentSuccess />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
-              <Route path="/terms" element={<TermsOfService />} />
-              <Route path="/cookies" element={<CookiesPolicy />} />
-              
-              {/* Blog Admin Routes */}
-              <Route path="/blog/admin" element={<BlogAdminLayout />}>
-                <Route index element={<BlogAdminDashboard />} />
-                <Route path="posts" element={<BlogAdminPosts />} />
-                <Route path="posts/new" element={<BlogPostEditor />} />
-                <Route path="posts/:id" element={<BlogPostEditor />} />
-                <Route path="categories" element={<BlogAdminCategories />} />
-                <Route path="tags" element={<BlogAdminTags />} />
-                <Route path="media" element={<BlogAdminMedia />} />
-              </Route>
-              
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+  <HelmetProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <div className="flex flex-col min-h-screen">
+            <div className="flex-1">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/email-verification-pending" element={<EmailVerificationPending />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/partner/new" element={<PartnerWizard />} />
+                <Route path="/partner/:id" element={<PartnerDetail />} />
+                <Route path="/archive" element={<Archive />} />
+                <Route path="/account" element={<Account />} />
+                <Route path="/account/profile" element={<SelfProfile />} />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/payment-success" element={<PaymentSuccess />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/cookies" element={<CookiesPolicy />} />
+                
+                {/* Public Blog Routes */}
+                <Route path="/blog" element={<BlogList />} />
+                <Route path="/blog/:slug" element={<BlogPost />} />
+                <Route path="/blog/category/:slug" element={<BlogCategory />} />
+                <Route path="/blog/tag/:slug" element={<BlogTag />} />
+                
+                {/* Blog Admin Routes */}
+                <Route path="/blog/admin" element={<BlogAdminLayout />}>
+                  <Route index element={<BlogAdminDashboard />} />
+                  <Route path="posts" element={<BlogAdminPosts />} />
+                  <Route path="posts/new" element={<BlogPostEditor />} />
+                  <Route path="posts/:id" element={<BlogPostEditor />} />
+                  <Route path="categories" element={<BlogAdminCategories />} />
+                  <Route path="tags" element={<BlogAdminTags />} />
+                  <Route path="media" element={<BlogAdminMedia />} />
+                </Route>
+                
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </div>
+            <Footer />
           </div>
-          <Footer />
-        </div>
-        <CookieConsent />
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+          <CookieConsent />
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </HelmetProvider>
 );
 
 export default App;
