@@ -12,11 +12,8 @@ interface TestUser {
   role: 'free' | 'pro' | 'admin';
 }
 
-const testUsers: TestUser[] = [
-  { email: 'fred@free.com', password: 'Dell@123', displayName: 'Fred', role: 'free' },
-  { email: 'peter@pro.com', password: 'Dell@123', displayName: 'Peter', role: 'pro' },
-  { email: 'alec@admin.com', password: 'Dell@123', displayName: 'Alec', role: 'admin' },
-];
+// Test user credentials must be passed via request body for security
+// Do not hardcode credentials in source code
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -24,6 +21,22 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Parse test users from request body
+    const body = await req.json();
+    const testUsers: TestUser[] = body.users;
+
+    if (!testUsers || !Array.isArray(testUsers) || testUsers.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Request body must contain "users" array with email, password, displayName, and role' 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
+    }
+
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',

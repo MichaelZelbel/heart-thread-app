@@ -54,7 +54,7 @@ npm run seed:e2e
 ## Test Data
 
 The seed script creates:
-- **Test User:** test+e2e@cherishly.app / Test1234!
+- **Test User:** Credentials provided via environment variables (`E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD`)
 - **Partner:** Sona
 - **Event:** Anniversary (yearly recurring, June 15, 2020)
 
