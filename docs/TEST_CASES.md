@@ -6,13 +6,13 @@ This document contains comprehensive end-to-end test cases for browser-based tes
 
 ## Test Personas
 
-| Role  | Name  | Email              | Password   | Description |
-|-------|-------|-------------------|------------|-------------|
-| Free  | Fred  | `fred@free.com`   | `Dell@123` | Free tier user with limited features |
-| Pro   | Peter | `peter@pro.com`   | `Dell@123` | Pro subscriber with full feature access |
-| Admin | Alec  | `alec@admin.com`  | `Dell@123` | Administrator with user management access |
+| Role  | Name  | Description |
+|-------|-------|-------------|
+| Free  | Fred  | Free tier user with limited features |
+| Pro   | Peter | Pro subscriber with full feature access |
+| Admin | Alec  | Administrator with user management access |
 
-> **Setup**: Run `SELECT public.assign_role_by_email('email', 'role');` in Cloud View > Run SQL to assign roles after creating users.
+> **Note**: Test credentials will be provided to testers prior to test execution.
 
 ---
 
@@ -55,9 +55,8 @@ Validate that:
 Navigate to `/auth`
 
 1. Ensure "Sign In" tab is selected
-2. Enter email: `fred@free.com`
-3. Enter password: `Dell@123`
-4. Click "Sign In" button
+2. Enter Fred's credentials (provided separately)
+3. Click "Sign In" button
 
 Validate that:
 - User is redirected to `/dashboard`
@@ -71,9 +70,8 @@ Validate that:
 Navigate to `/auth`
 
 1. Ensure "Sign In" tab is selected
-2. Enter email: `peter@pro.com`
-3. Enter password: `Dell@123`
-4. Click "Sign In" button
+2. Enter Peter's credentials (provided separately)
+3. Click "Sign In" button
 
 Validate that:
 - User is redirected to `/dashboard`
@@ -87,9 +85,8 @@ Validate that:
 Navigate to `/auth`
 
 1. Ensure "Sign In" tab is selected
-2. Enter email: `alec@admin.com`
-3. Enter password: `Dell@123`
-4. Click "Sign In" button
+2. Enter Alec's credentials (provided separately)
+3. Click "Sign In" button
 
 Validate that:
 - User is redirected to `/dashboard`
@@ -131,12 +128,12 @@ Validate that:
 
 ### TC-AUTH-007: Password Change
 
-Prerequisite: Logged in as `fred@free.com`
+Prerequisite: Logged in as Fred (Free user)
 
 Navigate to `/account`
 
 1. Scroll to "Password" section
-2. Enter current password: `Dell@123`
+2. Enter current password (provided separately)
 3. Enter new password: `NewPass456!`
 4. Confirm new password: `NewPass456!`
 5. Click "Change Password" button
@@ -146,7 +143,7 @@ Validate that:
 - Password fields are cleared
 - (Optional) Logout and login with new password works
 
-> **Cleanup**: Reset password back to `Dell@123` for future tests
+> **Cleanup**: Reset password back to original for future tests
 
 ---
 
@@ -154,7 +151,7 @@ Validate that:
 
 ### TC-PARTNER-001: Create New Cherished (Full Wizard)
 
-Prerequisite: Logged in as `peter@pro.com`
+Prerequisite: Logged in as Peter (Pro user)
 
 Navigate to `/dashboard`
 
@@ -447,7 +444,7 @@ Validate that:
 
 ### TC-PREMIUM-001: Free User Sees Upgrade Prompt for Claire AI
 
-Prerequisite: Logged in as `fred@free.com` (Free user)
+Prerequisite: Logged in as Fred (Free user)
 
 Navigate to `/partner/{id}` (any partner)
 
@@ -463,7 +460,7 @@ Validate that:
 
 ### TC-PREMIUM-002: Pro User Can Access Claire AI
 
-Prerequisite: Logged in as `peter@pro.com` (Pro user)
+Prerequisite: Logged in as Peter (Pro user)
 
 Navigate to `/partner/{id}` (any partner)
 
@@ -480,7 +477,7 @@ Validate that:
 
 ### TC-PREMIUM-003: Free User Dashboard Shows Upgrade CTA
 
-Prerequisite: Logged in as `fred@free.com` (Free user)
+Prerequisite: Logged in as Fred (Free user)
 
 Navigate to `/dashboard`
 
@@ -493,7 +490,7 @@ Validate that:
 
 ### TC-PREMIUM-004: Pricing Page Pro Upgrade Flow
 
-Prerequisite: Logged in as `fred@free.com` (Free user)
+Prerequisite: Logged in as Fred (Free user)
 
 Navigate to `/pricing`
 
@@ -511,7 +508,7 @@ Validate that:
 
 ### TC-PREMIUM-005: Pro User Sees Manage Subscription
 
-Prerequisite: Logged in as `peter@pro.com` (Pro user)
+Prerequisite: Logged in as Peter (Pro user)
 
 Navigate to `/pricing`
 
@@ -525,7 +522,7 @@ Validate that:
 
 ### TC-ADMIN-001: Admin Can Access Admin Dashboard
 
-Prerequisite: Logged in as `alec@admin.com` (Admin)
+Prerequisite: Logged in as Alec (Admin)
 
 Navigate to `/account`
 
@@ -541,7 +538,7 @@ Validate that:
 
 ### TC-ADMIN-002: Non-Admin Cannot Access Admin Dashboard
 
-Prerequisite: Logged in as `fred@free.com` (Free user)
+Prerequisite: Logged in as Fred (Free user)
 
 Navigate to `/admin` directly via URL
 
@@ -690,7 +687,7 @@ Validate that:
 
 ### TC-ACCOUNT-003: View AI Credits (Pro User)
 
-Prerequisite: Logged in as `peter@pro.com` (Pro user)
+Prerequisite: Logged in as Peter (Pro user)
 
 Navigate to `/account/profile`
 
@@ -708,7 +705,7 @@ Validate that:
 
 ### TC-AI-001: Claire Chat - Send Message
 
-Prerequisite: Logged in as `peter@pro.com`, on partner detail
+Prerequisite: Logged in as Peter (Pro user), on partner detail
 
 Navigate to `/partner/{id}` (Conversation tab)
 
@@ -763,7 +760,7 @@ Validate that:
 
 ### TC-BLOG-001: Access Blog Admin Dashboard
 
-Prerequisite: Logged in as `alec@admin.com` (Admin)
+Prerequisite: Logged in as Alec (Admin)
 
 Navigate to `/blog/admin`
 
