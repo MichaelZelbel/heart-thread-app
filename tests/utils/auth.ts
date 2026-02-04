@@ -1,7 +1,8 @@
 import { Page } from '@playwright/test';
 
-export const TEST_EMAIL = 'test+e2e@cherishly.app';
-export const TEST_PASSWORD = 'Test1234!';
+// Test credentials from environment variables (never hardcode)
+export const TEST_EMAIL = process.env.E2E_TEST_EMAIL || 'test+e2e@cherishly.app';
+export const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD || '';
 
 export async function signUp(page: Page, email: string = TEST_EMAIL, password: string = TEST_PASSWORD) {
   await page.goto('/auth');

@@ -18,8 +18,14 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   }
 });
 
-const TEST_EMAIL = 'test+e2e@cherishly.app';
-const TEST_PASSWORD = 'Test1234!';
+// Test credentials from environment variables (never hardcode)
+const TEST_EMAIL = process.env.E2E_TEST_EMAIL || 'test+e2e@cherishly.app';
+const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD!;
+
+if (!TEST_PASSWORD) {
+  console.error('E2E_TEST_PASSWORD environment variable is required');
+  process.exit(1);
+}
 
 async function seed() {
   console.log('🌱 Starting E2E seed...');
