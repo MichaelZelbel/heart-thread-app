@@ -34,6 +34,48 @@ interface Partner {
   birthdate: string | null;
 }
 
+/**
+ * Parse a date string (YYYY-MM-DD) into local date components.
+ * This avoids UTC conversion issues that cause day shifts.
+ */
+function parseDateString(dateStr: string): { year: number; month: number; day: number } {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return { year, month, day };
+}
+
+/**
+ * Get tomorrow's date components in the user's timezone.
+ */
+function getTomorrowInTimezone(timezone: string): { month: number; day: number } {
+  const now = new Date();
+  // Get current time in user's timezone
+  const userNowStr = now.toLocaleString('en-US', { timeZone: timezone });
+  const userNow = new Date(userNowStr);
+  
+  // Add one day to get tomorrow
+  userNow.setDate(userNow.getDate() + 1);
+  
+  return {
+    month: userNow.getMonth() + 1, // 1-indexed
+    day: userNow.getDate(),
+  };
+}
+
+/**
+ * Format tomorrow's date as YYYY-MM-DD for notification tracking.
+ */
+function getTomorrowDateString(timezone: string): string {
+  const now = new Date();
+  const userNowStr = now.toLocaleString('en-US', { timeZone: timezone });
+  const userNow = new Date(userNowStr);
+  userNow.setDate(userNow.getDate() + 1);
+  
+  const year = userNow.getFullYear();
+  const month = String(userNow.getMonth() + 1).padStart(2, '0');
+  const day = String(userNow.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -71,9 +113,10 @@ serve(async (req) => {
 
     for (const user of users as UserWithEvents[]) {
       try {
-        // Calculate "today" in the user's timezone
+        // Calculate "now" in the user's timezone
         const userTimezone = user.timezone || 'UTC';
-        const userNow = new Date(now.toLocaleString('en-US', { timeZone: userTimezone }));
+        const userNowStr = now.toLocaleString('en-US', { timeZone: userTimezone });
+        const userNow = new Date(userNowStr);
         const userHour = userNow.getHours();
         const userMinutes = userNow.getMinutes();
 
@@ -83,8 +126,10 @@ serve(async (req) => {
           continue;
         }
 
-        const todayInUserTZ = userNow.toISOString().split('T')[0];
-        console.log(`Processing user ${user.id} for date ${todayInUserTZ}`);
+        // Get tomorrow's date components in user's timezone
+        const tomorrow = getTomorrowInTimezone(userTimezone);
+        const tomorrowDateStr = getTomorrowDateString(userTimezone);
+        console.log(`Processing user ${user.id} for tomorrow's date: ${tomorrowDateStr} (month: ${tomorrow.month}, day: ${tomorrow.day})`);
 
         // Get user's partners
         const { data: partners, error: partnersError } = await supabase
@@ -98,21 +143,10 @@ serve(async (req) => {
           continue;
         }
 
-        // Get regular events for today
-        const { data: events, error: eventsError } = await supabase
-          .from('events')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('event_date', todayInUserTZ);
+        // Use a Map to deduplicate events by a unique key
+        const eventsMap = new Map<string, Event>();
 
-        if (eventsError) {
-          console.error(`Error fetching events for user ${user.id}:`, eventsError);
-          continue;
-        }
-
-        const allEvents: Event[] = events || [];
-
-        // Add recurring events (birthdays, anniversaries)
+        // Get recurring events that match tomorrow's date
         const { data: recurringEvents, error: recurringError } = await supabase
           .from('events')
           .select('*')
@@ -120,61 +154,68 @@ serve(async (req) => {
           .eq('is_recurring', true);
 
         if (!recurringError && recurringEvents) {
-          const todayMonth = userNow.getMonth() + 1;
-          const todayDay = userNow.getDate();
-
           for (const event of recurringEvents) {
-            const eventDate = new Date(event.event_date);
-            const eventMonth = eventDate.getMonth() + 1;
-            const eventDay = eventDate.getDate();
+            // Parse date without UTC conversion
+            const { month: eventMonth, day: eventDay } = parseDateString(event.event_date);
 
-            if (eventMonth === todayMonth && eventDay === todayDay) {
-              allEvents.push(event);
-            }
-          }
-        }
-
-        // Add partner birthdays
-        if (partners) {
-          for (const partner of partners as Partner[]) {
-            if (partner.birthdate) {
-              const birthdateObj = new Date(partner.birthdate);
-              const birthMonth = birthdateObj.getMonth() + 1;
-              const birthDay = birthdateObj.getDate();
-              const todayMonth = userNow.getMonth() + 1;
-              const todayDay = userNow.getDate();
-
-              if (birthMonth === todayMonth && birthDay === todayDay) {
-                allEvents.push({
-                  id: `birthday-${partner.id}`,
-                  title: 'Birthday',
-                  event_date: partner.birthdate,
-                  is_recurring: true,
-                  event_type: 'birthday',
-                  description: null,
-                  partner_id: partner.id,
-                });
+            if (eventMonth === tomorrow.month && eventDay === tomorrow.day) {
+              // Use partner_id + event_type as key to deduplicate
+              const dedupeKey = `${event.partner_id || 'no-partner'}-${event.event_type || event.title}`;
+              if (!eventsMap.has(dedupeKey)) {
+                eventsMap.set(dedupeKey, event);
+                console.log(`Added recurring event: ${event.title} (key: ${dedupeKey})`);
+              } else {
+                console.log(`Skipped duplicate recurring event: ${event.title} (key: ${dedupeKey})`);
               }
             }
           }
         }
 
-        console.log(`Found ${allEvents.length} events for user ${user.id}`);
+        // Add partner birthdays (only if not already added via events table)
+        if (partners) {
+          for (const partner of partners as Partner[]) {
+            if (partner.birthdate) {
+              // Parse birthdate without UTC conversion
+              const { month: birthMonth, day: birthDay } = parseDateString(partner.birthdate);
+
+              if (birthMonth === tomorrow.month && birthDay === tomorrow.day) {
+                const dedupeKey = `${partner.id}-birthday`;
+                if (!eventsMap.has(dedupeKey)) {
+                  eventsMap.set(dedupeKey, {
+                    id: `birthday-${partner.id}`,
+                    title: 'Birthday',
+                    event_date: partner.birthdate,
+                    is_recurring: true,
+                    event_type: 'birthday',
+                    description: null,
+                    partner_id: partner.id,
+                  });
+                  console.log(`Added partner birthday: ${partner.name} (key: ${dedupeKey})`);
+                } else {
+                  console.log(`Skipped duplicate birthday for partner: ${partner.name} (key: ${dedupeKey})`);
+                }
+              }
+            }
+          }
+        }
+
+        const allEvents = Array.from(eventsMap.values());
+        console.log(`Found ${allEvents.length} unique events for user ${user.id}`);
 
         // Send email for each event
         for (const event of allEvents) {
           try {
-            // Check if notification already sent for this event today
+            // Check if notification already sent for this event tomorrow
             const { data: existingNotification } = await supabase
               .from('event_notifications')
               .select('id')
               .eq('user_id', user.id)
               .eq('event_id', event.id)
-              .eq('notification_date', todayInUserTZ)
+              .eq('notification_date', tomorrowDateStr)
               .single();
 
             if (existingNotification) {
-              console.log(`Notification already sent for event ${event.id}`);
+              console.log(`Notification already sent for event ${event.id} on ${tomorrowDateStr}`);
               continue;
             }
 
@@ -188,12 +229,12 @@ serve(async (req) => {
             }
 
             // Send email using fetch to Resend API
-            const emailSubject = `Today: ${event.title} (${partnerName})`;
+            const emailSubject = `Tomorrow: ${event.title} (${partnerName})`;
             const emailHtml = `
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                 <h2 style="color: #FF6B9D;">Hi ${user.display_name || 'there'}! 💗</h2>
                 <p style="font-size: 16px; line-height: 1.6;">
-                  Today is <strong>${partnerName}'s ${event.title}</strong> 💗
+                  Tomorrow is <strong>${partnerName}'s ${event.title}</strong> 💗
                 </p>
                 ${event.description ? `<p style="font-size: 14px; color: #666; line-height: 1.6;">${event.description}</p>` : ''}
                 <div style="margin: 30px 0;">
@@ -238,7 +279,7 @@ serve(async (req) => {
               .insert({
                 user_id: user.id,
                 event_id: event.id,
-                notification_date: todayInUserTZ,
+                notification_date: tomorrowDateStr,
               });
 
             if (notificationError) {
