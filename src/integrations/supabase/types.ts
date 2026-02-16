@@ -734,6 +734,7 @@ export type Database = {
           love_language_physical: number | null
           love_language_quality: number | null
           love_language_words: number | null
+          merged_into_person_id: string | null
           message_coach_custom_tone: string | null
           message_coach_notes: string | null
           message_coach_preset_tone: string | null
@@ -763,6 +764,7 @@ export type Database = {
           love_language_physical?: number | null
           love_language_quality?: number | null
           love_language_words?: number | null
+          merged_into_person_id?: string | null
           message_coach_custom_tone?: string | null
           message_coach_notes?: string | null
           message_coach_preset_tone?: string | null
@@ -792,6 +794,7 @@ export type Database = {
           love_language_physical?: number | null
           love_language_quality?: number | null
           love_language_words?: number | null
+          merged_into_person_id?: string | null
           message_coach_custom_tone?: string | null
           message_coach_notes?: string | null
           message_coach_preset_tone?: string | null
@@ -807,7 +810,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "partners_merged_into_person_id_fkey"
+            columns: ["merged_into_person_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -844,6 +855,7 @@ export type Database = {
       }
       sync_conflicts: {
         Row: {
+          conflict_type: string | null
           connection_id: string
           created_at: string
           entity_type: string
@@ -853,9 +865,11 @@ export type Database = {
           remote_payload: Json
           resolution: string | null
           resolved_at: string | null
+          suggested_resolution: string | null
           user_id: string
         }
         Insert: {
+          conflict_type?: string | null
           connection_id: string
           created_at?: string
           entity_type: string
@@ -865,9 +879,11 @@ export type Database = {
           remote_payload: Json
           resolution?: string | null
           resolved_at?: string | null
+          suggested_resolution?: string | null
           user_id: string
         }
         Update: {
+          conflict_type?: string | null
           connection_id?: string
           created_at?: string
           entity_type?: string
@@ -877,6 +893,7 @@ export type Database = {
           remote_payload?: Json
           resolution?: string | null
           resolved_at?: string | null
+          suggested_resolution?: string | null
           user_id?: string
         }
         Relationships: [
@@ -957,6 +974,57 @@ export type Database = {
           },
         ]
       }
+      sync_merge_log: {
+        Row: {
+          created_at: string
+          id: string
+          kept_person_id: string
+          merged_links_snapshot: Json
+          merged_moments_snapshot: Json
+          merged_person_id: string
+          merged_person_snapshot: Json
+          undone_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kept_person_id: string
+          merged_links_snapshot?: Json
+          merged_moments_snapshot?: Json
+          merged_person_id: string
+          merged_person_snapshot?: Json
+          undone_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kept_person_id?: string
+          merged_links_snapshot?: Json
+          merged_moments_snapshot?: Json
+          merged_person_id?: string
+          merged_person_snapshot?: Json
+          undone_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_merge_log_kept_person_id_fkey"
+            columns: ["kept_person_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sync_merge_log_merged_person_id_fkey"
+            columns: ["merged_person_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sync_outbox: {
         Row: {
           connection_id: string
@@ -1031,12 +1099,70 @@ export type Database = {
         }
         Relationships: []
       }
+      sync_person_candidates: {
+        Row: {
+          confidence: number | null
+          connection_id: string
+          created_at: string
+          id: string
+          local_person_id: string | null
+          reasons: string[] | null
+          remote_person_name: string
+          remote_person_uid: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          confidence?: number | null
+          connection_id: string
+          created_at?: string
+          id?: string
+          local_person_id?: string | null
+          reasons?: string[] | null
+          remote_person_name: string
+          remote_person_uid: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          confidence?: number | null
+          connection_id?: string
+          created_at?: string
+          id?: string
+          local_person_id?: string | null
+          reasons?: string[] | null
+          remote_person_name?: string
+          remote_person_uid?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_person_candidates_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "sync_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sync_person_candidates_local_person_id_fkey"
+            columns: ["local_person_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sync_person_links: {
         Row: {
           connection_id: string
           created_at: string
           id: string
           is_enabled: boolean
+          link_status: Database["public"]["Enums"]["sync_link_status"]
           local_person_id: string
           remote_person_uid: string
           updated_at: string
@@ -1047,6 +1173,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_enabled?: boolean
+          link_status?: Database["public"]["Enums"]["sync_link_status"]
           local_person_id: string
           remote_person_uid: string
           updated_at?: string
@@ -1057,6 +1184,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_enabled?: boolean
+          link_status?: Database["public"]["Enums"]["sync_link_status"]
           local_person_id?: string
           remote_person_uid?: string
           updated_at?: string
@@ -1144,6 +1272,7 @@ export type Database = {
     Enums: {
       app_role: "free" | "pro" | "admin" | "pro_gift"
       blog_post_status: "draft" | "published" | "scheduled"
+      sync_link_status: "linked" | "pending" | "excluded" | "conflict"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1273,6 +1402,7 @@ export const Constants = {
     Enums: {
       app_role: ["free", "pro", "admin", "pro_gift"],
       blog_post_status: ["draft", "published", "scheduled"],
+      sync_link_status: ["linked", "pending", "excluded", "conflict"],
     },
   },
 } as const

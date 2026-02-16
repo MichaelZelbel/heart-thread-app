@@ -72,7 +72,7 @@ serve(async (req) => {
 
       try {
         if (entity_type === "person") {
-          await applyPerson(admin, conn.user_id, entity_uid, operation, payload);
+          await applyPerson(admin, conn.user_id, entity_uid, operation, payload, connectionId);
           applied++;
         } else if (entity_type === "moment") {
           const result = await applyMoment(admin, conn.user_id, entity_uid, operation, payload, personMap, connectionId);
@@ -106,9 +106,10 @@ async function applyPerson(
   personUid: string,
   operation: string,
   payload: Record<string, unknown>,
+  connectionId: string,
 ) {
   if (operation === "delete") {
-    return; // Soft-delete not supported for partners
+    return;
   }
 
   // Check if partner already exists locally by person_uid
@@ -132,14 +133,83 @@ async function applyPerson(
         })
         .eq("id", existing.id);
     }
-  } else {
-    await admin.from("partners").insert({
-      user_id: userId,
-      person_uid: personUid,
-      name: (payload.name as string) || "Unknown",
-      relationship_type: (payload.relationship_label as string) || null,
-    });
+    return;
   }
+
+  // DUPLICATE DETECTION: check if a local person with the same name exists
+  const remoteName = ((payload.name as string) || "").trim().toLowerCase();
+  if (remoteName) {
+    const { data: nameMatches } = await admin
+      .from("partners")
+      .select("id, name")
+      .eq("user_id", userId)
+      .eq("archived", false);
+
+    const duplicate = (nameMatches || []).find(
+      p => p.name.trim().toLowerCase() === remoteName
+    );
+
+    if (duplicate) {
+      // Create a duplicate_detected conflict instead of silently creating
+      await admin.from("sync_conflicts").insert({
+        user_id: userId,
+        connection_id: connectionId,
+        entity_type: "person",
+        entity_uid: personUid,
+        conflict_type: "duplicate_detected",
+        suggested_resolution: `Link to existing "${duplicate.name}" instead`,
+        local_payload: duplicate as unknown as Record<string, unknown>,
+        remote_payload: payload as unknown as Record<string, unknown>,
+      });
+
+      // Create a pending person link
+      await admin.from("sync_person_links").upsert({
+        user_id: userId,
+        connection_id: connectionId,
+        local_person_id: duplicate.id,
+        remote_person_uid: personUid,
+        link_status: "conflict",
+        is_enabled: false,
+      }, { onConflict: "connection_id,user_id" as never });
+
+      // Also save as candidate
+      await admin.from("sync_person_candidates").upsert({
+        user_id: userId,
+        connection_id: connectionId,
+        remote_person_uid: personUid,
+        remote_person_name: (payload.name as string) || "Unknown",
+        local_person_id: duplicate.id,
+        confidence: 0.95,
+        reasons: ["Exact name match — duplicate detected"],
+        status: "pending",
+      }, { onConflict: "connection_id,remote_person_uid" });
+
+      return; // Do NOT create a new person
+    }
+  }
+
+  // No duplicate — but still don't auto-create. Create a pending candidate for user decision.
+  await admin.from("sync_person_candidates").upsert({
+    user_id: userId,
+    connection_id: connectionId,
+    remote_person_uid: personUid,
+    remote_person_name: (payload.name as string) || "Unknown",
+    confidence: 0,
+    reasons: ["New remote person — no local match found"],
+    status: "pending",
+  }, { onConflict: "connection_id,remote_person_uid" });
+
+  // Create conflict for missing mapping
+  await admin.from("sync_conflicts").insert({
+    user_id: userId,
+    connection_id: connectionId,
+    entity_type: "person",
+    entity_uid: personUid,
+    conflict_type: "missing_mapping",
+    suggested_resolution: "Create new local person or link to existing",
+    local_payload: {},
+    remote_payload: payload as unknown as Record<string, unknown>,
+  });
 }
 
 async function applyMoment(
@@ -168,10 +238,35 @@ async function applyMoment(
     return "applied";
   }
 
-  // Resolve partner from person_uid
+  // Resolve partner from person_uid — GATING: only sync if linked
   let partnerId: string | null = null;
   if (payload.person_uid) {
     partnerId = personMap.get(payload.person_uid as string) || null;
+
+    if (!partnerId) {
+      // Missing mapping — check if link exists but not linked
+      const { data: link } = await admin
+        .from("sync_person_links")
+        .select("link_status")
+        .eq("connection_id", connectionId)
+        .eq("remote_person_uid", payload.person_uid as string)
+        .maybeSingle();
+
+      if (!link || link.link_status !== "linked") {
+        // Queue as missing_mapping conflict
+        await admin.from("sync_conflicts").insert({
+          user_id: userId,
+          connection_id: connectionId,
+          entity_type: "moment",
+          entity_uid: momentUid,
+          conflict_type: "missing_mapping",
+          suggested_resolution: `Map remote person first, then retry sync`,
+          local_payload: {},
+          remote_payload: payload as unknown as Record<string, unknown>,
+        });
+        return "conflict";
+      }
+    }
   }
 
   // Map Temerio fields to Cherishly schema
