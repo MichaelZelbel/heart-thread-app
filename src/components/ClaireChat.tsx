@@ -1,12 +1,14 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Send, ChevronDown, ChevronUp } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Sparkles, Send, ChevronDown, ChevronUp, Maximize2, Minimize2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAICreditsGate } from "@/hooks/useAICreditsGate";
+import { ClaireChatMessages } from "@/components/claire/ClaireChatMessages";
+import { ClaireChatInput } from "@/components/claire/ClaireChatInput";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -32,8 +34,9 @@ export const ClaireChat = ({ partnerId, partnerName: initialPartnerName, compact
   const [loading, setLoading] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [expanded, setExpanded] = useState(!compact);
+  const [fullscreen, setFullscreen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fullscreenScrollRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const { checkCredits, refetchCredits } = useAICreditsGate();
 
@@ -44,7 +47,6 @@ export const ClaireChat = ({ partnerId, partnerName: initialPartnerName, compact
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
-        // Load partner name if partnerId is provided
         if (partnerId) {
           const { data } = await supabase
             .from("partners")
@@ -56,7 +58,6 @@ export const ClaireChat = ({ partnerId, partnerName: initialPartnerName, compact
           }
         }
 
-        // Load chat history - filter by partnerId if provided, otherwise load general chat (partner_id is null)
         let query = supabase
           .from('claire_chat_messages')
           .select('*')
@@ -77,7 +78,6 @@ export const ClaireChat = ({ partnerId, partnerName: initialPartnerName, compact
             content: msg.content
           })));
         } else {
-          // Show welcome message if no history - use partner name if already loaded
           const displayName = partnerId ? (partnerName || "your cherished one") : null;
           const welcomeMsg = displayName
             ? `Hi! I'm here to help you connect even more deeply with ${displayName}. 💗 I can suggest thoughtful activities, gift ideas, conversation starters, and more based on what you've shared about them. What would you like to explore?`
@@ -86,7 +86,6 @@ export const ClaireChat = ({ partnerId, partnerName: initialPartnerName, compact
           setMessages([{ role: 'assistant', content: welcomeMsg }]);
         }
         
-        // Set prefilled message if provided
         if (prefillMessage) {
           setInput(prefillMessage);
         }
@@ -100,21 +99,20 @@ export const ClaireChat = ({ partnerId, partnerName: initialPartnerName, compact
     loadChatHistory();
   }, [partnerId, prefillMessage]);
 
-  // Auto-scroll to bottom within the ScrollArea viewport when messages change or loading completes
-  useEffect(() => {
-    const root = scrollRef.current;
+  const scrollToBottom = useCallback((ref: React.RefObject<HTMLDivElement>) => {
+    const root = ref.current;
     if (!root) return;
+    const viewport = root.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement | null;
+    if (viewport) {
+      viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+    }
+  }, []);
 
-    const doScroll = () => {
-      const viewport = root.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement | null;
-      if (viewport) {
-        viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
-      }
-    };
-
-    const timeoutId = setTimeout(doScroll, 50);
-    return () => clearTimeout(timeoutId);
-  }, [messages, loadingHistory]);
+  useEffect(() => {
+    const t1 = setTimeout(() => scrollToBottom(scrollRef), 50);
+    const t2 = setTimeout(() => scrollToBottom(fullscreenScrollRef), 50);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [messages, loadingHistory, scrollToBottom]);
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
@@ -122,8 +120,7 @@ export const ClaireChat = ({ partnerId, partnerName: initialPartnerName, compact
 
     const userMessage = input.trim();
     setInput("");
-    const newUserMessage = { role: 'user' as const, content: userMessage };
-    setMessages(prev => [...prev, newUserMessage]);
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setLoading(true);
 
     try {
@@ -133,7 +130,6 @@ export const ClaireChat = ({ partnerId, partnerName: initialPartnerName, compact
         return;
       }
 
-      // Save user message to database
       await supabase.from('claire_chat_messages').insert({
         user_id: session.user.id,
         partner_id: partnerId || null,
@@ -142,14 +138,8 @@ export const ClaireChat = ({ partnerId, partnerName: initialPartnerName, compact
       });
 
       const { data, error } = await supabase.functions.invoke('claire-chat', {
-        body: { 
-          message: userMessage, 
-          partnerId,
-          messageCoachContext 
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
+        body: { message: userMessage, partnerId, messageCoachContext },
+        headers: { Authorization: `Bearer ${session.access_token}` }
       });
 
       if (error) {
@@ -159,18 +149,13 @@ export const ClaireChat = ({ partnerId, partnerName: initialPartnerName, compact
       }
 
       if (data?.reply) {
-        const assistantMessage = { role: 'assistant' as const, content: data.reply };
-        setMessages(prev => [...prev, assistantMessage]);
-        
-        // Save assistant message to database
+        setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
         await supabase.from('claire_chat_messages').insert({
           user_id: session.user.id,
           partner_id: partnerId || null,
           role: 'assistant',
           content: data.reply
         });
-        
-        // Update credits display after successful AI call
         refetchCredits();
       } else {
         toast.error("I didn't get a response. Please try again.");
@@ -183,12 +168,7 @@ export const ClaireChat = ({ partnerId, partnerName: initialPartnerName, compact
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
+  const title = partnerName ? `${partnerName}'s Claire 💗` : "Claire – Your Heart Companion";
 
   if (compact && !expanded) {
     return (
@@ -200,9 +180,7 @@ export const ClaireChat = ({ partnerId, partnerName: initialPartnerName, compact
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Sparkles className="w-5 h-5 text-primary" />
-              <CardTitle className="text-base">
-                {partnerName ? `${partnerName}'s Claire 💗` : "Claire – Your Heart Companion"}
-              </CardTitle>
+              <CardTitle className="text-base">{title}</CardTitle>
             </div>
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </div>
@@ -216,94 +194,90 @@ export const ClaireChat = ({ partnerId, partnerName: initialPartnerName, compact
     );
   }
 
-  return (
-    <Card className="shadow-soft flex flex-col h-full">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            <CardTitle className="text-base">
-              {partnerName ? `${partnerName}'s Claire 💗` : "Claire – Your Heart Companion"}
-            </CardTitle>
-          </div>
-          {compact && (
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => setExpanded(false)}
-              className="h-8 w-8 p-0"
-            >
-              <ChevronUp className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
-        <CardDescription className="text-xs">
-          AI-powered relationship guidance
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent className="flex-1 flex flex-col p-4 space-y-3 min-h-0">
-        <ScrollArea 
-          ref={scrollRef}
-          className="flex-1 pr-4"
-        >
-          {loadingHistory ? (
-            <div className="flex justify-center items-center h-full">
-              <p className="text-sm text-muted-foreground">Loading chat history...</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {messages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[85%] rounded-lg px-4 py-2 ${
-                    msg.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
-                  }`}
-                >
-                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                </div>
-              </div>
-              ))}
-              {loading && (
-                <div className="flex justify-start">
-                  <div className="bg-muted rounded-lg px-4 py-2">
-                    <p className="text-sm text-muted-foreground">Claire is thinking...</p>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-        </ScrollArea>
+  const chatContent = (isFullscreen: boolean) => (
+    <CardContent className="flex-1 flex flex-col p-4 space-y-3 min-h-0">
+      <ScrollArea 
+        ref={isFullscreen ? fullscreenScrollRef : scrollRef}
+        className="flex-1 pr-4"
+      >
+        <ClaireChatMessages messages={messages} loading={loading} loadingHistory={loadingHistory} />
+      </ScrollArea>
 
-        <div className="pt-3 border-t space-y-2">
-          <div className="flex gap-2">
-            <Input
-              placeholder="Ask Claire for suggestions..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              disabled={loading}
-              className="flex-1"
-            />
-            <Button 
-              onClick={sendMessage} 
-              disabled={loading || !input.trim()}
-              size="icon"
+      <div className="pt-3 border-t space-y-2">
+        <ClaireChatInput
+          input={input}
+          setInput={setInput}
+          onSend={sendMessage}
+          loading={loading}
+        />
+        <p className="text-xs text-muted-foreground text-center">
+          Claire uses your saved Cherished info to personalize suggestions. Nothing is shared.
+        </p>
+      </div>
+    </CardContent>
+  );
+
+  return (
+    <>
+      <Card className="shadow-soft flex flex-col h-full">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              <CardTitle className="text-base">{title}</CardTitle>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setFullscreen(true)}
+                className="h-8 w-8 p-0"
+                title="Expand to fullscreen"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </Button>
+              {compact && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setExpanded(false)}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronUp className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+          <CardDescription className="text-xs">
+            AI-powered relationship guidance
+          </CardDescription>
+        </CardHeader>
+        
+        {chatContent(false)}
+      </Card>
+
+      <Dialog open={fullscreen} onOpenChange={setFullscreen}>
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 gap-0">
+          <div className="flex items-center justify-between px-6 py-4 border-b">
+            <div className="flex items-center space-x-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-semibold">{title}</h2>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setFullscreen(false)}
+              className="h-8 w-8 p-0"
+              title="Collapse to inline view"
             >
-              <Send className="w-4 h-4" />
+              <Minimize2 className="w-4 h-4" />
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground text-center">
-            Claire uses your saved Cherished info to personalize suggestions. Nothing is shared.
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+          <div className="flex-1 flex flex-col min-h-0">
+            {chatContent(true)}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
