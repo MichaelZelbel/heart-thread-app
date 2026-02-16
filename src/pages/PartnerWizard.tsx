@@ -87,7 +87,7 @@ const PartnerWizard = () => {
 
       // Determine birthdate if creating a Birthday event
       let birthdate = null;
-      if (specialDay.day && specialDay.month) {
+      if (specialDay.day != null && specialDay.month != null) {
         const eventType = specialDay.eventType === "Custom..." 
           ? specialDay.customEventType 
           : specialDay.eventType;
@@ -122,7 +122,7 @@ const PartnerWizard = () => {
       if (partnerError) throw partnerError;
 
       // Create event if date is provided
-      if (specialDay.day && specialDay.month) {
+      if (specialDay.day != null && specialDay.month != null) {
         const eventDate = new Date(
           specialDay.year || new Date().getFullYear(),
           specialDay.month,

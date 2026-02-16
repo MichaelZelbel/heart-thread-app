@@ -188,7 +188,7 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
 
       // Determine birthdate if creating a Birthday event
       let birthdate = null;
-      if (wizardData.specialDay.day && wizardData.specialDay.month) {
+      if (wizardData.specialDay.day != null && wizardData.specialDay.month != null) {
         const eventType = wizardData.specialDay.eventType === "Custom..." 
           ? wizardData.specialDay.customEventType 
           : wizardData.specialDay.eventType;
@@ -222,7 +222,7 @@ export const CherishWizard = ({ onClose, isLoggedIn }: CherishWizardProps) => {
       if (partnerError) throw partnerError;
 
       // Create event if date is provided
-      if (wizardData.specialDay.day && wizardData.specialDay.month) {
+      if (wizardData.specialDay.day != null && wizardData.specialDay.month != null) {
         const eventDate = new Date(
           wizardData.specialDay.year || new Date().getFullYear(),
           wizardData.specialDay.month,
