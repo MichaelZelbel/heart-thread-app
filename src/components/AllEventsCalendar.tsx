@@ -5,13 +5,13 @@ import { Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { dateToYMDLocal, parseYMDToLocalDate } from "@/lib/utils";
 
-interface Event {
+interface Moment {
   id: string;
   title: string;
-  event_date: string;
-  event_type: string;
-  partner_id: string | null;
-  is_recurring: boolean;
+  moment_date: string;
+  event_type: string | null;
+  partner_ids: string[] | null;
+  is_celebrated_annually: boolean;
 }
 
 interface Partner {
@@ -20,7 +20,7 @@ interface Partner {
 }
 
 export const AllEventsCalendar = () => {
-  const [events, setEvents] = useState<Event[]>([]);
+  const [moments, setMoments] = useState<Moment[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -32,91 +32,78 @@ export const AllEventsCalendar = () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    // Load partners
     const { data: partnersData } = await supabase
       .from("partners")
       .select("id, name")
       .eq("user_id", session.user.id);
 
-    if (partnersData) {
-      setPartners(partnersData);
-    }
+    if (partnersData) setPartners(partnersData);
 
-    // Load all events
-    const { data: eventsData } = await supabase
-      .from("events")
-      .select("*")
+    // Load moments that are celebrated annually or are in the future
+    const { data: momentsData } = await supabase
+      .from("moments")
+      .select("id, title, moment_date, event_type, partner_ids, is_celebrated_annually")
       .eq("user_id", session.user.id)
-      .order("event_date", { ascending: true });
+      .order("moment_date", { ascending: true });
 
-    if (eventsData) {
-      setEvents(eventsData);
-    }
-
+    if (momentsData) setMoments(momentsData);
     setLoading(false);
   };
 
-  const getPartnerName = (partnerId: string | null) => {
-    if (!partnerId) return "";
-    const partner = partners.find(p => p.id === partnerId);
+  const getPartnerName = (partnerIds: string[] | null) => {
+    if (!partnerIds || partnerIds.length === 0) return "";
+    const partner = partners.find(p => partnerIds.includes(p.id));
     return partner ? partner.name : "";
   };
 
-  // Helper to generate recurring event occurrences
-  const getRecurringOccurrences = (event: Event) => {
-    if (!event.is_recurring) return [event];
-    
+  const getRecurringOccurrences = (moment: Moment) => {
+    if (!moment.is_celebrated_annually) return [moment];
+
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    const sixMonthsFromNow = new Date(now);
-    sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
-    
-    const originalDate = parseYMDToLocalDate(event.event_date);
+    const originalDate = parseYMDToLocalDate(moment.moment_date);
     const occurrences = [];
-    
-    // Generate occurrences for the next 10 years
+
     for (let yearOffset = 0; yearOffset < 10; yearOffset++) {
       const year = now.getFullYear() + yearOffset;
       const month = originalDate.getMonth();
       const day = originalDate.getDate();
-      
+
       let occurrenceDate = new Date(year, month, day);
-      
-      // Handle Feb 29 in non-leap years: show on Feb 28
+
       if (month === 1 && day === 29) {
         const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
         if (!isLeapYear) {
-          occurrenceDate = new Date(year, 1, 28); // Feb 28
+          occurrenceDate = new Date(year, 1, 28);
         }
       }
-      
+
       occurrences.push({
-        ...event,
-        event_date: dateToYMDLocal(occurrenceDate),
-        displayYear: occurrenceDate.getFullYear(),
+        ...moment,
+        moment_date: dateToYMDLocal(occurrenceDate),
       });
     }
-    
+
     return occurrences;
   };
 
-  const upcomingEvents = events
+  const upcomingMoments = moments
+    .filter(m => m.is_celebrated_annually || parseYMDToLocalDate(m.moment_date) >= new Date())
     .flatMap(getRecurringOccurrences)
-    .filter(e => {
-      const eventDate = parseYMDToLocalDate(e.event_date);
+    .filter(m => {
+      const mDate = parseYMDToLocalDate(m.moment_date);
       const now = new Date();
       now.setHours(0, 0, 0, 0);
       const sixMonthsFromNow = new Date(now);
       sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
-      return eventDate >= now && eventDate <= sixMonthsFromNow;
+      return mDate >= now && mDate <= sixMonthsFromNow;
     })
-    .sort((a, b) => a.event_date.localeCompare(b.event_date));
+    .sort((a, b) => a.moment_date.localeCompare(b.moment_date));
 
-  const getPartnerColor = (partnerId: string | null) => {
-    if (!partnerId) return "hsl(var(--primary))";
-    // Generate consistent colors based on partner index
-    const index = partners.findIndex(p => p.id === partnerId);
-    const hues = [340, 280, 200, 160, 25, 50]; // Various hues from design system
+  const getPartnerColor = (partnerIds: string[] | null) => {
+    if (!partnerIds || partnerIds.length === 0) return "hsl(var(--primary))";
+    const index = partners.findIndex(p => partnerIds.includes(p.id));
+    const hues = [340, 280, 200, 160, 25, 50];
     const hue = hues[index % hues.length];
     return `hsl(${hue} 70% 60%)`;
   };
@@ -149,7 +136,7 @@ export const AllEventsCalendar = () => {
         </p>
       </CardHeader>
       <CardContent>
-        {upcomingEvents.length === 0 ? (
+        {upcomingMoments.length === 0 ? (
           <div className="text-center py-12 bg-muted/30 rounded-lg">
             <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">
@@ -158,34 +145,36 @@ export const AllEventsCalendar = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {upcomingEvents.map((event) => {
-              const partnerName = getPartnerName(event.partner_id);
+            {upcomingMoments.map((moment, idx) => {
+              const partnerName = getPartnerName(moment.partner_ids);
               return (
                 <div
-                  key={event.id}
+                  key={`${moment.id}-${idx}`}
                   className="flex items-start gap-3 p-3 bg-card border border-border rounded-lg hover:shadow-soft transition-shadow"
                 >
                   <div
                     className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
-                    style={{ backgroundColor: getPartnerColor(event.partner_id) }}
+                    style={{ backgroundColor: getPartnerColor(moment.partner_ids) }}
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium">
-                        {event.title}
+                        {moment.title}
                         {partnerName && ` (${partnerName})`}
                       </span>
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                        {event.event_type}
-                      </span>
-                      {event.is_recurring && (
+                      {moment.event_type && (
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                          {moment.event_type}
+                        </span>
+                      )}
+                      {moment.is_celebrated_annually && (
                         <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
-                          Recurring
+                          Yearly
                         </span>
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {format(parseYMDToLocalDate(event.event_date), "MMMM d, yyyy")}
+                      {format(parseYMDToLocalDate(moment.moment_date), "MMMM d, yyyy")}
                     </p>
                   </div>
                 </div>

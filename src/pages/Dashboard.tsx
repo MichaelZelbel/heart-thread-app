@@ -42,6 +42,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
 interface Profile {
   display_name: string;
 }
@@ -51,14 +52,16 @@ interface Partner {
   photo_url: string | null;
   display_order: number;
 }
-interface Event {
+
+interface UpcomingMoment {
   id: string;
   title: string;
-  event_date: string;
-  partner_id: string | null;
-  is_recurring: boolean;
+  moment_date: string;
+  is_celebrated_annually: boolean;
+  partner_ids: string[] | null;
 }
-interface EventOccurrence extends Event {
+
+interface UpcomingOccurrence extends UpcomingMoment {
   originalDate: string;
   displayDate: string;
   partnerName?: string;
@@ -120,42 +123,9 @@ function SortablePartner({ partner, onClick, onEdit, onArchive, onDelete }: Sort
           <p className="font-medium">{partner.name}</p>
         </div>
       </div>
-      <Button
-        size="icon"
-        variant="ghost"
-        onClick={(e) => {
-          e.stopPropagation();
-          onEdit();
-        }}
-        className="h-9 w-9 shrink-0"
-        aria-label="Edit partner"
-      >
-        <Edit2 className="w-4 h-4" />
-      </Button>
-      <Button
-        size="icon"
-        variant="ghost"
-        onClick={(e) => {
-          e.stopPropagation();
-          onArchive();
-        }}
-        className="h-9 w-9 shrink-0"
-        aria-label="Archive partner"
-      >
-        <Archive className="w-4 h-4" />
-      </Button>
-      <Button
-        size="icon"
-        variant="ghost"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-        className="h-9 w-9 shrink-0 text-destructive hover:text-destructive"
-        aria-label="Delete partner"
-      >
-        <Trash2 className="w-4 h-4" />
-      </Button>
+      <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); onEdit(); }} className="h-9 w-9 shrink-0" aria-label="Edit partner"><Edit2 className="w-4 h-4" /></Button>
+      <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); onArchive(); }} className="h-9 w-9 shrink-0" aria-label="Archive partner"><Archive className="w-4 h-4" /></Button>
+      <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); onDelete(); }} className="h-9 w-9 shrink-0 text-destructive hover:text-destructive" aria-label="Delete partner"><Trash2 className="w-4 h-4" /></Button>
     </div>
   );
 }
@@ -166,19 +136,19 @@ const Dashboard = () => {
   const { isPro, loading: roleLoading } = useUserRole();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [partners, setPartners] = useState<Partner[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<EventOccurrence[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingOccurrence[]>([]);
   const [moments, setMoments] = useState<MomentSummary[]>([]);
   const [totalMoments, setTotalMoments] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showMomentsDialog, setShowMomentsDialog] = useState(false);
   const [clairePrefillMessage, setClairePrefillMessage] = useState<string>("");
+
   useEffect(() => {
     checkAuth();
   }, []);
+
   const checkAuth = async () => {
     setLoading(true);
-
-    // Small helper to prevent any promise from hanging forever
     const withTimeout = <T,>(promise: Promise<T>, ms = 12000) =>
       Promise.race([
         promise,
@@ -186,19 +156,15 @@ const Dashboard = () => {
       ]);
 
     try {
-      // If returning from OAuth, exchange the code for a session
       const url = new URL(window.location.href);
       const code = url.searchParams.get('code');
       const error_description = url.searchParams.get('error_description');
 
-      if (error_description) {
-        toast.error(decodeURIComponent(error_description));
-      }
+      if (error_description) toast.error(decodeURIComponent(error_description));
 
       if (code) {
         try {
           await withTimeout(supabase.auth.exchangeCodeForSession(code));
-          // Clean URL params after successful exchange
           url.searchParams.delete('code');
           url.searchParams.delete('state');
           url.searchParams.delete('error');
@@ -209,16 +175,10 @@ const Dashboard = () => {
         }
       }
 
-      // Session check with timeout
       const { data: { session } } = await withTimeout(supabase.auth.getSession(), 10000) as any;
 
-      if (!session) {
-        setLoading(false);
-        navigate("/auth");
-        return;
-      }
+      if (!session) { setLoading(false); navigate("/auth"); return; }
 
-      // Proactively refresh if token is expired or close to expiry
       try {
         const expiresAtMs = session.expires_at ? session.expires_at * 1000 : 0;
         if (!expiresAtMs || (expiresAtMs - Date.now()) < 60_000) {
@@ -233,14 +193,12 @@ const Dashboard = () => {
         return;
       }
 
-      // Check email verification (except for test users)
       if (!session.user.email_confirmed_at && !isTestUser(session.user.email || "")) {
         setLoading(false);
         navigate("/email-verification-pending");
         return;
       }
 
-      // Load dashboard data with per-call timeouts. Never block the UI forever.
       const uid = session.user.id;
       const results = await Promise.allSettled([
         withTimeout(loadProfile(uid), 8000),
@@ -252,110 +210,63 @@ const Dashboard = () => {
       const failed = results.some(r => r.status === 'rejected');
       if (failed) {
         console.warn('Some dashboard data failed to load');
-        toast('Some data took too long to load', {
-          description: 'You can keep using the app—try refreshing if something looks off.',
-        });
+        toast('Some data took too long to load', { description: 'You can keep using the app—try refreshing if something looks off.' });
       }
 
       setLoading(false);
     } catch (error: any) {
       console.error('Auth check failed:', error);
-      // On timeout or error, sign out and redirect to force fresh login
       await supabase.auth.signOut();
       setLoading(false);
       toast.error('Session expired. Please sign in again.');
       navigate("/auth");
     }
   };
+
   const loadProfile = async (userId: string) => {
-    const {
-      data
-    } = await supabase.from("profiles").select("display_name").eq("id", userId).single();
+    const { data } = await supabase.from("profiles").select("display_name").eq("id", userId).single();
     if (data) setProfile(data);
   };
+
   const loadPartners = async (userId: string) => {
-    const {
-      data
-    } = await supabase.from("partners").select("id, name, photo_url, display_order").eq("user_id", userId).eq("archived", false).neq("relationship_type", "self").order("display_order", { ascending: true });
+    const { data } = await supabase.from("partners").select("id, name, photo_url, display_order").eq("user_id", userId).eq("archived", false).neq("relationship_type", "self").order("display_order", { ascending: true });
     if (data) setPartners(data);
   };
 
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-
-    if (!over || active.id === over.id) {
-      return;
-    }
-
-    const oldIndex = partners.findIndex((partner) => partner.id === active.id);
-    const newIndex = partners.findIndex((partner) => partner.id === over.id);
-
+    if (!over || active.id === over.id) return;
+    const oldIndex = partners.findIndex((p) => p.id === active.id);
+    const newIndex = partners.findIndex((p) => p.id === over.id);
     const reorderedPartners = arrayMove(partners, oldIndex, newIndex);
     setPartners(reorderedPartners);
-
-    // Update positions in database
     const updates = reorderedPartners.map((partner, index) =>
-      supabase
-        .from("partners")
-        .update({ display_order: index })
-        .eq("id", partner.id)
+      supabase.from("partners").update({ display_order: index }).eq("id", partner.id)
     );
-
     await Promise.all(updates);
   };
 
-  const handleEditPartner = (partnerId: string) => {
-    navigate(`/partner/${partnerId}`);
-  };
+  const handleEditPartner = (partnerId: string) => navigate(`/partner/${partnerId}`);
 
   const handleArchivePartner = async (partnerId: string, partnerName: string) => {
-    const { error } = await supabase
-      .from("partners")
-      .update({ archived: true })
-      .eq("id", partnerId);
-
-    if (error) {
-      toast.error("Failed to archive partner");
-      return;
-    }
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (session) {
-      loadPartners(session.user.id);
-    }
+    const { error } = await supabase.from("partners").update({ archived: true }).eq("id", partnerId);
+    if (error) { toast.error("Failed to archive partner"); return; }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) loadPartners(session.user.id);
     toast.success(`${partnerName} archived`);
   };
 
   const handleDeletePartner = async (partnerId: string, partnerName: string) => {
-    if (!confirm(`Are you sure you want to delete ${partnerName}? This action cannot be undone.`)) {
-      return;
-    }
-
-    const { error } = await supabase
-      .from("partners")
-      .delete()
-      .eq("id", partnerId);
-
-    if (error) {
-      toast.error("Failed to delete partner");
-      return;
-    }
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (session) {
-      loadPartners(session.user.id);
-    }
+    if (!confirm(`Are you sure you want to delete ${partnerName}? This action cannot be undone.`)) return;
+    const { error } = await supabase.from("partners").delete().eq("id", partnerId);
+    if (error) { toast.error("Failed to delete partner"); return; }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) loadPartners(session.user.id);
     toast.success(`${partnerName} deleted`);
   };
 
@@ -366,69 +277,64 @@ const Dashboard = () => {
       .eq("user_id", userId)
       .order("moment_date", { ascending: false })
       .limit(3);
-    
     if (data) {
       setMoments(data);
       setTotalMoments(count || 0);
     }
   };
+
+  const isLeapYear = (year: number) => (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+
   const loadUpcomingEvents = async (userId: string) => {
-    // Use date-only window to avoid time-of-day exclusion
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const endOfWindow = new Date(startOfToday);
     endOfWindow.setDate(endOfWindow.getDate() + 7);
     endOfWindow.setHours(23, 59, 59, 999);
 
-    // Get all events and partners (partners include birthdates)
-    const {
-      data: events
-    } = await supabase.from("events").select("id, title, event_date, partner_id, is_recurring").eq("user_id", userId);
-    const {
-      data: partnersData
-    } = await supabase.from("partners").select("id, name, birthdate").eq("user_id", userId).eq("archived", false).neq("relationship_type", "self");
-    if (!events && !partnersData) return;
+    // Get celebrated-annually moments and partner birthdates
+    const { data: celebratedMoments } = await supabase
+      .from("moments")
+      .select("id, title, moment_date, is_celebrated_annually, partner_ids")
+      .eq("user_id", userId)
+      .eq("is_celebrated_annually", true);
+
+    const { data: partnersData } = await supabase
+      .from("partners")
+      .select("id, name, birthdate")
+      .eq("user_id", userId)
+      .eq("archived", false)
+      .neq("relationship_type", "self");
+
+    if (!celebratedMoments && !partnersData) return;
+
     const partnerMap = new Map(partnersData?.map(p => [p.id, p.name]) || []);
-    const occurrences: EventOccurrence[] = [];
+    const occurrences: UpcomingOccurrence[] = [];
 
-    // Process regular events
-    events?.forEach(event => {
-      const eventDate = parseYMDToLocalDate(event.event_date);
-      if (event.is_recurring) {
-        // Generate occurrences for recurring events
-        const currentYear = startOfToday.getFullYear();
-        for (let year = currentYear; year <= currentYear + 1; year++) {
-          const month = eventDate.getMonth();
-          const day = eventDate.getDate();
-          let occurrenceDate = new Date(year, month, day);
-
-          // Handle Feb 29 in non-leap years
-          if (month === 1 && day === 29 && !isLeapYear(year)) {
-            occurrenceDate = new Date(year, 1, 28);
-          }
-          if (occurrenceDate >= startOfToday && occurrenceDate <= endOfWindow) {
-            occurrences.push({
-              ...event,
-              originalDate: event.event_date,
-              displayDate: dateToYMDLocal(occurrenceDate),
-              partnerName: event.partner_id ? partnerMap.get(event.partner_id) : undefined
-            });
-          }
+    // Process celebrated-annually moments
+    celebratedMoments?.forEach(moment => {
+      const momentDate = parseYMDToLocalDate(moment.moment_date);
+      const currentYear = startOfToday.getFullYear();
+      for (let year = currentYear; year <= currentYear + 1; year++) {
+        const month = momentDate.getMonth();
+        const day = momentDate.getDate();
+        let occurrenceDate = new Date(year, month, day);
+        if (month === 1 && day === 29 && !isLeapYear(year)) {
+          occurrenceDate = new Date(year, 1, 28);
         }
-      } else {
-        // Non-recurring event
-        if (eventDate >= startOfToday && eventDate <= endOfWindow) {
+        if (occurrenceDate >= startOfToday && occurrenceDate <= endOfWindow) {
+          const partnerId = moment.partner_ids?.[0];
           occurrences.push({
-            ...event,
-            originalDate: event.event_date,
-            displayDate: event.event_date,
-            partnerName: event.partner_id ? partnerMap.get(event.partner_id) : undefined
+            ...moment,
+            originalDate: moment.moment_date,
+            displayDate: dateToYMDLocal(occurrenceDate),
+            partnerName: partnerId ? partnerMap.get(partnerId) : undefined
           });
         }
       }
     });
 
-    // Process birthdays from partners (always yearly recurring)
+    // Process birthdays from partners
     partnersData?.forEach(partner => {
       if (!partner.birthdate) return;
       const birthdate = parseYMDToLocalDate(partner.birthdate);
@@ -437,8 +343,6 @@ const Dashboard = () => {
         const month = birthdate.getMonth();
         const day = birthdate.getDate();
         let occurrenceDate = new Date(year, month, day);
-
-        // Handle Feb 29 in non-leap years
         if (month === 1 && day === 29 && !isLeapYear(year)) {
           occurrenceDate = new Date(year, 1, 28);
         }
@@ -446,9 +350,9 @@ const Dashboard = () => {
           occurrences.push({
             id: `birthday-${partner.id}-${year}`,
             title: `${partner.name}'s Birthday`,
-            event_date: partner.birthdate,
-            partner_id: partner.id,
-            is_recurring: true,
+            moment_date: partner.birthdate,
+            is_celebrated_annually: true,
+            partner_ids: [partner.id],
             originalDate: partner.birthdate,
             displayDate: dateToYMDLocal(occurrenceDate),
             partnerName: partner.name
@@ -456,25 +360,26 @@ const Dashboard = () => {
         }
       }
     });
+
     occurrences.sort((a, b) => a.displayDate.localeCompare(b.displayDate));
     setUpcomingEvents(occurrences);
   };
-  const isLeapYear = (year: number) => {
-    return year % 4 === 0 && year % 100 !== 0 || year % 400 === 0;
-  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast.success("Logged out successfully");
     navigate("/auth");
   };
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-gradient-soft">
-        <div className="text-center">
-          <Heart className="w-12 h-12 mx-auto mb-4 text-primary animate-pulse-soft" />
-          <p className="text-muted-foreground">Loading your love hub...</p>
-        </div>
-      </div>;
+      <div className="text-center">
+        <Heart className="w-12 h-12 mx-auto mb-4 text-primary animate-pulse-soft" />
+        <p className="text-muted-foreground">Loading your love hub...</p>
+      </div>
+    </div>;
   }
+
   return <><SEOHead title="Dashboard | Cherishly" noIndex />
     <div className="min-h-screen bg-gradient-soft">
       <nav className="bg-card border-b border-border shadow-soft">
@@ -485,109 +390,57 @@ const Dashboard = () => {
           </div>
           <div className="flex items-center gap-2">
             {!isPro && !roleLoading && (
-              <Button 
-                size="sm" 
-                onClick={() => navigate("/pricing")}
-                className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white flex items-center gap-2"
-              >
-                <span>Unlock the full magic</span>
-                <span>🤍</span>
+              <Button size="sm" onClick={() => navigate("/pricing")} className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white flex items-center gap-2">
+                <span>Unlock the full magic</span><span>🤍</span>
               </Button>
             )}
-            <Button variant="ghost" size="sm" onClick={() => navigate("/account/profile")}>
-              <User className="w-4 h-4 mr-2" />
-              Profile
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/account")}>
-              <Settings className="w-4 h-4 mr-2" />
-              Account
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/account/profile")}><User className="w-4 h-4 mr-2" />Profile</Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/account")}><Settings className="w-4 h-4 mr-2" />Account</Button>
+            <Button variant="ghost" size="sm" onClick={handleLogout}><LogOut className="w-4 h-4 mr-2" />Logout</Button>
           </div>
         </div>
       </nav>
 
       <main className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="mb-8 animate-fade-in">
-          <h1 className="text-3xl font-bold mb-2">
-            Welcome back, {profile?.display_name || "Friend"}! 💕
-          </h1>
-          <p className="text-muted-foreground">
-            Here's what's happening in your relationship world
-          </p>
+          <h1 className="text-3xl font-bold mb-2">Welcome back, {profile?.display_name || "Friend"}! 💕</h1>
+          <p className="text-muted-foreground">Here's what's happening in your relationship world</p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
           <Card className="shadow-soft hover:shadow-glow transition-shadow animate-scale-in">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Heart className="w-5 h-5 text-primary" />
-                <span>Cherished</span>
-              </CardTitle>
+              <CardTitle className="flex items-center space-x-2"><Heart className="w-5 h-5 text-primary" /><span>Cherished</span></CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold text-primary mb-2">
-                {partners.length}
-              </div>
-              <p className="text-sm text-muted-foreground mb-4">
-                Beautiful connections
-              </p>
-              <div className="text-4xl font-bold text-secondary mb-2">
-                {upcomingEvents.length}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Important dates
-              </p>
+              <div className="text-4xl font-bold text-primary mb-2">{partners.length}</div>
+              <p className="text-sm text-muted-foreground mb-4">Beautiful connections</p>
+              <div className="text-4xl font-bold text-secondary mb-2">{upcomingEvents.length}</div>
+              <p className="text-sm text-muted-foreground">Important dates</p>
             </CardContent>
           </Card>
 
           <div className="animate-scale-in" style={{ animationDelay: "0.1s" }}>
-            <ActivitySuggestion 
-              partnerId={partners[0]?.id}
-              onOpenClaire={(message) => setClairePrefillMessage(message)}
-              hasPartners={partners.length > 0}
-              onAddPartner={() => navigate("/partner/new")}
-              isPro={isPro}
-            />
+            <ActivitySuggestion partnerId={partners[0]?.id} onOpenClaire={(message) => setClairePrefillMessage(message)} hasPartners={partners.length > 0} onAddPartner={() => navigate("/partner/new")} isPro={isPro} />
           </div>
 
-          <Card 
-            className={cn(
-              "shadow-soft hover:shadow-glow transition-shadow animate-scale-in cursor-pointer",
-              !isPro && "bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20"
-            )}
-            style={{ animationDelay: "0.2s" }}
-            onClick={() => isPro && setShowMomentsDialog(true)}
-          >
+          <Card className={cn("shadow-soft hover:shadow-glow transition-shadow animate-scale-in cursor-pointer", !isPro && "bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20")} style={{ animationDelay: "0.2s" }} onClick={() => isPro && setShowMomentsDialog(true)}>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Sparkles className="w-5 h-5 text-accent" />
-                  <span>Moments</span>
+                  <Sparkles className="w-5 h-5 text-accent" /><span>Moments</span>
                   {!isPro && <Badge variant="secondary" className="text-xs">Pro</Badge>}
                 </div>
                 {isPro && (
-                  <Button size="sm" variant="ghost" onClick={(e) => {
-                    e.stopPropagation();
-                    setShowMomentsDialog(true);
-                  }}>
-                    <Plus className="w-4 h-4" />
-                  </Button>
+                  <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setShowMomentsDialog(true); }}><Plus className="w-4 h-4" /></Button>
                 )}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {isPro ? (
                 <>
-                  <div className="text-4xl font-bold text-accent mb-2">
-                    {totalMoments}
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Memories logged
-                  </p>
+                  <div className="text-4xl font-bold text-accent mb-2">{totalMoments}</div>
+                  <p className="text-sm text-muted-foreground mb-3">Memories logged</p>
                   {moments.length > 0 && (
                     <div className="space-y-2 pt-2 border-t">
                       {moments.map((moment) => {
@@ -595,16 +448,10 @@ const Dashboard = () => {
                           .map((id) => partners.find((p) => p.id === id)?.name)
                           .filter(Boolean)
                           .join(", ");
-                        
                         return (
                           <div key={moment.id} className="text-xs">
-                            <p className="font-medium truncate">
-                              {moment.title || "Untitled"}
-                            </p>
-                            <p className="text-muted-foreground">
-                              {format(new Date(moment.moment_date), "MMM d")}
-                              {partnerNames && ` • ${partnerNames}`}
-                            </p>
+                            <p className="font-medium truncate">{moment.title || "Untitled"}</p>
+                            <p className="text-muted-foreground">{format(new Date(moment.moment_date), "MMM d")}{partnerNames && ` • ${partnerNames}`}</p>
                           </div>
                         );
                       })}
@@ -613,15 +460,8 @@ const Dashboard = () => {
                 </>
               ) : (
                 <div className="pt-2">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Capture and cherish your favorite memories together.
-                  </p>
-                  <Button asChild size="lg" className="w-full gap-2">
-                    <Link to="/pricing">
-                      <Sparkles className="w-4 h-4" />
-                      Upgrade to Pro
-                    </Link>
-                  </Button>
+                  <p className="text-sm text-muted-foreground mb-4">Capture and cherish your favorite memories together.</p>
+                  <Button asChild size="lg" className="w-full gap-2"><Link to="/pricing"><Sparkles className="w-4 h-4" />Upgrade to Pro</Link></Button>
                 </div>
               )}
             </CardContent>
@@ -629,84 +469,46 @@ const Dashboard = () => {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Left Column */}
           <div className="space-y-6">
             <Card className="shadow-soft animate-fade-in">
-                <CardHeader className="grid grid-cols-[1fr_auto] items-start gap-4">
-                  <div>
-                    <CardTitle>Your Cherished</CardTitle>
-                    <CardDescription>People who make your heart full</CardDescription>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button onClick={() => navigate("/partner/new")} size="sm" data-testid="add-partner-button">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Cherished
-                    </Button>
-                    <Button onClick={() => navigate("/archive")} size="sm" variant="outline">
-                      Archive
-                    </Button>
-                  </div>
-                </CardHeader>
+              <CardHeader className="grid grid-cols-[1fr_auto] items-start gap-4">
+                <div><CardTitle>Your Cherished</CardTitle><CardDescription>People who make your heart full</CardDescription></div>
+                <div className="flex gap-2 shrink-0">
+                  <Button onClick={() => navigate("/partner/new")} size="sm" data-testid="add-partner-button"><Plus className="w-4 h-4 mr-2" />Add Cherished</Button>
+                  <Button onClick={() => navigate("/archive")} size="sm" variant="outline">Archive</Button>
+                </div>
+              </CardHeader>
               <CardContent className="space-y-6 relative">
                 {partners.length === 0 ? (
                   <div className="text-center py-8">
                     <Heart className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                    <p className="text-muted-foreground mb-4">
-                      No cherished added yet. Start building your connection map!
-                    </p>
-                    <Button onClick={() => navigate("/partner/new")} variant="outline">
-                      Add Your First Cherished
-                    </Button>
+                    <p className="text-muted-foreground mb-4">No cherished added yet. Start building your connection map!</p>
+                    <Button onClick={() => navigate("/partner/new")} variant="outline">Add Your First Cherished</Button>
                   </div>
                 ) : (
-                  <>
-                    {/* Current user row will be shown at the bottom of the list */}
-
-                    {/* Cherished list with drag and drop */}
-                    <DndContext
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={handleDragEnd}
-                    >
-                      <SortableContext
-                        items={partners.map(p => p.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        <div className="space-y-2">
-                          {partners.map((partner) => (
-                            <SortablePartner
-                              key={partner.id}
-                              partner={partner}
-                              onClick={() => navigate(`/partner/${partner.id}`)}
-                              onEdit={() => handleEditPartner(partner.id)}
-                              onArchive={() => handleArchivePartner(partner.id, partner.name)}
-                              onDelete={() => handleDeletePartner(partner.id, partner.name)}
-                            />
-                          ))}
-                        </div>
-                      </SortableContext>
-                    </DndContext>
-
-                  </>
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={partners.map(p => p.id)} strategy={verticalListSortingStrategy}>
+                      <div className="space-y-2">
+                        {partners.map((partner) => (
+                          <SortablePartner key={partner.id} partner={partner} onClick={() => navigate(`/partner/${partner.id}`)} onEdit={() => handleEditPartner(partner.id)} onArchive={() => handleArchivePartner(partner.id, partner.name)} onDelete={() => handleDeletePartner(partner.id, partner.name)} />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
                 )}
               </CardContent>
             </Card>
 
             <Card className="shadow-soft animate-fade-in">
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Calendar className="w-5 h-5 text-secondary" />
-                  <span>This Week's Highlights</span>
-                </CardTitle>
+                <CardTitle className="flex items-center space-x-2"><Calendar className="w-5 h-5 text-secondary" /><span>This Week's Highlights</span></CardTitle>
                 <CardDescription>Important dates coming up</CardDescription>
               </CardHeader>
               <CardContent>
                 {upcomingEvents.length === 0 ? (
                   <div className="text-center py-8">
                     <Calendar className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                    <p className="text-muted-foreground">
-                      No upcoming events this week
-                    </p>
+                    <p className="text-muted-foreground">No upcoming events this week</p>
                   </div>
                 ) : (
                   <div className="space-y-3" data-testid="upcoming-list">
@@ -716,9 +518,7 @@ const Dashboard = () => {
                         <div className="flex-1 min-w-0">
                           <p className="font-medium">
                             {event.title}
-                            {event.is_recurring && <Badge variant="secondary" className="ml-2 text-xs">
-                                Recurring
-                              </Badge>}
+                            {event.is_celebrated_annually && <Badge variant="secondary" className="ml-2 text-xs">Yearly</Badge>}
                           </p>
                           <p className="text-sm text-muted-foreground mt-1">
                             {format(parseYMDToLocalDate(event.displayDate), "EEEE, MMMM d")}
@@ -733,7 +533,6 @@ const Dashboard = () => {
             </Card>
           </div>
 
-          {/* Right Column */}
           <div className="space-y-6">
             {isPro ? (
               <div className="h-[800px] animate-fade-in">
@@ -741,10 +540,7 @@ const Dashboard = () => {
               </div>
             ) : (
               <Card className="shadow-soft animate-fade-in">
-                <UpgradePrompt
-                  featureName="AI Chat with Claire"
-                  description="Get personalized relationship advice and gift ideas from your AI companion, Claire."
-                />
+                <UpgradePrompt featureName="AI Chat with Claire" description="Get personalized relationship advice and gift ideas from your AI companion, Claire." />
               </Card>
             )}
           </div>
@@ -754,19 +550,14 @@ const Dashboard = () => {
       {isPro && (
         <Dialog open={showMomentsDialog} onOpenChange={setShowMomentsDialog}>
           <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>All Moments</DialogTitle>
-            </DialogHeader>
-            <MomentManager 
-              showPartnerColumn 
-              onMomentChange={async () => {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session) await loadMoments(session.user.id);
-              }}
-            />
+            <DialogHeader><DialogTitle>All Moments</DialogTitle></DialogHeader>
+            <MomentManager showPartnerColumn onMomentChange={async () => {
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session) await loadMoments(session.user.id);
+            }} />
           </DialogContent>
         </Dialog>
       )}
-    </div></>
+    </div></>;
 };
 export default Dashboard;

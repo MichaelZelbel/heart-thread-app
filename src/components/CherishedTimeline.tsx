@@ -4,9 +4,7 @@ import {
   Calendar,
   Star,
   Camera,
-  MessageCircle,
   Sparkles,
-  MapPin,
   Gift,
   Cake,
   Plane,
@@ -28,13 +26,12 @@ import { TimelineItemDialog } from "@/components/timeline/TimelineItemDialog";
 
 export interface TimelineEntry {
   id: string;
-  source: "event" | "moment";
   type: "milestone" | "event" | "moment";
   title: string;
   date: string; // YYYY-MM-DD
   description?: string | null;
   eventType?: string | null;
-  isRecurring?: boolean;
+  isCelebratedAnnually?: boolean;
 }
 
 interface CherishedTimelineProps {
@@ -55,25 +52,23 @@ const EVENT_TYPE_ICONS: Record<string, React.ReactNode> = {
 const MILESTONE_TYPES = ["Birthday", "Anniversary", "Day We Met", "First Kiss", "First 'I Love You'"];
 
 const getIcon = (entry: TimelineEntry) => {
-  if (entry.source === "event" && entry.eventType) {
+  if (entry.eventType) {
     return EVENT_TYPE_ICONS[entry.eventType] || <Calendar className="w-4 h-4" />;
   }
-  if (entry.source === "moment") return <Camera className="w-4 h-4" />;
-  return <Calendar className="w-4 h-4" />;
+  return <Camera className="w-4 h-4" />;
 };
 
 const isMilestone = (entry: TimelineEntry) => {
-  return entry.source === "event" && entry.eventType && MILESTONE_TYPES.includes(entry.eventType);
+  return entry.eventType && MILESTONE_TYPES.includes(entry.eventType);
 };
 
 const getTypeLabel = (entry: TimelineEntry) => {
-  if (entry.source === "event") return entry.eventType || "Event";
-  return "Memory";
+  return entry.eventType || "Moment";
 };
 
 const getTypeColor = (entry: TimelineEntry) => {
   if (isMilestone(entry)) return "bg-primary text-primary-foreground";
-  if (entry.source === "event") return "bg-accent text-accent-foreground";
+  if (entry.eventType) return "bg-accent text-accent-foreground";
   return "bg-secondary text-secondary-foreground";
 };
 
@@ -91,7 +86,6 @@ export const CherishedTimeline = ({ partnerId, partnerName, onAskClaire }: Cheri
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimelineEntry | null>(null);
-  const [dialogMode, setDialogMode] = useState<"event" | "moment">("event");
 
   useEffect(() => {
     loadTimeline();
@@ -101,53 +95,37 @@ export const CherishedTimeline = ({ partnerId, partnerName, onAskClaire }: Cheri
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    const [eventsRes, momentsRes] = await Promise.all([
-      supabase
-        .from("events")
-        .select("*")
-        .eq("partner_id", partnerId)
-        .eq("user_id", session.user.id)
-        .order("event_date", { ascending: false }),
-      supabase
-        .from("moments")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .contains("partner_ids", [partnerId])
-        .order("moment_date", { ascending: false }),
-    ]);
+    const { data, error } = await supabase
+      .from("moments")
+      .select("*")
+      .eq("user_id", session.user.id)
+      .contains("partner_ids", [partnerId])
+      .order("moment_date", { ascending: false });
 
-    const eventEntries: TimelineEntry[] = (eventsRes.data || []).map((e) => ({
-      id: e.id,
-      source: "event" as const,
-      type: "event" as const,
-      title: e.title,
-      date: e.event_date,
-      description: e.description,
-      eventType: e.event_type,
-      isRecurring: e.is_recurring,
-    }));
+    if (error) {
+      toast.error("Failed to load timeline");
+      setLoading(false);
+      return;
+    }
 
-    const momentEntries: TimelineEntry[] = (momentsRes.data || []).map((m) => ({
+    const mapped: TimelineEntry[] = (data || []).map((m) => ({
       id: m.id,
-      source: "moment" as const,
-      type: "moment" as const,
+      type: (m.event_type && MILESTONE_TYPES.includes(m.event_type) ? "milestone" : "moment") as TimelineEntry["type"],
       title: m.title,
       date: m.moment_date,
       description: m.description,
+      eventType: m.event_type,
+      isCelebratedAnnually: m.is_celebrated_annually,
     }));
 
-    const all = [...eventEntries, ...momentEntries].sort(
-      (a, b) => b.date.localeCompare(a.date)
-    );
-    setEntries(all);
+    setEntries(mapped);
     setLoading(false);
   };
 
   const handleDelete = async (entry: TimelineEntry) => {
     if (!confirm(`Delete "${entry.title}"? This cannot be undone.`)) return;
 
-    const table = entry.source === "event" ? "events" : "moments";
-    const { error } = await supabase.from(table).delete().eq("id", entry.id);
+    const { error } = await supabase.from("moments").delete().eq("id", entry.id);
 
     if (error) {
       toast.error("Failed to delete");
@@ -159,13 +137,11 @@ export const CherishedTimeline = ({ partnerId, partnerName, onAskClaire }: Cheri
 
   const handleEdit = (entry: TimelineEntry) => {
     setEditingEntry(entry);
-    setDialogMode(entry.source);
     setDialogOpen(true);
   };
 
-  const handleAdd = (mode: "event" | "moment") => {
+  const handleAdd = () => {
     setEditingEntry(null);
-    setDialogMode(mode);
     setDialogOpen(true);
   };
 
@@ -184,7 +160,7 @@ export const CherishedTimeline = ({ partnerId, partnerName, onAskClaire }: Cheri
 
   return (
     <div className="space-y-6">
-      {/* Header with Add buttons */}
+      {/* Header with Add button */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Calendar className="w-5 h-5 text-primary" />
@@ -192,16 +168,10 @@ export const CherishedTimeline = ({ partnerId, partnerName, onAskClaire }: Cheri
             {filteredEntries.length} moments in your story
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => handleAdd("event")}>
-            <Plus className="w-4 h-4 mr-1" />
-            Event
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => handleAdd("moment")}>
-            <Plus className="w-4 h-4 mr-1" />
-            Memory
-          </Button>
-        </div>
+        <Button size="sm" variant="outline" onClick={handleAdd}>
+          <Plus className="w-4 h-4 mr-1" />
+          Add Moment
+        </Button>
       </div>
 
       {/* View Toggle */}
@@ -264,17 +234,12 @@ export const CherishedTimeline = ({ partnerId, partnerName, onAskClaire }: Cheri
             </h3>
             <p className="text-muted-foreground text-sm mb-4">
               {viewMode === "milestones"
-                ? "Add milestone events like birthdays, anniversaries, or the day you met."
-                : `Add events and memories to build your timeline with ${partnerName}.`}
+                ? "Add milestone moments like birthdays, anniversaries, or the day you met."
+                : `Add moments to build your timeline with ${partnerName}.`}
             </p>
-            <div className="flex gap-2 justify-center">
-              <Button size="sm" onClick={() => handleAdd("event")}>
-                <Plus className="w-4 h-4 mr-1" /> Add Event
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => handleAdd("moment")}>
-                <Plus className="w-4 h-4 mr-1" /> Add Memory
-              </Button>
-            </div>
+            <Button size="sm" onClick={handleAdd}>
+              <Plus className="w-4 h-4 mr-1" /> Add Moment
+            </Button>
           </CardContent>
         </Card>
       )}
@@ -290,7 +255,7 @@ export const CherishedTimeline = ({ partnerId, partnerName, onAskClaire }: Cheri
               const highlight = isMilestone(entry);
               return (
                 <div
-                  key={`${entry.source}-${entry.id}`}
+                  key={entry.id}
                   className={cn(
                     "relative pl-14 py-4 group",
                     "transition-all duration-200 ease-out",
@@ -330,7 +295,7 @@ export const CherishedTimeline = ({ partnerId, partnerName, onAskClaire }: Cheri
                           >
                             {getTypeLabel(entry)}
                           </Badge>
-                          {entry.isRecurring && (
+                          {entry.isCelebratedAnnually && (
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
                               Yearly
                             </Badge>
@@ -401,7 +366,6 @@ export const CherishedTimeline = ({ partnerId, partnerName, onAskClaire }: Cheri
       <TimelineItemDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        mode={dialogMode}
         editingEntry={editingEntry}
         partnerId={partnerId}
         partnerName={partnerName}

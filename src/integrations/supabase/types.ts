@@ -404,84 +404,32 @@ export type Database = {
       event_notifications: {
         Row: {
           created_at: string
-          event_id: string
+          event_id: string | null
           id: string
+          moment_id: string | null
           notification_date: string
           notified_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
-          event_id: string
+          event_id?: string | null
           id?: string
+          moment_id?: string | null
           notification_date: string
           notified_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
-          event_id?: string
+          event_id?: string | null
           id?: string
+          moment_id?: string | null
           notification_date?: string
           notified_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "event_notifications_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      events: {
-        Row: {
-          created_at: string
-          description: string | null
-          event_date: string
-          event_type: string | null
-          id: string
-          is_recurring: boolean
-          partner_id: string | null
-          title: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          event_date: string
-          event_type?: string | null
-          id?: string
-          is_recurring?: boolean
-          partner_id?: string | null
-          title: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          event_date?: string
-          event_type?: string | null
-          id?: string
-          is_recurring?: boolean
-          partner_id?: string | null
-          title?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "events_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       llm_usage_events: {
         Row: {
@@ -532,7 +480,9 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          event_type: string | null
           id: string
+          is_celebrated_annually: boolean
           moment_date: string
           partner_ids: string[] | null
           photo_url: string | null
@@ -543,7 +493,9 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          event_type?: string | null
           id?: string
+          is_celebrated_annually?: boolean
           moment_date: string
           partner_ids?: string[] | null
           photo_url?: string | null
@@ -554,7 +506,9 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          event_type?: string | null
           id?: string
+          is_celebrated_annually?: boolean
           moment_date?: string
           partner_ids?: string[] | null
           photo_url?: string | null
