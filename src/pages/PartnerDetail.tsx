@@ -341,7 +341,7 @@ const PartnerDetail = () => {
                 </p>
               </CardHeader>
               <CardContent>
-                <CherishedTimeline partnerName={name} onAskClaire={handleAskClaireFromTimeline} />
+                <CherishedTimeline partnerId={id!} partnerName={name} onAskClaire={handleAskClaireFromTimeline} />
               </CardContent>
             </Card>
           </TabsContent>
