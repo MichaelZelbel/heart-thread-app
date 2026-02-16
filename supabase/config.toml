@@ -38,3 +38,18 @@ verify_jwt = false
 
 [functions.rss-feed]
 verify_jwt = false
+
+[functions.create-pairing-code]
+verify_jwt = false
+
+[functions.accept-pairing-code]
+verify_jwt = false
+
+[functions.consume-pairing-code]
+verify_jwt = false
+
+[functions.sync-pull]
+verify_jwt = false
+
+[functions.sync-push]
+verify_jwt = false
