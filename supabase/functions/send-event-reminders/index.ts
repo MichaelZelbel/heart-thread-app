@@ -181,17 +181,18 @@ serve(async (req) => {
 
         for (const event of allEvents) {
           try {
-            // Check if notification already sent
-            const { data: existingNotification } = await supabase
+            // Atomically claim this notification slot — prevents duplicate sends from concurrent runs
+            const { error: claimError } = await supabase
               .from('event_notifications')
-              .select('id')
-              .eq('user_id', user.id)
-              .eq('moment_id', event.id)
-              .eq('notification_date', tomorrowDateStr)
-              .single();
+              .insert({
+                user_id: user.id,
+                moment_id: event.id,
+                notification_date: tomorrowDateStr,
+              });
 
-            if (existingNotification) {
-              console.log(`Notification already sent for moment ${event.id} on ${tomorrowDateStr}`);
+            if (claimError) {
+              // Unique constraint violation means another invocation already claimed it
+              console.log(`Notification already claimed for moment ${event.id} on ${tomorrowDateStr}: ${claimError.message}`);
               continue;
             }
 
@@ -243,20 +244,6 @@ serve(async (req) => {
             if (!emailResponse.ok) {
               const errorText = await emailResponse.text();
               console.error(`Error sending email for moment ${event.id}:`, errorText);
-              continue;
-            }
-
-            // Record notification using moment_id
-            const { error: notificationError } = await supabase
-              .from('event_notifications')
-              .insert({
-                user_id: user.id,
-                moment_id: event.id,
-                notification_date: tomorrowDateStr,
-              });
-
-            if (notificationError) {
-              console.error(`Error recording notification for moment ${event.id}:`, notificationError);
               continue;
             }
 
