@@ -53,3 +53,24 @@ verify_jwt = false
 
 [functions.sync-push]
 verify_jwt = false
+
+[functions.sync-list-remote-people]
+verify_jwt = false
+
+[functions.sync-suggest-person-matches]
+verify_jwt = false
+
+[functions.sync-link-person]
+verify_jwt = false
+
+[functions.sync-exclude-person]
+verify_jwt = false
+
+[functions.sync-create-remote-person]
+verify_jwt = false
+
+[functions.sync-merge-local-people]
+verify_jwt = false
+
+[functions.sync-undo-merge]
+verify_jwt = false

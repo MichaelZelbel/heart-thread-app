@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   RefreshCw,
@@ -14,10 +15,11 @@ import {
   Copy,
   Loader2,
   CheckCircle2,
-  Search,
-  Users,
   Clock,
+  Users,
+  Search,
 } from "lucide-react";
+import { SyncPeopleMapping } from "./SyncPeopleMapping";
 
 interface SyncConnection {
   id: string;
@@ -276,7 +278,7 @@ export function SyncSettings() {
             </div>
           </div>
         ) : (
-          /* Active connection — show sync controls */
+          /* Active connection — show sync controls with tabs */
           <div className="space-y-4">
             <div className="flex items-center justify-between rounded-lg bg-primary/5 border border-primary/20 p-4">
               <div className="flex items-center gap-3">
@@ -296,47 +298,64 @@ export function SyncSettings() {
               </Button>
             </div>
 
-            {/* Person sync controls */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium text-sm flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  People to sync
-                </h4>
-                <Button variant="outline" size="sm" onClick={() => handleSyncAll(activeConnection.id)}>
-                  Sync All
-                </Button>
-              </div>
+            <Tabs defaultValue="mapping" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="mapping">
+                  <Users className="w-4 h-4 mr-1" />
+                  People Mapping
+                </TabsTrigger>
+                <TabsTrigger value="toggles">
+                  Quick Toggles
+                </TabsTrigger>
+              </TabsList>
 
-              {partners.length > 5 && (
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search people..."
-                    className="pl-9 h-8 text-sm"
-                  />
-                </div>
-              )}
+              <TabsContent value="mapping" className="mt-4">
+                <SyncPeopleMapping connectionId={activeConnection.id} />
+              </TabsContent>
 
-              <div className="space-y-1 max-h-[300px] overflow-y-auto">
-                {filteredPartners.map((p) => {
-                  const link = personLinks.find(l => l.local_person_id === p.id);
-                  const isEnabled = link?.is_enabled ?? false;
-                  return (
-                    <div key={p.id} className="flex items-center justify-between py-2 px-2 hover:bg-muted/30 rounded">
-                      <Label htmlFor={`sync-${p.id}`} className="text-sm cursor-pointer">{p.name}</Label>
-                      <Switch
-                        id={`sync-${p.id}`}
-                        checked={isEnabled}
-                        onCheckedChange={() => handleTogglePersonLink(p.id, activeConnection.id, isEnabled)}
+              <TabsContent value="toggles" className="mt-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-sm flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      People to sync
+                    </h4>
+                    <Button variant="outline" size="sm" onClick={() => handleSyncAll(activeConnection.id)}>
+                      Sync All
+                    </Button>
+                  </div>
+
+                  {partners.length > 5 && (
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Search people..."
+                        className="pl-9 h-8 text-sm"
                       />
                     </div>
-                  );
-                })}
-              </div>
-            </div>
+                  )}
+
+                  <div className="space-y-1 max-h-[300px] overflow-y-auto">
+                    {filteredPartners.map((p) => {
+                      const link = personLinks.find(l => l.local_person_id === p.id);
+                      const isEnabled = link?.is_enabled ?? false;
+                      return (
+                        <div key={p.id} className="flex items-center justify-between py-2 px-2 hover:bg-muted/30 rounded">
+                          <Label htmlFor={`sync-${p.id}`} className="text-sm cursor-pointer">{p.name}</Label>
+                          <Switch
+                            id={`sync-${p.id}`}
+                            checked={isEnabled}
+                            onCheckedChange={() => handleTogglePersonLink(p.id, activeConnection.id, isEnabled)}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         )}
       </CardContent>
