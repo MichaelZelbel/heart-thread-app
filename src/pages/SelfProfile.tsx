@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { SEOHead } from "@/components/seo/SEOHead";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -221,6 +222,8 @@ const SelfProfile = () => {
   }
 
   return (
+    <>
+    <SEOHead title="My Profile | Cherishly" noIndex />
     <div className="min-h-screen bg-gradient-soft">
       <nav className="bg-card border-b border-border shadow-soft">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -405,6 +408,7 @@ const SelfProfile = () => {
         </Tabs>
       </main>
     </div>
+    </>
   );
 };
 

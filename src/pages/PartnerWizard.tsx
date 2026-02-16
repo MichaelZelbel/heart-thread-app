@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SEOHead } from "@/components/seo/SEOHead";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -188,7 +189,8 @@ const PartnerWizard = () => {
     }
   };
   const progress = currentStep / totalSteps * 100;
-  return <div className="min-h-screen bg-gradient-soft">
+  return <><SEOHead title="Add a Cherished | Cherishly" noIndex />
+    <div className="min-h-screen bg-gradient-soft">
       <nav className="bg-card border-b border-border shadow-soft">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -415,7 +417,7 @@ const PartnerWizard = () => {
           </CardContent>
         </Card>
       </main>
-    </div>;
+    </div></>;
 };
 
 // Helper component for detail sections in step 3

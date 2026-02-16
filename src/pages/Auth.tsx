@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SEOHead } from "@/components/seo/SEOHead";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -143,6 +144,8 @@ const Auth = () => {
   };
 
   return (
+    <>
+    <SEOHead title="Sign In | Cherishly" description="Sign in or create your Cherishly account." noIndex />
     <div className="min-h-screen flex items-center justify-center bg-gradient-soft p-4">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
@@ -304,6 +307,7 @@ const Auth = () => {
         </p>
       </div>
     </div>
+    </>
   );
 };
 

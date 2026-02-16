@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { SEOHead } from "@/components/seo/SEOHead";
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,8 @@ const PaymentSuccess = () => {
   }, [navigate, toast]);
 
   return (
+    <>
+    <SEOHead title="Payment Success | Cherishly" noIndex />
     <div className="min-h-screen bg-gradient-to-b from-background to-primary/5 flex items-center justify-center p-4">
       <Card className="max-w-md w-full">
         <CardHeader className="text-center">
@@ -101,6 +104,7 @@ const PaymentSuccess = () => {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 };
 

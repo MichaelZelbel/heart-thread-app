@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SEOHead } from "@/components/seo/SEOHead";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -298,6 +299,8 @@ export default function Account() {
   }
 
   return (
+    <>
+    <SEOHead title="Account Settings | Cherishly" noIndex />
     <div className="min-h-screen bg-background">
       <div className="container max-w-4xl py-8 px-4">
         <Button
@@ -609,5 +612,6 @@ export default function Account() {
         </div>
       </div>
     </div>
+    </>
   );
 }
