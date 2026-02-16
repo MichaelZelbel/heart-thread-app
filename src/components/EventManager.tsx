@@ -67,6 +67,7 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
       .select("id, title, moment_date, event_type, description, is_celebrated_annually")
       .eq("user_id", session.user.id)
       .contains("partner_ids", [partnerId])
+      .is("deleted_at", null)
       .not("event_type", "is", null)
       .order("moment_date", { ascending: true });
 

@@ -73,6 +73,7 @@ export const MomentManager = ({ partnerId, partnerName, showPartnerColumn = fals
       .from("moments")
       .select("*")
       .eq("user_id", session.user.id)
+      .is("deleted_at", null)
       .order("moment_date", { ascending: false });
 
     if (partnerId) {

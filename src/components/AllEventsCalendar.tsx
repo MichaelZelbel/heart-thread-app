@@ -44,6 +44,7 @@ export const AllEventsCalendar = () => {
       .from("moments")
       .select("id, title, moment_date, event_type, partner_ids, is_celebrated_annually")
       .eq("user_id", session.user.id)
+      .is("deleted_at", null)
       .order("moment_date", { ascending: true });
 
     if (momentsData) setMoments(momentsData);
