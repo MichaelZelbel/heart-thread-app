@@ -23,7 +23,6 @@ const EVENT_TYPE_PRESETS = [
 interface TimelineItemDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  mode: "event" | "moment";
   editingEntry: TimelineEntry | null;
   partnerId: string;
   partnerName: string;
@@ -33,7 +32,6 @@ interface TimelineItemDialogProps {
 export const TimelineItemDialog = ({
   open,
   onOpenChange,
-  mode,
   editingEntry,
   partnerId,
   partnerName,
@@ -43,7 +41,7 @@ export const TimelineItemDialog = ({
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
   const [eventType, setEventType] = useState("Custom");
-  const [isRecurring, setIsRecurring] = useState(true);
+  const [isCelebratedAnnually, setIsCelebratedAnnually] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -52,23 +50,23 @@ export const TimelineItemDialog = ({
         setDescription(editingEntry.description || "");
         setDate(editingEntry.date);
         setEventType(editingEntry.eventType || "Custom");
-        setIsRecurring(editingEntry.isRecurring ?? true);
+        setIsCelebratedAnnually(editingEntry.isCelebratedAnnually ?? false);
       } else {
         setTitle("");
         setDescription("");
         setDate(dateToYMDLocal(new Date()));
         setEventType("Custom");
-        setIsRecurring(true);
+        setIsCelebratedAnnually(false);
       }
     }
   }, [open, editingEntry]);
 
-  // Auto-populate title for new events
+  // Auto-populate title for new entries with a type
   useEffect(() => {
-    if (!editingEntry && mode === "event" && eventType !== "Custom") {
+    if (!editingEntry && eventType !== "Custom") {
       setTitle(eventType);
     }
-  }, [eventType, editingEntry, mode]);
+  }, [eventType, editingEntry]);
 
   const handleSave = async () => {
     if (!title.trim() || !date) {
@@ -79,82 +77,58 @@ export const TimelineItemDialog = ({
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    if (mode === "event") {
-      const eventData = {
-        title: title.trim(),
-        event_date: date,
-        event_type: eventType,
-        description: description.trim() || null,
-        partner_id: partnerId,
-        user_id: session.user.id,
-        is_recurring: isRecurring,
-      };
+    const momentData = {
+      title: title.trim(),
+      moment_date: date,
+      description: description.trim() || null,
+      partner_ids: [partnerId],
+      user_id: session.user.id,
+      event_type: eventType === "Custom" ? null : eventType,
+      is_celebrated_annually: isCelebratedAnnually,
+    };
 
-      if (editingEntry) {
-        const { error } = await supabase.from("events").update(eventData).eq("id", editingEntry.id);
-        if (error) { toast.error("Failed to update event"); return; }
-        toast.success("Event updated");
-      } else {
-        const { error } = await supabase.from("events").insert(eventData);
-        if (error) { toast.error("Failed to create event"); return; }
-        toast.success("Event created");
-      }
+    if (editingEntry) {
+      const { error } = await supabase.from("moments").update(momentData).eq("id", editingEntry.id);
+      if (error) { toast.error("Failed to update moment"); return; }
+      toast.success("Moment updated");
     } else {
-      const momentData = {
-        title: title.trim(),
-        moment_date: date,
-        description: description.trim() || null,
-        partner_ids: [partnerId],
-        user_id: session.user.id,
-      };
-
-      if (editingEntry) {
-        const { error } = await supabase.from("moments").update(momentData).eq("id", editingEntry.id);
-        if (error) { toast.error("Failed to update memory"); return; }
-        toast.success("Memory updated");
-      } else {
-        const { error } = await supabase.from("moments").insert(momentData);
-        if (error) { toast.error("Failed to create memory"); return; }
-        toast.success("Memory created");
-      }
+      const { error } = await supabase.from("moments").insert(momentData);
+      if (error) { toast.error("Failed to create moment"); return; }
+      toast.success("Moment created");
     }
 
     onOpenChange(false);
     onSaved();
   };
 
-  const isEvent = mode === "event";
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {editingEntry ? "Edit" : "Add"} {isEvent ? "Event" : "Memory"}
+            {editingEntry ? "Edit" : "Add"} Moment
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          {isEvent && (
-            <div>
-              <Label>Type</Label>
-              <Select value={eventType} onValueChange={setEventType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {EVENT_TYPE_PRESETS.map((type) => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <div>
+            <Label>Type (optional)</Label>
+            <Select value={eventType} onValueChange={setEventType}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {EVENT_TYPE_PRESETS.map((type) => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div>
             <Label>Title *</Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={isEvent ? "e.g., First Date" : "e.g., Lazy Sunday"}
+              placeholder="e.g., First Date, Lazy Sunday"
             />
           </div>
           <div>
@@ -174,15 +148,13 @@ export const TimelineItemDialog = ({
               rows={3}
             />
           </div>
-          {isEvent && (
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Yearly Recurring</Label>
-                <p className="text-xs text-muted-foreground">Repeats every year</p>
-              </div>
-              <Switch checked={isRecurring} onCheckedChange={setIsRecurring} />
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Celebrated Annually</Label>
+              <p className="text-xs text-muted-foreground">Triggers reminders & appears in calendar</p>
             </div>
-          )}
+            <Switch checked={isCelebratedAnnually} onCheckedChange={setIsCelebratedAnnually} />
+          </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button onClick={handleSave}>{editingEntry ? "Update" : "Create"}</Button>

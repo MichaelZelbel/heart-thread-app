@@ -9,16 +9,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Calendar, Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { format, addYears } from "date-fns";
+import { format } from "date-fns";
 import { dateToYMDLocal, parseYMDToLocalDate } from "@/lib/utils";
 
-interface Event {
+interface Moment {
   id: string;
   title: string;
-  event_date: string;
-  event_type: string;
+  moment_date: string;
+  event_type: string | null;
   description: string | null;
-  is_recurring: boolean;
+  is_celebrated_annually: boolean;
 }
 
 interface EventManagerProps {
@@ -37,53 +37,52 @@ const eventTypePresets = [
 ];
 
 export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
-  const [events, setEvents] = useState<Event[]>([]);
+  const [moments, setMoments] = useState<Moment[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  
+  const [editingMoment, setEditingMoment] = useState<Moment | null>(null);
+
   const [title, setTitle] = useState("");
   const [eventType, setEventType] = useState("Custom");
-  const [eventDate, setEventDate] = useState("");
+  const [momentDate, setMomentDate] = useState("");
   const [description, setDescription] = useState("");
-  const [isRecurring, setIsRecurring] = useState(true);
+  const [isCelebratedAnnually, setIsCelebratedAnnually] = useState(true);
 
   useEffect(() => {
-    loadEvents();
+    loadMoments();
   }, [partnerId]);
 
-  // Auto-populate title when event type changes (only for new events)
   useEffect(() => {
-    if (!editingEvent && eventType !== "Custom") {
+    if (!editingMoment && eventType !== "Custom") {
       setTitle(eventType);
     }
-  }, [eventType, editingEvent]);
+  }, [eventType, editingMoment]);
 
-  const loadEvents = async () => {
+  const loadMoments = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
     const { data, error } = await supabase
-      .from("events")
-      .select("*")
-      .eq("partner_id", partnerId)
+      .from("moments")
+      .select("id, title, moment_date, event_type, description, is_celebrated_annually")
       .eq("user_id", session.user.id)
-      .order("event_date", { ascending: true });
+      .contains("partner_ids", [partnerId])
+      .not("event_type", "is", null)
+      .order("moment_date", { ascending: true });
 
     if (!error && data) {
-      setEvents(data);
+      setMoments(data);
     }
     setLoading(false);
   };
 
   const handleSave = async () => {
-    if (!title.trim() || !eventDate) {
+    if (!title.trim() || !momentDate) {
       toast.error("Please fill in title and date");
       return;
     }
 
-    // Parse and validate date (supports MM/DD or MM/DD/YYYY)
-    const parsedDate = parseFlexibleDate(eventDate);
+    const parsedDate = parseFlexibleDate(momentDate);
     if (!parsedDate) {
       toast.error("Please enter a valid date (MM/DD or MM/DD/YYYY)");
       return;
@@ -92,204 +91,142 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    // Special handling for Birthday events - ensure only one exists and sync with partner birthdate
-    if (eventType === "Birthday") {
-      // Check if another Birthday event already exists (only when creating new)
-      if (!editingEvent) {
-        const { data: existingBirthday } = await supabase
-          .from("events")
-          .select("id")
-          .eq("partner_id", partnerId)
-          .eq("event_type", "Birthday")
-          .maybeSingle();
+    // Birthday uniqueness check
+    if (eventType === "Birthday" && !editingMoment) {
+      const { data: existingBirthday } = await supabase
+        .from("moments")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .contains("partner_ids", [partnerId])
+        .eq("event_type", "Birthday")
+        .maybeSingle();
 
-        if (existingBirthday) {
-          toast.error("A birthday already exists for this person. Please edit the existing one.");
-          return;
-        }
+      if (existingBirthday) {
+        toast.error("A birthday already exists for this person. Please edit the existing one.");
+        return;
       }
+    }
 
-      // Update partner's birthdate field
+    // Sync partner birthdate
+    if (eventType === "Birthday") {
       await supabase
         .from("partners")
         .update({ birthdate: parsedDate })
         .eq("id", partnerId);
     }
 
-    const eventData = {
+    const momentData = {
       title: title.trim(),
-      event_date: parsedDate,
-      event_type: eventType,
+      moment_date: parsedDate,
+      event_type: eventType === "Custom" ? null : eventType,
       description: description.trim() || null,
-      partner_id: partnerId,
+      partner_ids: [partnerId],
       user_id: session.user.id,
-      is_recurring: eventType === "Birthday" ? true : isRecurring,
+      is_celebrated_annually: eventType === "Birthday" ? true : isCelebratedAnnually,
     };
 
-    if (editingEvent) {
-      const { error } = await supabase
-        .from("events")
-        .update(eventData)
-        .eq("id", editingEvent.id);
-
-      if (error) {
-        toast.error("Failed to update event");
-        return;
-      }
-      toast.success("Event updated");
+    if (editingMoment) {
+      const { error } = await supabase.from("moments").update(momentData).eq("id", editingMoment.id);
+      if (error) { toast.error("Failed to update"); return; }
+      toast.success("Updated");
     } else {
-      const { error } = await supabase
-        .from("events")
-        .insert(eventData);
-
-      if (error) {
-        toast.error("Failed to create event");
-        return;
-      }
-      toast.success("Event created");
+      const { error } = await supabase.from("moments").insert(momentData);
+      if (error) { toast.error("Failed to create"); return; }
+      toast.success("Created");
     }
 
     resetForm();
     setIsDialogOpen(false);
-    loadEvents();
+    loadMoments();
   };
 
-  const handleDelete = async (eventId: string) => {
-    const { error } = await supabase
-      .from("events")
-      .delete()
-      .eq("id", eventId);
-
-    if (error) {
-      toast.error("Failed to delete event");
-      return;
-    }
-
-    toast.success("Event deleted");
-    loadEvents();
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("moments").delete().eq("id", id);
+    if (error) { toast.error("Failed to delete"); return; }
+    toast.success("Deleted");
+    loadMoments();
   };
 
   const resetForm = () => {
     setTitle("");
     setEventType("Custom");
-    setEventDate("");
+    setMomentDate("");
     setDescription("");
-    setIsRecurring(true);
-    setEditingEvent(null);
+    setIsCelebratedAnnually(true);
+    setEditingMoment(null);
   };
 
-  const openEditDialog = (event: Event) => {
-    setEditingEvent(event);
-    setTitle(event.title);
-    setEventType(event.event_type);
-    setEventDate(formatDateForInput(event.event_date));
-    setDescription(event.description || "");
-    setIsRecurring(event.is_recurring);
+  const openEditDialog = (m: Moment) => {
+    setEditingMoment(m);
+    setTitle(m.title);
+    setEventType(m.event_type || "Custom");
+    setMomentDate(formatDateForInput(m.moment_date));
+    setDescription(m.description || "");
+    setIsCelebratedAnnually(m.is_celebrated_annually);
     setIsDialogOpen(true);
   };
 
-  // Helper to parse flexible date input (MM/DD or MM/DD/YYYY)
   const parseFlexibleDate = (input: string): string | null => {
     const trimmed = input.trim();
-    
-    // Try MM/DD/YYYY format
     const fullMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (fullMatch) {
       const [, month, day, year] = fullMatch;
-      const m = month.padStart(2, '0');
-      const d = day.padStart(2, '0');
-      return `${year}-${m}-${d}`;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
-    
-    // Try MM/DD format (no year)
     const shortMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})$/);
     if (shortMatch) {
       const [, month, day] = shortMatch;
-      const m = month.padStart(2, '0');
-      const d = day.padStart(2, '0');
-      // Use 1900 as sentinel year for dates without year
-      return `1900-${m}-${d}`;
+      return `1900-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
-    
     return null;
   };
 
-  // Helper to format date for input field
   const formatDateForInput = (dateStr: string): string => {
     const date = parseYMDToLocalDate(dateStr);
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
-    
-    // If year is 1900 (sentinel), show only MM/DD
-    if (year === 1900) {
-      return `${month}/${day}`;
-    }
+    if (year === 1900) return `${month}/${day}`;
     return `${month}/${day}/${year}`;
   };
 
-  // Helper to generate recurring event occurrences
-  const getRecurringOccurrences = (event: Event) => {
-    if (!event.is_recurring) return [event];
-    
+  const formatEventDate = (dateStr: string): string => {
+    const date = parseYMDToLocalDate(dateStr);
+    if (date.getFullYear() === 1900) return format(date, "MMMM d");
+    return format(date, "MMMM d, yyyy");
+  };
+
+  const getRecurringOccurrences = (m: Moment) => {
+    if (!m.is_celebrated_annually) return [m];
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    const sixMonthsFromNow = new Date(now);
-    sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
-    
-    const originalDate = parseYMDToLocalDate(event.event_date);
+    const originalDate = parseYMDToLocalDate(m.moment_date);
     const occurrences = [];
-    
-    // Generate occurrences for the next 10 years
     for (let yearOffset = 0; yearOffset < 10; yearOffset++) {
       const year = now.getFullYear() + yearOffset;
       const month = originalDate.getMonth();
       const day = originalDate.getDate();
-      
       let occurrenceDate = new Date(year, month, day);
-      
-      // Handle Feb 29 in non-leap years: show on Feb 28
       if (month === 1 && day === 29) {
         const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
-        if (!isLeapYear) {
-          occurrenceDate = new Date(year, 1, 28); // Feb 28
-        }
+        if (!isLeapYear) occurrenceDate = new Date(year, 1, 28);
       }
-      
-      occurrences.push({
-        ...event,
-        event_date: dateToYMDLocal(occurrenceDate),
-        displayYear: occurrenceDate.getFullYear(),
-        hasYear: originalDate.getFullYear() !== 1900,
-      });
+      occurrences.push({ ...m, moment_date: dateToYMDLocal(occurrenceDate) });
     }
-    
     return occurrences;
   };
 
-  // Helper to format event date for display
-  const formatEventDate = (dateStr: string): string => {
-    const date = parseYMDToLocalDate(dateStr);
-    const year = date.getFullYear();
-    
-    // If year is 1900 (sentinel), show only month and day
-    if (year === 1900) {
-      return format(date, "MMMM d");
-    }
-    return format(date, "MMMM d, yyyy");
-  };
-
-  const upcomingEvents = events
+  const upcomingMoments = moments
     .flatMap(getRecurringOccurrences)
-    .filter(e => {
-      const eventDate = parseYMDToLocalDate(e.event_date);
+    .filter(m => {
+      const d = parseYMDToLocalDate(m.moment_date);
       const now = new Date();
       now.setHours(0, 0, 0, 0);
-      const sixMonthsFromNow = new Date(now);
-      sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
-      return eventDate >= now && eventDate <= sixMonthsFromNow;
+      const sixMonths = new Date(now);
+      sixMonths.setMonth(sixMonths.getMonth() + 6);
+      return d >= now && d <= sixMonths;
     })
-    .sort((a, b) => a.event_date.localeCompare(b.event_date));
+    .sort((a, b) => a.moment_date.localeCompare(b.moment_date));
 
   if (loading) {
     return <div className="text-center text-muted-foreground">Loading events...</div>;
@@ -316,144 +253,76 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingEvent ? "Edit Event" : "Add Event"}</DialogTitle>
+              <DialogTitle>{editingMoment ? "Edit Event" : "Add Event"}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
                 <Label htmlFor="eventType">Type</Label>
                 <Select value={eventType} onValueChange={setEventType}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {eventTypePresets.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label htmlFor="title">Title *</Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g., First Date"
-                  data-testid="event-title-input"
-                />
+                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., First Date" data-testid="event-title-input" />
               </div>
               <div>
                 <Label htmlFor="date">Date *</Label>
-                <Input
-                  id="date"
-                  type="text"
-                  value={eventDate}
-                  onChange={(e) => setEventDate(e.target.value)}
-                  placeholder="MM/DD or MM/DD/YYYY"
-                  data-testid="event-date-input"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Year is optional (e.g., 09/30 or 09/30/1999)
-                </p>
+                <Input id="date" type="text" value={momentDate} onChange={(e) => setMomentDate(e.target.value)} placeholder="MM/DD or MM/DD/YYYY" data-testid="event-date-input" />
+                <p className="text-xs text-muted-foreground mt-1">Year is optional (e.g., 09/30 or 09/30/1999)</p>
               </div>
               <div>
                 <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Optional details..."
-                  rows={3}
-                />
+                <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional details..." rows={3} />
               </div>
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="recurring">Yearly Recurring</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Event repeats every year on this date
-                  </p>
+                  <Label htmlFor="recurring">Celebrated Annually</Label>
+                  <p className="text-xs text-muted-foreground">Triggers reminders & appears in calendar</p>
                 </div>
-                <Switch
-                  id="recurring"
-                  checked={isRecurring}
-                  onCheckedChange={setIsRecurring}
-                  data-testid="event-recurrence-toggle"
-                />
+                <Switch id="recurring" checked={isCelebratedAnnually} onCheckedChange={setIsCelebratedAnnually} data-testid="event-recurrence-toggle" />
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => {
-                  setIsDialogOpen(false);
-                  resetForm();
-                }}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSave}>
-                  {editingEvent ? "Update" : "Create"}
-                </Button>
+                <Button variant="outline" onClick={() => { setIsDialogOpen(false); resetForm(); }}>Cancel</Button>
+                <Button onClick={handleSave}>{editingMoment ? "Update" : "Create"}</Button>
               </div>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      {events.length === 0 ? (
+      {moments.length === 0 ? (
         <div className="text-center py-12 bg-muted/30 rounded-lg">
           <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">
-            No events yet. Add your first event — like "Day we met" or "First kiss."
-          </p>
+          <p className="text-muted-foreground">No events yet. Add your first event — like "Day we met" or "First kiss."</p>
         </div>
       ) : (
         <>
           <div className="space-y-4">
             <h4 className="font-medium">Upcoming Events (Next 6 Months)</h4>
-            {upcomingEvents.length === 0 ? (
+            {upcomingMoments.length === 0 ? (
               <p className="text-sm text-muted-foreground">No upcoming events in the next 6 months.</p>
             ) : (
               <div className="space-y-2">
-                {upcomingEvents.map((event) => (
-                  <div
-                    key={event.id}
-                    className="flex items-center justify-between p-3 bg-card border border-border rounded-lg"
-                  >
-                  <div className="flex-1">
+                {upcomingMoments.map((m, idx) => (
+                  <div key={`${m.id}-${idx}`} className="flex items-center justify-between p-3 bg-card border border-border rounded-lg">
+                    <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium">{event.title}</span>
-                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                          {event.event_type}
-                        </span>
-                        {event.is_recurring && (
-                          <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
-                            Recurring
-                          </span>
-                        )}
+                        <span className="font-medium">{m.title}</span>
+                        {m.event_type && <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">{m.event_type}</span>}
+                        {m.is_celebrated_annually && <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">Yearly</span>}
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {formatEventDate(event.event_date)}
-                      </p>
-                      {event.description && (
-                        <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
-                      )}
+                      <p className="text-sm text-muted-foreground">{formatEventDate(m.moment_date)}</p>
+                      {m.description && <p className="text-sm text-muted-foreground mt-1">{m.description}</p>}
                     </div>
                     <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditDialog(event)}
-                        disabled={event.event_type === "Birthday"}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(event.id)}
-                        disabled={event.event_type === "Birthday"}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(m)} disabled={m.event_type === "Birthday"}><Pencil className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(m.id)} disabled={m.event_type === "Birthday"}><Trash2 className="w-4 h-4" /></Button>
                     </div>
                   </div>
                 ))}
@@ -464,47 +333,20 @@ export const EventManager = ({ partnerId, partnerName }: EventManagerProps) => {
           <div className="space-y-4">
             <h4 className="font-medium">All Events</h4>
             <div className="space-y-2">
-              {events.map((event) => (
-                <div
-                  key={event.id}
-                  className="flex items-center justify-between p-3 bg-card border border-border rounded-lg"
-                >
+              {moments.map((m) => (
+                <div key={m.id} className="flex items-center justify-between p-3 bg-card border border-border rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium">{event.title}</span>
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                        {event.event_type}
-                      </span>
-                      {event.is_recurring && (
-                        <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
-                          Recurring
-                        </span>
-                      )}
+                      <span className="font-medium">{m.title}</span>
+                      {m.event_type && <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">{m.event_type}</span>}
+                      {m.is_celebrated_annually && <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">Yearly</span>}
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {formatEventDate(event.event_date)}
-                    </p>
-                    {event.description && (
-                      <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
-                    )}
+                    <p className="text-sm text-muted-foreground">{formatEventDate(m.moment_date)}</p>
+                    {m.description && <p className="text-sm text-muted-foreground mt-1">{m.description}</p>}
                   </div>
                   <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openEditDialog(event)}
-                      disabled={event.event_type === "Birthday"}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(event.id)}
-                      disabled={event.event_type === "Birthday"}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => openEditDialog(m)} disabled={m.event_type === "Birthday"}><Pencil className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(m.id)} disabled={m.event_type === "Birthday"}><Trash2 className="w-4 h-4" /></Button>
                   </div>
                 </div>
               ))}

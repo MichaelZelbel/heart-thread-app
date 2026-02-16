@@ -18,14 +18,14 @@ interface UserWithEvents {
   timezone: string;
 }
 
-interface Event {
+interface MomentEvent {
   id: string;
   title: string;
-  event_date: string;
-  is_recurring: boolean;
-  event_type: string;
+  moment_date: string;
+  is_celebrated_annually: boolean;
+  event_type: string | null;
   description: string | null;
-  partner_id: string | null;
+  partner_ids: string[] | null;
 }
 
 interface Partner {
@@ -34,42 +34,24 @@ interface Partner {
   birthdate: string | null;
 }
 
-/**
- * Parse a date string (YYYY-MM-DD) into local date components.
- * This avoids UTC conversion issues that cause day shifts.
- */
 function parseDateString(dateStr: string): { year: number; month: number; day: number } {
   const [year, month, day] = dateStr.split('-').map(Number);
   return { year, month, day };
 }
 
-/**
- * Get tomorrow's date components in the user's timezone.
- */
 function getTomorrowInTimezone(timezone: string): { month: number; day: number } {
   const now = new Date();
-  // Get current time in user's timezone
   const userNowStr = now.toLocaleString('en-US', { timeZone: timezone });
   const userNow = new Date(userNowStr);
-  
-  // Add one day to get tomorrow
   userNow.setDate(userNow.getDate() + 1);
-  
-  return {
-    month: userNow.getMonth() + 1, // 1-indexed
-    day: userNow.getDate(),
-  };
+  return { month: userNow.getMonth() + 1, day: userNow.getDate() };
 }
 
-/**
- * Format tomorrow's date as YYYY-MM-DD for notification tracking.
- */
 function getTomorrowDateString(timezone: string): string {
   const now = new Date();
   const userNowStr = now.toLocaleString('en-US', { timeZone: timezone });
   const userNow = new Date(userNowStr);
   userNow.setDate(userNow.getDate() + 1);
-  
   const year = userNow.getFullYear();
   const month = String(userNow.getMonth() + 1).padStart(2, '0');
   const day = String(userNow.getDate()).padStart(2, '0');
@@ -77,28 +59,21 @@ function getTomorrowDateString(timezone: string): string {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     console.log('Starting event reminder job...');
 
-    // Get all users with notifications enabled
     const { data: users, error: usersError } = await supabase
       .from('profiles')
       .select('id, display_name, email, timezone')
       .eq('email_notifications_enabled', true)
       .not('email', 'is', null);
 
-    if (usersError) {
-      console.error('Error fetching users:', usersError);
-      throw usersError;
-    }
-
+    if (usersError) { console.error('Error fetching users:', usersError); throw usersError; }
     if (!users || users.length === 0) {
       console.log('No users with notifications enabled');
       return new Response(JSON.stringify({ message: 'No users to notify' }), {
@@ -107,92 +82,94 @@ serve(async (req) => {
     }
 
     console.log(`Found ${users.length} users with notifications enabled`);
-
     const notificationsSent = [];
     const now = new Date();
 
     for (const user of users as UserWithEvents[]) {
       try {
-        // Calculate "now" in the user's timezone
         const userTimezone = user.timezone || 'UTC';
         const userNowStr = now.toLocaleString('en-US', { timeZone: userTimezone });
         const userNow = new Date(userNowStr);
         const userHour = userNow.getHours();
         const userMinutes = userNow.getMinutes();
 
-        // Only send if user's local time is between 00:00 and 00:15
         if (userHour !== 0 || userMinutes > 15) {
           console.log(`Skipping user ${user.id}: not in notification window (${userHour}:${userMinutes})`);
           continue;
         }
 
-        // Get tomorrow's date components in user's timezone
         const tomorrow = getTomorrowInTimezone(userTimezone);
         const tomorrowDateStr = getTomorrowDateString(userTimezone);
-        console.log(`Processing user ${user.id} for tomorrow's date: ${tomorrowDateStr} (month: ${tomorrow.month}, day: ${tomorrow.day})`);
+        console.log(`Processing user ${user.id} for tomorrow: ${tomorrowDateStr}`);
 
-        // Get user's partners
         const { data: partners, error: partnersError } = await supabase
           .from('partners')
           .select('id, name, birthdate')
           .eq('user_id', user.id)
           .eq('archived', false);
 
-        if (partnersError) {
-          console.error(`Error fetching partners for user ${user.id}:`, partnersError);
-          continue;
-        }
+        if (partnersError) { console.error(`Error fetching partners for user ${user.id}:`, partnersError); continue; }
 
-        // Use a Map to deduplicate events by a unique key
-        const eventsMap = new Map<string, Event>();
+        const eventsMap = new Map<string, MomentEvent>();
 
-        // Get recurring events that match tomorrow's date
-        const { data: recurringEvents, error: recurringError } = await supabase
-          .from('events')
+        // Get celebrated-annually moments
+        const { data: recurringMoments, error: recurringError } = await supabase
+          .from('moments')
           .select('*')
           .eq('user_id', user.id)
-          .eq('is_recurring', true);
+          .eq('is_celebrated_annually', true);
 
-        if (!recurringError && recurringEvents) {
-          for (const event of recurringEvents) {
-            // Parse date without UTC conversion
-            const { month: eventMonth, day: eventDay } = parseDateString(event.event_date);
-
-            if (eventMonth === tomorrow.month && eventDay === tomorrow.day) {
-              // Use partner_id + event_type as key to deduplicate
-              const dedupeKey = `${event.partner_id || 'no-partner'}-${event.event_type || event.title}`;
+        if (!recurringError && recurringMoments) {
+          for (const moment of recurringMoments) {
+            const { month: mMonth, day: mDay } = parseDateString(moment.moment_date);
+            if (mMonth === tomorrow.month && mDay === tomorrow.day) {
+              const partnerId = moment.partner_ids?.[0] || 'no-partner';
+              const dedupeKey = `${partnerId}-${moment.event_type || moment.title}`;
               if (!eventsMap.has(dedupeKey)) {
-                eventsMap.set(dedupeKey, event);
-                console.log(`Added recurring event: ${event.title} (key: ${dedupeKey})`);
-              } else {
-                console.log(`Skipped duplicate recurring event: ${event.title} (key: ${dedupeKey})`);
+                eventsMap.set(dedupeKey, moment);
+                console.log(`Added recurring moment: ${moment.title} (key: ${dedupeKey})`);
               }
             }
           }
         }
 
-        // Add partner birthdays (only if not already added via events table)
+        // Get future one-off moments happening tomorrow
+        const { data: futureMoments, error: futureError } = await supabase
+          .from('moments')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_celebrated_annually', false)
+          .eq('moment_date', tomorrowDateStr);
+
+        if (!futureError && futureMoments) {
+          for (const moment of futureMoments) {
+            const partnerId = moment.partner_ids?.[0] || 'no-partner';
+            const dedupeKey = `${partnerId}-${moment.title}`;
+            if (!eventsMap.has(dedupeKey)) {
+              eventsMap.set(dedupeKey, moment);
+              console.log(`Added future moment: ${moment.title}`);
+            }
+          }
+        }
+
+        // Add partner birthdays
         if (partners) {
           for (const partner of partners as Partner[]) {
             if (partner.birthdate) {
-              // Parse birthdate without UTC conversion
               const { month: birthMonth, day: birthDay } = parseDateString(partner.birthdate);
-
               if (birthMonth === tomorrow.month && birthDay === tomorrow.day) {
                 const dedupeKey = `${partner.id}-birthday`;
                 if (!eventsMap.has(dedupeKey)) {
                   eventsMap.set(dedupeKey, {
                     id: `birthday-${partner.id}`,
                     title: 'Birthday',
-                    event_date: partner.birthdate,
-                    is_recurring: true,
+                    moment_date: partner.birthdate,
+                    is_celebrated_annually: true,
                     event_type: 'birthday',
                     description: null,
-                    partner_id: partner.id,
+                    partner_ids: [partner.id],
                   });
-                  console.log(`Added partner birthday: ${partner.name} (key: ${dedupeKey})`);
-                } else {
-                  console.log(`Skipped duplicate birthday for partner: ${partner.name} (key: ${dedupeKey})`);
+                  console.log(`Added partner birthday: ${partner.name}`);
                 }
               }
             }
@@ -202,33 +179,29 @@ serve(async (req) => {
         const allEvents = Array.from(eventsMap.values());
         console.log(`Found ${allEvents.length} unique events for user ${user.id}`);
 
-        // Send email for each event
         for (const event of allEvents) {
           try {
-            // Check if notification already sent for this event tomorrow
+            // Check if notification already sent
             const { data: existingNotification } = await supabase
               .from('event_notifications')
               .select('id')
               .eq('user_id', user.id)
-              .eq('event_id', event.id)
+              .eq('moment_id', event.id)
               .eq('notification_date', tomorrowDateStr)
               .single();
 
             if (existingNotification) {
-              console.log(`Notification already sent for event ${event.id} on ${tomorrowDateStr}`);
+              console.log(`Notification already sent for moment ${event.id} on ${tomorrowDateStr}`);
               continue;
             }
 
-            // Get partner name if event has partner_id
+            const partnerId = event.partner_ids?.[0];
             let partnerName = 'Your Cherished';
-            if (event.partner_id && partners) {
-              const partner = (partners as Partner[]).find(p => p.id === event.partner_id);
-              if (partner) {
-                partnerName = partner.name;
-              }
+            if (partnerId && partners) {
+              const partner = (partners as Partner[]).find(p => p.id === partnerId);
+              if (partner) partnerName = partner.name;
             }
 
-            // Send email using fetch to Resend API
             const emailSubject = `Tomorrow: ${event.title} (${partnerName})`;
             const emailHtml = `
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -238,11 +211,11 @@ serve(async (req) => {
                 </p>
                 ${event.description ? `<p style="font-size: 14px; color: #666; line-height: 1.6;">${event.description}</p>` : ''}
                 <div style="margin: 30px 0;">
-                  <a href="${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovable.app')}/partner/${event.partner_id}" 
+                  <a href="${supabaseUrl?.replace('supabase.co', 'lovable.app')}/partner/${partnerId}"
                      style="display: inline-block; background: #FF6B9D; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin-right: 10px;">
                     Open ${partnerName}
                   </a>
-                  <a href="${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovable.app')}/dashboard" 
+                  <a href="${supabaseUrl?.replace('supabase.co', 'lovable.app')}/dashboard"
                      style="display: inline-block; background: #6B9DFF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px;">
                     View all events
                   </a>
@@ -269,33 +242,28 @@ serve(async (req) => {
 
             if (!emailResponse.ok) {
               const errorText = await emailResponse.text();
-              console.error(`Error sending email for event ${event.id}:`, errorText);
+              console.error(`Error sending email for moment ${event.id}:`, errorText);
               continue;
             }
 
-            // Record notification
+            // Record notification using moment_id
             const { error: notificationError } = await supabase
               .from('event_notifications')
               .insert({
                 user_id: user.id,
-                event_id: event.id,
+                moment_id: event.id,
                 notification_date: tomorrowDateStr,
               });
 
             if (notificationError) {
-              console.error(`Error recording notification for event ${event.id}:`, notificationError);
+              console.error(`Error recording notification for moment ${event.id}:`, notificationError);
               continue;
             }
 
-            notificationsSent.push({
-              user_id: user.id,
-              event_id: event.id,
-              email: user.email,
-            });
-
-            console.log(`Sent notification for event ${event.id} to ${user.email}`);
+            notificationsSent.push({ user_id: user.id, moment_id: event.id, email: user.email });
+            console.log(`Sent notification for moment ${event.id} to ${user.email}`);
           } catch (error) {
-            console.error(`Error processing event ${event.id}:`, error);
+            console.error(`Error processing moment ${event.id}:`, error);
           }
         }
       } catch (error) {
@@ -311,18 +279,13 @@ serve(async (req) => {
         notifications_sent: notificationsSent.length,
         details: notificationsSent,
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
     console.error('Error in send-event-reminders function:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

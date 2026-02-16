@@ -133,13 +133,13 @@ const PartnerWizard = () => {
           ? specialDay.customEventType 
           : specialDay.eventType;
 
-        await supabase.from("events").insert({
+        await supabase.from("moments").insert({
           user_id: session.user.id,
-          partner_id: partner.id,
-          event_date: eventDate.toISOString().split('T')[0],
+          partner_ids: [partner.id],
+          moment_date: eventDate.toISOString().split('T')[0],
           event_type: eventType || "custom",
           title: eventType || "Special Day",
-          is_recurring: true,
+          is_celebrated_annually: true,
         });
       }
 
