@@ -478,40 +478,58 @@ export type Database = {
       }
       moments: {
         Row: {
+          attachments: Json | null
           created_at: string
+          deleted_at: string | null
           description: string | null
           event_type: string | null
+          happened_at: string | null
           id: string
+          impact_level: number
           is_celebrated_annually: boolean
           moment_date: string
+          moment_uid: string
           partner_ids: string[] | null
           photo_url: string | null
+          source: string | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          attachments?: Json | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           event_type?: string | null
+          happened_at?: string | null
           id?: string
+          impact_level?: number
           is_celebrated_annually?: boolean
           moment_date: string
+          moment_uid?: string
           partner_ids?: string[] | null
           photo_url?: string | null
+          source?: string | null
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          attachments?: Json | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           event_type?: string | null
+          happened_at?: string | null
           id?: string
+          impact_level?: number
           is_celebrated_annually?: boolean
           moment_date?: string
+          moment_uid?: string
           partner_ids?: string[] | null
           photo_url?: string | null
+          source?: string | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -724,6 +742,7 @@ export type Database = {
           message_coach_use_default_tone: boolean | null
           name: string
           notes: string | null
+          person_uid: string
           photo_url: string | null
           relationship_type: string | null
           social_media: Json | null
@@ -752,6 +771,7 @@ export type Database = {
           message_coach_use_default_tone?: boolean | null
           name: string
           notes?: string | null
+          person_uid?: string
           photo_url?: string | null
           relationship_type?: string | null
           social_media?: Json | null
@@ -780,6 +800,7 @@ export type Database = {
           message_coach_use_default_tone?: boolean | null
           name?: string
           notes?: string | null
+          person_uid?: string
           photo_url?: string | null
           relationship_type?: string | null
           social_media?: Json | null
@@ -820,6 +841,243 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      sync_conflicts: {
+        Row: {
+          connection_id: string
+          created_at: string
+          entity_type: string
+          entity_uid: string
+          id: string
+          local_payload: Json
+          remote_payload: Json
+          resolution: string | null
+          resolved_at: string | null
+          user_id: string
+        }
+        Insert: {
+          connection_id: string
+          created_at?: string
+          entity_type: string
+          entity_uid: string
+          id?: string
+          local_payload: Json
+          remote_payload: Json
+          resolution?: string | null
+          resolved_at?: string | null
+          user_id: string
+        }
+        Update: {
+          connection_id?: string
+          created_at?: string
+          entity_type?: string
+          entity_uid?: string
+          id?: string
+          local_payload?: Json
+          remote_payload?: Json
+          resolution?: string | null
+          resolved_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_conflicts_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "sync_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_connections: {
+        Row: {
+          created_at: string
+          id: string
+          remote_app: string
+          remote_base_url: string | null
+          shared_secret_hash: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          remote_app: string
+          remote_base_url?: string | null
+          shared_secret_hash: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          remote_app?: string
+          remote_base_url?: string | null
+          shared_secret_hash?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sync_cursors: {
+        Row: {
+          connection_id: string
+          id: string
+          last_pulled_outbox_id: number
+          last_pushed_outbox_id: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connection_id: string
+          id?: string
+          last_pulled_outbox_id?: number
+          last_pushed_outbox_id?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connection_id?: string
+          id?: string
+          last_pulled_outbox_id?: number
+          last_pushed_outbox_id?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_cursors_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "sync_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_outbox: {
+        Row: {
+          connection_id: string
+          delivered_at: string | null
+          delivery_attempts: number
+          entity_type: string
+          entity_uid: string
+          id: number
+          occurred_at: string
+          operation: string
+          payload: Json
+          user_id: string
+        }
+        Insert: {
+          connection_id: string
+          delivered_at?: string | null
+          delivery_attempts?: number
+          entity_type: string
+          entity_uid: string
+          id?: number
+          occurred_at?: string
+          operation: string
+          payload?: Json
+          user_id: string
+        }
+        Update: {
+          connection_id?: string
+          delivered_at?: string | null
+          delivery_attempts?: number
+          entity_type?: string
+          entity_uid?: string
+          id?: number
+          occurred_at?: string
+          operation?: string
+          payload?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_outbox_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "sync_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_pairing_codes: {
+        Row: {
+          code: string
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sync_person_links: {
+        Row: {
+          connection_id: string
+          created_at: string
+          id: string
+          is_enabled: boolean
+          local_person_id: string
+          remote_person_uid: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connection_id: string
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          local_person_id: string
+          remote_person_uid: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connection_id?: string
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          local_person_id?: string
+          remote_person_uid?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_person_links_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "sync_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sync_person_links_local_person_id_fkey"
+            columns: ["local_person_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
