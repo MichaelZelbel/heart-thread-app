@@ -100,6 +100,7 @@ export const CherishedTimeline = ({ partnerId, partnerName, onAskClaire }: Cheri
       .select("*")
       .eq("user_id", session.user.id)
       .contains("partner_ids", [partnerId])
+      .is("deleted_at", null)
       .order("moment_date", { ascending: false });
 
     if (error) {

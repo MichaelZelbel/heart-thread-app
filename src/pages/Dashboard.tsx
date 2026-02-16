@@ -275,6 +275,7 @@ const Dashboard = () => {
       .from("moments")
       .select("id, title, moment_date, partner_ids", { count: 'exact' })
       .eq("user_id", userId)
+      .is("deleted_at", null)
       .order("moment_date", { ascending: false })
       .limit(3);
     if (data) {
@@ -297,7 +298,8 @@ const Dashboard = () => {
       .from("moments")
       .select("id, title, moment_date, is_celebrated_annually, partner_ids")
       .eq("user_id", userId)
-      .eq("is_celebrated_annually", true);
+      .eq("is_celebrated_annually", true)
+      .is("deleted_at", null);
 
     const { data: partnersData } = await supabase
       .from("partners")
