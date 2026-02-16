@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { SEOHead } from "@/components/seo/SEOHead";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
@@ -23,6 +24,7 @@ const CookiesPolicy = () => {
 
   return (
     <>
+      <SEOHead title="Cookies Policy | Cherishly" description="Learn how Cherishly uses cookies and your choices regarding them." />
       <style>{`
         @media print {
           nav, footer, .no-print { display: none !important; }

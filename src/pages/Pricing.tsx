@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SEOHead } from "@/components/seo/SEOHead";
 import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -107,6 +108,8 @@ const Pricing = () => {
   ];
 
   return (
+    <>
+    <SEOHead title="Pricing | Cherishly" description="Choose the plan that feels right — start free or upgrade to Pro for AI chats, reminders, and more." />
     <div className="min-h-screen bg-gradient-to-b from-background to-primary/5">
       <div className="container mx-auto px-4 py-16">
         {/* Hero Section */}
@@ -315,6 +318,7 @@ const Pricing = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

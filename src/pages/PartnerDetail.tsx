@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { SEOHead } from "@/components/seo/SEOHead";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -278,7 +279,8 @@ const PartnerDetail = () => {
         </div>
       </div>;
   }
-  return <div className="min-h-screen bg-gradient-soft">
+  return <><SEOHead title={`${name} | Cherishly`} noIndex />
+    <div className="min-h-screen bg-gradient-soft">
       <nav className="bg-card border-b border-border shadow-soft">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -392,6 +394,6 @@ const PartnerDetail = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>;
+    </div></>
 };
 export default PartnerDetail;

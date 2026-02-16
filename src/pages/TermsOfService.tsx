@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { SEOHead } from "@/components/seo/SEOHead";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
@@ -30,6 +31,7 @@ const TermsOfService = () => {
 
   return (
     <>
+      <SEOHead title="Terms of Service | Cherishly" description="Read Cherishly's terms of service — the agreement governing your use of our platform." />
       <style>{`
         @media print {
           nav, footer, .no-print { display: none !important; }

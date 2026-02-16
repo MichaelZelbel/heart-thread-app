@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { SEOHead } from "@/components/seo/SEOHead";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
@@ -24,6 +25,7 @@ const PrivacyPolicy = () => {
 
   return (
     <>
+      <SEOHead title="Privacy Policy | Cherishly" description="Read Cherishly's privacy policy — how we collect, use, and protect your personal data." />
       <style>{`
         @media print {
           nav, footer, .no-print { display: none !important; }

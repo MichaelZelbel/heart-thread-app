@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { SEOHead } from "@/components/seo/SEOHead";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,11 @@ const Home = () => {
   }
 
   return (
+    <>
+    <SEOHead
+      title="Cherishly — Your Relationship Companion"
+      description="Cherishly helps you remember and celebrate your loved ones — start free or upgrade for premium features like reminders, AI guidance, and more."
+    />
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#FFD9E8] via-[#FFF0F5] to-[#FFF8F5]">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-white/40">
@@ -199,6 +205,7 @@ const Home = () => {
         </div>
       </section>
     </div>
+    </>
   );
 };
 
