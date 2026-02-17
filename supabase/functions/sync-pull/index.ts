@@ -23,34 +23,65 @@ serve(async (req) => {
     const bodyText = await req.text();
     const admin = createAdminClient();
 
-    const { data: conn, error: connErr } = await admin
+    // The connectionId header is the REMOTE app's connection ID, not ours.
+    // Find local connection by verifying HMAC against all active connections.
+    const { data: activeConns } = await admin
       .from("sync_connections")
       .select("id, user_id, shared_secret_hash, status")
-      .eq("id", connectionId)
-      .eq("status", "active")
-      .single();
+      .eq("status", "active");
 
-    if (connErr || !conn) {
-      return new Response(JSON.stringify({ error: "Connection not found or inactive" }), {
+    if (!activeConns || activeConns.length === 0) {
+      return new Response(JSON.stringify({ error: "No active connections" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const valid = await verifyHmac(conn.shared_secret_hash, bodyText, signature);
-    if (!valid) {
+    let conn: typeof activeConns[0] | null = null;
+    for (const c of activeConns) {
+      const valid = await verifyHmac(c.shared_secret_hash, bodyText, signature);
+      if (valid) {
+        conn = c;
+        break;
+      }
+    }
+
+    if (!conn) {
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { since_outbox_id = 0, limit = 100 } = JSON.parse(bodyText);
+    const parsed = JSON.parse(bodyText);
+
+    // Handle list_people mode: return all local partners for the connected user
+    if (parsed.list_people) {
+      const { data: partners } = await admin
+        .from("partners")
+        .select("id, name, person_uid, relationship_type")
+        .eq("user_id", conn.user_id)
+        .eq("archived", false)
+        .is("merged_into_person_id", null);
+
+      return new Response(JSON.stringify({
+        people: (partners || []).map(p => ({
+          person_uid: p.person_uid,
+          name: p.name,
+          relationship_label: p.relationship_type,
+        })),
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Standard pull: return outbox events
+    const { since_outbox_id = 0, limit = 100 } = parsed;
 
     const { data: links } = await admin
       .from("sync_person_links")
       .select("local_person_id, remote_person_uid")
-      .eq("connection_id", connectionId)
+      .eq("connection_id", conn.id)
       .eq("is_enabled", true);
 
     if (!links || links.length === 0) {
@@ -62,7 +93,7 @@ serve(async (req) => {
     const { data: outboxRows, error: outboxErr } = await admin
       .from("sync_outbox")
       .select("*")
-      .eq("connection_id", connectionId)
+      .eq("connection_id", conn.id)
       .gt("id", since_outbox_id)
       .order("id", { ascending: true })
       .limit(limit);
@@ -83,7 +114,7 @@ serve(async (req) => {
       .from("sync_cursors")
       .upsert({
         user_id: conn.user_id,
-        connection_id: connectionId,
+        connection_id: conn.id,
         last_pulled_outbox_id: lastId,
         updated_at: new Date().toISOString(),
       }, { onConflict: "user_id,connection_id" });

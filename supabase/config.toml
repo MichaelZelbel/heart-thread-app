@@ -74,3 +74,15 @@ verify_jwt = false
 
 [functions.sync-undo-merge]
 verify_jwt = false
+
+[functions.sync-create-local-person]
+verify_jwt = false
+
+[functions.sync-disconnect]
+verify_jwt = false
+
+[functions.sync-revoke-connection]
+verify_jwt = false
+
+[functions.sync-suggest-person-matches]
+verify_jwt = false
