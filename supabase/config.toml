@@ -84,5 +84,8 @@ verify_jwt = false
 [functions.sync-revoke-connection]
 verify_jwt = false
 
+[functions.sync-list-people]
+verify_jwt = false
+
 [functions.sync-suggest-person-matches]
 verify_jwt = false
