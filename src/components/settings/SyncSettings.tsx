@@ -73,6 +73,19 @@ export function SyncSettings() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Realtime: auto-refresh when sync_connections changes (e.g. revoked from Temerio side)
+  useEffect(() => {
+    const channel = supabase
+      .channel("sync-connections-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sync_connections" },
+        () => { loadData(); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [loadData]);
+
   // Countdown timer for pairing code
   useEffect(() => {
     if (!pairingExpiry) return;
