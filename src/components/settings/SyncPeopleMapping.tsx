@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -10,15 +9,12 @@ import {
   Check,
   ExternalLink,
   EyeOff,
-  GitMerge,
   Link2,
   Loader2,
-  RotateCcw,
   Sparkles,
   Unlink,
   UserPlus,
   Users,
-  X,
 } from "lucide-react";
 import {
   Dialog,
@@ -58,14 +54,6 @@ interface SyncConflict {
   resolved_at: string | null;
 }
 
-interface MergeLog {
-  id: string;
-  kept_person_id: string;
-  merged_person_id: string;
-  merged_person_snapshot: Record<string, unknown>;
-  undone_at: string | null;
-  created_at: string;
-}
 
 interface Partner {
   id: string;
@@ -81,15 +69,9 @@ export function SyncPeopleMapping({ connectionId }: Props) {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [links, setLinks] = useState<PersonLink[]>([]);
   const [conflicts, setConflicts] = useState<SyncConflict[]>([]);
-  const [mergeLogs, setMergeLogs] = useState<MergeLog[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-
-  // Merge dialog state
-  const [mergeOpen, setMergeOpen] = useState(false);
-  const [mergeKeep, setMergeKeep] = useState<string>("");
-  const [mergeDrop, setMergeDrop] = useState<string>("");
 
   // Manual link dialog
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
@@ -101,18 +83,16 @@ export function SyncPeopleMapping({ connectionId }: Props) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    const [candidatesRes, linksRes, conflictsRes, mergeLogsRes, partnersRes] = await Promise.all([
+    const [candidatesRes, linksRes, conflictsRes, partnersRes] = await Promise.all([
       supabase.from("sync_person_candidates").select("*").eq("connection_id", connectionId).order("confidence", { ascending: false }),
       supabase.from("sync_person_links").select("*").eq("connection_id", connectionId),
       supabase.from("sync_conflicts").select("*").eq("connection_id", connectionId).is("resolved_at", null).order("created_at", { ascending: false }),
-      supabase.from("sync_merge_log").select("*").is("undone_at", null).order("created_at", { ascending: false }),
       supabase.from("partners").select("id, name, person_uid").eq("archived", false).order("name"),
     ]);
 
     setCandidates((candidatesRes.data || []) as unknown as Candidate[]);
     setLinks((linksRes.data || []) as unknown as PersonLink[]);
     setConflicts((conflictsRes.data || []) as unknown as SyncConflict[]);
-    setMergeLogs((mergeLogsRes.data || []) as unknown as MergeLog[]);
     setPartners(partnersRes.data || []);
     setLoading(false);
   }, [connectionId]);
@@ -179,50 +159,6 @@ export function SyncPeopleMapping({ connectionId }: Props) {
       loadData();
     } catch {
       toast.error("Failed to create remote person");
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleMerge = async () => {
-    if (!mergeKeep || !mergeDrop || mergeKeep === mergeDrop) return;
-    setActionLoading("merge");
-    try {
-      const session = await getSession();
-      if (!session) return;
-
-      const { error } = await supabase.functions.invoke("sync-merge-local-people", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: { keep_person_id: mergeKeep, merge_person_id: mergeDrop },
-      });
-      if (error) throw error;
-      toast.success("People merged!");
-      setMergeOpen(false);
-      setMergeKeep("");
-      setMergeDrop("");
-      loadData();
-    } catch {
-      toast.error("Failed to merge people");
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleUndoMerge = async (logId: string) => {
-    setActionLoading(logId);
-    try {
-      const session = await getSession();
-      if (!session) return;
-
-      const { error } = await supabase.functions.invoke("sync-undo-merge", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: { merge_log_id: logId },
-      });
-      if (error) throw error;
-      toast.success("Merge undone!");
-      loadData();
-    } catch {
-      toast.error("Failed to undo merge");
     } finally {
       setActionLoading(null);
     }
@@ -540,51 +476,6 @@ export function SyncPeopleMapping({ connectionId }: Props) {
         </div>
       )}
 
-      {/* Merge & Undo */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h4 className="font-medium text-sm flex items-center gap-2">
-            <GitMerge className="w-4 h-4" />
-            Merge Duplicates
-          </h4>
-          <Button size="sm" variant="outline" onClick={() => setMergeOpen(true)} disabled={partners.length < 2}>
-            <GitMerge className="w-3 h-3 mr-1" />
-            Merge People
-          </Button>
-        </div>
-
-        {mergeLogs.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">Recent merges (undoable):</p>
-            {mergeLogs.map(log => (
-              <div key={log.id} className="flex items-center justify-between py-2 px-3 rounded border">
-                <div>
-                  <p className="text-sm">
-                    Merged "{(log.merged_person_snapshot as { name?: string })?.name}" → "{partnerName(log.kept_person_id)}"
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(log.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleUndoMerge(log.id)}
-                  disabled={!!actionLoading}
-                >
-                  {actionLoading === log.id ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <RotateCcw className="w-3 h-3 mr-1" />
-                  )}
-                  Undo
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Manual Link Dialog */}
       <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
         <DialogContent>
@@ -622,56 +513,6 @@ export function SyncPeopleMapping({ connectionId }: Props) {
         </DialogContent>
       </Dialog>
 
-      {/* Merge Dialog */}
-      <Dialog open={mergeOpen} onOpenChange={setMergeOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Merge Duplicate People</DialogTitle>
-            <DialogDescription>
-              All moments, likes, and links from the merged person will move to the kept person. This can be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Keep this person:</label>
-              <Select value={mergeKeep} onValueChange={setMergeKeep}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select person to keep..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {partners.filter(p => p.id !== mergeDrop).map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Merge (archive) this person:</label>
-              <Select value={mergeDrop} onValueChange={setMergeDrop}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select person to merge..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {partners.filter(p => p.id !== mergeKeep).map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setMergeOpen(false)}>Cancel</Button>
-            <Button
-              onClick={handleMerge}
-              disabled={!mergeKeep || !mergeDrop || mergeKeep === mergeDrop || !!actionLoading}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              {actionLoading === "merge" ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <GitMerge className="w-4 h-4 mr-1" />}
-              Merge
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
