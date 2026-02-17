@@ -55,12 +55,11 @@ serve(async (req) => {
         })
         .eq("id", existingLink.id);
     } else {
-      // Create a placeholder link marked as excluded
-      // We need a local_person_id — use a dummy approach: set to the first partner or handle null
+      // Create a placeholder link marked as excluded (local_person_id is nullable)
       await admin.from("sync_person_links").insert({
         user_id: userId,
         connection_id,
-        local_person_id: "00000000-0000-0000-0000-000000000000", // placeholder, won't be used
+        local_person_id: null,
         remote_person_uid,
         link_status: "excluded",
         is_enabled: false,

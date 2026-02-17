@@ -1163,7 +1163,7 @@ export type Database = {
           id: string
           is_enabled: boolean
           link_status: Database["public"]["Enums"]["sync_link_status"]
-          local_person_id: string
+          local_person_id: string | null
           remote_person_uid: string
           updated_at: string
           user_id: string
@@ -1174,7 +1174,7 @@ export type Database = {
           id?: string
           is_enabled?: boolean
           link_status?: Database["public"]["Enums"]["sync_link_status"]
-          local_person_id: string
+          local_person_id?: string | null
           remote_person_uid: string
           updated_at?: string
           user_id: string
@@ -1185,7 +1185,7 @@ export type Database = {
           id?: string
           is_enabled?: boolean
           link_status?: Database["public"]["Enums"]["sync_link_status"]
-          local_person_id?: string
+          local_person_id?: string | null
           remote_person_uid?: string
           updated_at?: string
           user_id?: string
