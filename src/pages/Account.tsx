@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
 import { ArrowLeft, Mail, Lock, Bell, Globe, Sparkles, CreditCard, Loader2, Shield } from "lucide-react";
 import { SyncSettings } from "@/components/settings/SyncSettings";
+import { MergePeopleSection } from "@/components/settings/MergePeopleSection";
 import { Link } from "react-router-dom";
 
 const COMMON_TIMEZONES = [
@@ -556,6 +557,9 @@ export default function Account() {
               )}
             </CardContent>
           </Card>
+
+          {/* Merge Duplicate People */}
+          <MergePeopleSection />
 
           {/* Sync with Temerio */}
           <SyncSettings />
