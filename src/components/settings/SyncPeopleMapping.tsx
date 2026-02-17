@@ -298,6 +298,52 @@ export function SyncPeopleMapping({ connectionId }: Props) {
     setLinkDialogOpen(true);
   };
 
+  // ── Accept All ────────────────────────────────────────────────
+
+  const handleAcceptAll = async () => {
+    setActionLoading("accept-all");
+    try {
+      const session = await getSession();
+      if (!session) return;
+
+      // 1) Accept all suggested matches (link them)
+      for (const m of suggestedMatches) {
+        await supabase.functions.invoke("sync-link-person", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          body: { remote_person_uid: m.remote_person_uid, local_person_id: m.local_person_id },
+        });
+      }
+
+      // 2) Create all missing people in Temerio
+      for (const p of suggestedCreateRemote) {
+        await supabase.functions.invoke("sync-create-remote-person", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          body: { local_person_id: p.local_person_id },
+        });
+      }
+
+      // 3) Create all missing people in Cherishly
+      for (const rp of suggestedCreateLocal) {
+        await supabase.functions.invoke("sync-create-local-person", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          body: {
+            remote_person_uid: rp.remote_person_uid,
+            remote_name: rp.remote_name,
+            remote_relationship_label: rp.remote_relationship_label,
+            connection_id: connectionId,
+          },
+        });
+      }
+
+      toast.success("All suggestions accepted!");
+      await Promise.all([fetchSuggestions(true), loadConflicts()]);
+    } catch {
+      toast.error("Some actions failed. Please review remaining items.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   // ── Derived state ─────────────────────────────────────────────
 
   const partnerName = (id: string) => partners.find(p => p.id === id)?.name || "Unknown";
@@ -395,11 +441,25 @@ export function SyncPeopleMapping({ connectionId }: Props) {
       {/* ── Suggested Actions ──────────────────────────────────── */}
       {totalSuggestions > 0 ? (
         <div className="space-y-4">
-          <h4 className="font-medium text-sm flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" />
-            Suggested Actions
-            <Badge variant="secondary" className="text-xs">{totalSuggestions}</Badge>
-          </h4>
+          <div className="flex items-center justify-between">
+            <h4 className="font-medium text-sm flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              Suggested Actions
+              <Badge variant="secondary" className="text-xs">{totalSuggestions}</Badge>
+            </h4>
+            <Button
+              size="sm"
+              onClick={handleAcceptAll}
+              disabled={!!actionLoading}
+            >
+              {actionLoading === "accept-all" ? (
+                <Loader2 className="w-3 h-3 animate-spin mr-1" />
+              ) : (
+                <Check className="w-3 h-3 mr-1" />
+              )}
+              Accept All
+            </Button>
+          </div>
 
           {/* A) Suggested Matches */}
           {suggestedMatches.length > 0 && (
@@ -412,10 +472,7 @@ export function SyncPeopleMapping({ connectionId }: Props) {
                       <p className="text-sm font-medium truncate">
                         {m.local_name} <span className="text-muted-foreground">↔</span> {m.remote_name}
                       </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <ConfidenceBadge confidence={m.confidence} />
-                        <span className="text-xs text-muted-foreground">{m.reasons.join(", ")}</span>
-                      </div>
+                      <span className="text-xs text-muted-foreground mt-0.5">{m.reasons.join(", ")}</span>
                     </div>
                     {actionLoading === m.remote_person_uid && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
                   </div>
