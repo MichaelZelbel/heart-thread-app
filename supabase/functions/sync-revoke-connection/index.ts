@@ -24,23 +24,33 @@ serve(async (req) => {
     const bodyText = await req.text();
     const admin = createAdminClient();
 
-    // Look up connection (must still be active to accept the revoke)
-    const { data: conn, error: connErr } = await admin
+    // The connectionId header is the REMOTE app's connection ID, not ours.
+    // We need to find our local active connection by verifying the HMAC
+    // signature against all active connections' shared secrets.
+    const { data: activeConns } = await admin
       .from("sync_connections")
       .select("id, user_id, shared_secret_hash, status")
-      .eq("id", connectionId)
-      .eq("status", "active")
-      .single();
+      .eq("status", "active");
 
-    if (connErr || !conn) {
-      // Already revoked or doesn't exist — idempotent success
+    if (!activeConns || activeConns.length === 0) {
+      // No active connections — idempotent success
       return new Response(JSON.stringify({ ok: true, already_revoked: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const valid = await verifyHmac(conn.shared_secret_hash, bodyText, signature);
-    if (!valid) {
+    // Find the connection whose shared secret validates the HMAC
+    let matchedConn: typeof activeConns[0] | null = null;
+    for (const conn of activeConns) {
+      const valid = await verifyHmac(conn.shared_secret_hash, bodyText, signature);
+      if (valid) {
+        matchedConn = conn;
+        break;
+      }
+    }
+
+    if (!matchedConn) {
+      console.error("No active connection matched the HMAC signature. Remote connection ID:", connectionId);
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -51,9 +61,9 @@ serve(async (req) => {
     await admin
       .from("sync_connections")
       .update({ status: "revoked", updated_at: new Date().toISOString() })
-      .eq("id", connectionId);
+      .eq("id", matchedConn.id);
 
-    console.log(`Connection ${connectionId} revoked by remote request`);
+    console.log(`Connection ${matchedConn.id} revoked by remote request (remote connection ID: ${connectionId})`);
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
