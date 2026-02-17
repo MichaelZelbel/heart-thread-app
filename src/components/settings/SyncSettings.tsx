@@ -149,17 +149,28 @@ export function SyncSettings() {
   };
 
   const handleRevoke = async (connId: string) => {
-    if (!confirm("Revoke this connection? Sync will stop.")) return;
-    const { error } = await supabase
-      .from("sync_connections")
-      .update({ status: "revoked" })
-      .eq("id", connId);
-    if (error) {
-      toast.error("Failed to revoke");
-      return;
+    if (!confirm("Revoke this connection? Sync will stop on both sides.")) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data, error } = await supabase.functions.invoke("sync-disconnect", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { connection_id: connId },
+      });
+
+      if (error) throw error;
+
+      const remoteNotified = data?.remote_notified;
+      toast.success(
+        remoteNotified
+          ? "Disconnected from both sides"
+          : "Disconnected locally (Temerio may still show the connection briefly)"
+      );
+      loadData();
+    } catch (e) {
+      toast.error("Failed to disconnect");
     }
-    toast.success("Connection revoked");
-    loadData();
   };
 
   const handleTogglePersonLink = async (partnerId: string, connectionId: string, currentlyEnabled: boolean) => {
