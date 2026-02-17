@@ -1,391 +1,583 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { toast } from "sonner";
 import {
   AlertTriangle,
   Check,
-  ChevronDown,
-  Download,
-  ExternalLink,
-  EyeOff,
   Link2,
   Loader2,
-  Pencil,
   RefreshCw,
+  RotateCcw,
+  Search,
   Sparkles,
-  Unlink,
-  Upload,
-  Users,
-  X,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-// ── Types ──────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────
+const CREATE_REMOTE = "__create_remote__";
+const CREATE_LOCAL = "__create_local__";
+const DO_NOT_SYNC = "__do_not_sync__";
 
-interface SuggestedMatch {
-  remote_person_uid: string;
-  remote_name: string;
-  local_person_id: string;
-  local_name: string;
-  confidence: number;
-  reasons: string[];
-}
-
-interface SuggestedCreateRemote {
-  local_person_id: string;
-  local_name: string;
-  local_person_uid: string;
-}
-
-interface SuggestedCreateLocal {
-  remote_person_uid: string;
-  remote_name: string;
-  remote_relationship_label: string | null;
-}
-
-interface PersonLink {
-  id: string;
-  local_person_id: string;
-  remote_person_uid: string;
-  is_enabled: boolean;
-  link_status: string;
-}
-
-interface SyncConflict {
-  id: string;
-  entity_type: string;
-  entity_uid: string;
-  conflict_type: string | null;
-  suggested_resolution: string | null;
-  local_payload: Record<string, unknown>;
-  remote_payload: Record<string, unknown>;
-  resolved_at: string | null;
-}
-
-interface Partner {
+// ── Types ─────────────────────────────────────────────────────────
+interface LocalPerson {
   id: string;
   name: string;
   person_uid: string;
 }
-
+interface RemotePerson {
+  person_uid: string;
+  name: string;
+  relationship_label: string | null;
+}
+interface ExistingLink {
+  id: string;
+  local_person_id: string | null;
+  remote_person_uid: string;
+  link_status: string;
+  is_enabled: boolean;
+}
 interface Props {
   connectionId: string;
 }
 
-// ── Component ──────────────────────────────────────────────────────
+// ── Matching utilities ────────────────────────────────────────────
+function normalizeName(name: string): string {
+  return name.toLowerCase().trim().replace(/[^\p{L}\p{N}\s]/gu, "").replace(/\s+/g, " ");
+}
 
+function matchScore(a: string, b: string): { confidence: number; reason: string } | null {
+  const at = a.trim(), bt = b.trim();
+  if (at.toLowerCase() === bt.toLowerCase()) return { confidence: 0.95, reason: "Exact name match" };
+  if (normalizeName(at) === normalizeName(bt)) return { confidence: 0.90, reason: "Normalized name match" };
+  const af = at.toLowerCase().split(/\s+/)[0];
+  const bf = bt.toLowerCase().split(/\s+/)[0];
+  if (af === bf && af.length >= 2) return { confidence: 0.70, reason: "First name match" };
+  if (at.toLowerCase().includes(bt.toLowerCase()) || bt.toLowerCase().includes(at.toLowerCase()))
+    return { confidence: 0.50, reason: "Partial name match" };
+  return null;
+}
+
+// ── Component ─────────────────────────────────────────────────────
 export function SyncPeopleMapping({ connectionId }: Props) {
-  const [suggestedMatches, setSuggestedMatches] = useState<SuggestedMatch[]>([]);
-  const [suggestedCreateRemote, setSuggestedCreateRemote] = useState<SuggestedCreateRemote[]>([]);
-  const [suggestedCreateLocal, setSuggestedCreateLocal] = useState<SuggestedCreateLocal[]>([]);
-  const [links, setLinks] = useState<PersonLink[]>([]);
-  const [conflicts, setConflicts] = useState<SyncConflict[]>([]);
-  const [partners, setPartners] = useState<Partner[]>([]);
+  // Data
+  const [localPeople, setLocalPeople] = useState<LocalPerson[]>([]);
+  const [remotePeople, setRemotePeople] = useState<RemotePerson[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
 
-  // Manual link dialog
-  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
-  const [linkDialogMode, setLinkDialogMode] = useState<"remote" | "local">("remote");
-  const [linkRemoteUid, setLinkRemoteUid] = useState("");
-  const [linkRemoteName, setLinkRemoteName] = useState("");
-  const [linkLocalId, setLinkLocalId] = useState("");
-  const [linkLocalName, setLinkLocalName] = useState("");
+  // Mapping state (staged, client-side only until Activate)
+  const [localMappings, setLocalMappings] = useState<Record<string, string>>({}); // localId → remoteUid | CREATE_REMOTE | DO_NOT_SYNC
+  const [remoteExcludes, setRemoteExcludes] = useState<Set<string>>(new Set());
 
+  // Track which pairings are fuzzy suggestions (not exact match, not from DB)
+  const [suggestedIds, setSuggestedIds] = useState<Set<string>>(new Set());
+
+  // Snapshot of initial DB state for diff / hasChanges
+  const [dbPairings, setDbPairings] = useState<Record<string, string>>({});
+  const [dbExcludes, setDbExcludes] = useState<Set<string>>(new Set());
+
+  // UI
+  const [applying, setApplying] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [localSearch, setLocalSearch] = useState("");
+  const [remoteSearch, setRemoteSearch] = useState("");
+  const [localFilter, setLocalFilter] = useState("all");
+  const [remoteFilter, setRemoteFilter] = useState("all");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  // ── Derived: reverse pairings (remoteUid → localId) ───────────
+  const reversePairings = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const [lid, val] of Object.entries(localMappings)) {
+      if (val !== CREATE_REMOTE && val !== DO_NOT_SYNC) {
+        map[val] = lid;
+      }
+    }
+    return map;
+  }, [localMappings]);
+
+  // ── Helpers ────────────────────────────────────────────────────
+  const getLocalAction = useCallback(
+    (localId: string) => localMappings[localId] || CREATE_REMOTE,
+    [localMappings]
+  );
+
+  const getRemoteAction = useCallback(
+    (remoteUid: string): string => {
+      if (reversePairings[remoteUid]) return reversePairings[remoteUid];
+      if (remoteExcludes.has(remoteUid)) return DO_NOT_SYNC;
+      return CREATE_LOCAL;
+    },
+    [reversePairings, remoteExcludes]
+  );
+
+  const localName = useCallback(
+    (id: string) => localPeople.find((p) => p.id === id)?.name || "Unknown",
+    [localPeople]
+  );
+  const remoteName = useCallback(
+    (uid: string) => remotePeople.find((r) => r.person_uid === uid)?.name || uid.slice(0, 8) + "…",
+    [remotePeople]
+  );
+
+  // ── Data loading ──────────────────────────────────────────────
   const getSession = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     return session;
   };
 
-  // ── Fetch suggestions from backend ────────────────────────────
-
-  const fetchSuggestions = useCallback(async (forceRefresh = false) => {
+  const loadData = useCallback(async (forceRefresh = false) => {
     const session = await getSession();
     if (!session) return;
 
+    // 1) Trigger remote cache refresh
+    const { data: syncData } = await supabase.functions.invoke("sync-list-remote-people", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: { force_refresh: forceRefresh },
+    });
+
+    // 2) Get local people
+    const { data: partners } = await supabase
+      .from("partners")
+      .select("id, name, person_uid")
+      .eq("archived", false)
+      .is("merged_into_person_id", null)
+      .order("name");
+
+    // 3) Get remote people from cache
+    const { data: cacheData } = await supabase
+      .from("sync_remote_people_cache")
+      .select("remote_person_uid, remote_name, remote_relationship_label")
+      .eq("connection_id", connectionId);
+
+    // 4) Get existing links
+    const { data: links } = await supabase
+      .from("sync_person_links")
+      .select("id, local_person_id, remote_person_uid, link_status, is_enabled")
+      .eq("connection_id", connectionId);
+
+    const lp: LocalPerson[] = (partners || []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      person_uid: p.person_uid,
+    }));
+    const rp: RemotePerson[] = (cacheData || []).map((c) => ({
+      person_uid: c.remote_person_uid,
+      name: c.remote_name,
+      relationship_label: c.remote_relationship_label,
+    }));
+    const el: ExistingLink[] = (links || []) as ExistingLink[];
+
+    setLocalPeople(lp);
+    setRemotePeople(rp);
+    setFetchedAt(syncData?.fetched_at || new Date().toISOString());
+
+    // Build initial state from DB
+    const dbPairs: Record<string, string> = {};
+    const dbExcl = new Set<string>();
+    for (const link of el) {
+      if (link.link_status === "linked" && link.local_person_id) {
+        dbPairs[link.local_person_id] = link.remote_person_uid;
+      } else if (link.link_status === "excluded") {
+        dbExcl.add(link.remote_person_uid);
+      }
+    }
+    setDbPairings(dbPairs);
+    setDbExcludes(dbExcl);
+
+    // Build full mapping state: DB links + suggestions for unlinked
+    const mappings: Record<string, string> = { ...dbPairs };
+    const rExcludes = new Set(dbExcl);
+    const suggested = new Set<string>();
+
+    const linkedRemoteUids = new Set(Object.values(dbPairs));
+    const linkedLocalIds = new Set(Object.keys(dbPairs));
+
+    // Match unlinked local people to unlinked remote people
+    const availableRemote = rp.filter(
+      (r) => !linkedRemoteUids.has(r.person_uid) && !dbExcl.has(r.person_uid)
+    );
+
+    for (const local of lp) {
+      if (linkedLocalIds.has(local.id)) continue;
+
+      let bestMatch: { uid: string; confidence: number; reason: string } | null = null;
+      for (const remote of availableRemote) {
+        if (linkedRemoteUids.has(remote.person_uid)) continue;
+        const m = matchScore(local.name, remote.name);
+        if (m && (!bestMatch || m.confidence > bestMatch.confidence)) {
+          bestMatch = { uid: remote.person_uid, ...m };
+        }
+      }
+
+      if (bestMatch && bestMatch.confidence >= 0.50) {
+        mappings[local.id] = bestMatch.uid;
+        linkedRemoteUids.add(bestMatch.uid);
+        if (bestMatch.confidence < 0.95) {
+          suggested.add(local.id);
+        }
+      } else {
+        mappings[local.id] = CREATE_REMOTE;
+      }
+    }
+
+    setLocalMappings(mappings);
+    setRemoteExcludes(rExcludes);
+    setSuggestedIds(suggested);
+    setLoading(false);
+  }, [connectionId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // ── Change handlers ───────────────────────────────────────────
+  const handleLocalChange = (localId: string, value: string) => {
+    setSuggestedIds((s) => { const n = new Set(s); n.delete(localId); return n; });
+
+    if (value === DO_NOT_SYNC || value === CREATE_REMOTE) {
+      setLocalMappings((prev) => ({ ...prev, [localId]: value }));
+      return;
+    }
+
+    // Linking to a remote person
+    const remoteUid = value;
+    setLocalMappings((prev) => {
+      const next = { ...prev };
+      // If remote was linked to another local, free them
+      const oldLocal = Object.entries(next).find(
+        ([lid, r]) => r === remoteUid && lid !== localId
+      )?.[0];
+      if (oldLocal) {
+        next[oldLocal] = CREATE_REMOTE;
+        toast.info(`Reassigned: ${remoteName(remoteUid)} → ${localName(localId)}`);
+      }
+      next[localId] = remoteUid;
+      return next;
+    });
+    setRemoteExcludes((s) => { const n = new Set(s); n.delete(remoteUid); return n; });
+  };
+
+  const handleRemoteChange = (remoteUid: string, value: string) => {
+    if (value === DO_NOT_SYNC) {
+      // Remove any local pairing to this remote
+      setLocalMappings((prev) => {
+        const next = { ...prev };
+        const lid = Object.entries(next).find(([_, r]) => r === remoteUid)?.[0];
+        if (lid) {
+          next[lid] = CREATE_REMOTE;
+          setSuggestedIds((s) => { const n = new Set(s); n.delete(lid); return n; });
+        }
+        return next;
+      });
+      setRemoteExcludes((s) => new Set(s).add(remoteUid));
+      return;
+    }
+
+    if (value === CREATE_LOCAL) {
+      setLocalMappings((prev) => {
+        const next = { ...prev };
+        const lid = Object.entries(next).find(([_, r]) => r === remoteUid)?.[0];
+        if (lid) {
+          next[lid] = CREATE_REMOTE;
+          setSuggestedIds((s) => { const n = new Set(s); n.delete(lid); return n; });
+        }
+        return next;
+      });
+      setRemoteExcludes((s) => { const n = new Set(s); n.delete(remoteUid); return n; });
+      return;
+    }
+
+    // Linking to a local person
+    const localId = value;
+    setSuggestedIds((s) => { const n = new Set(s); n.delete(localId); return n; });
+    setLocalMappings((prev) => {
+      const next = { ...prev };
+      // If this local was linked elsewhere, fine - we're overwriting
+      // If this remote was linked to another local, free them
+      const oldLocal = Object.entries(next).find(
+        ([lid, r]) => r === remoteUid && lid !== localId
+      )?.[0];
+      if (oldLocal) {
+        next[oldLocal] = CREATE_REMOTE;
+        toast.info(`Reassigned: ${remoteName(remoteUid)} → ${localName(localId)}`);
+      }
+      next[localId] = remoteUid;
+      return next;
+    });
+    setRemoteExcludes((s) => { const n = new Set(s); n.delete(remoteUid); return n; });
+  };
+
+  // ── Summary counts ────────────────────────────────────────────
+  const summary = useMemo(() => {
+    let linked = 0, createRemote = 0, doNotSyncLocal = 0;
+    for (const val of Object.values(localMappings)) {
+      if (val === CREATE_REMOTE) createRemote++;
+      else if (val === DO_NOT_SYNC) doNotSyncLocal++;
+      else linked++;
+    }
+    const linkedRemoteUids = new Set(
+      Object.values(localMappings).filter((v) => v !== CREATE_REMOTE && v !== DO_NOT_SYNC)
+    );
+    const createLocal = remotePeople.filter(
+      (r) => !linkedRemoteUids.has(r.person_uid) && !remoteExcludes.has(r.person_uid)
+    ).length;
+    const doNotSyncRemote = remoteExcludes.size;
+    return { linked, createRemote, createLocal, doNotSync: doNotSyncLocal + doNotSyncRemote };
+  }, [localMappings, remoteExcludes, remotePeople]);
+
+  // ── Has changes ───────────────────────────────────────────────
+  const hasChanges = useMemo(() => {
+    // Compare current state with DB state
+    for (const [lid, val] of Object.entries(localMappings)) {
+      const dbVal = dbPairings[lid];
+      if (val !== CREATE_REMOTE && val !== DO_NOT_SYNC) {
+        // Currently linked
+        if (dbVal !== val) return true;
+      } else {
+        // Currently not linked
+        if (dbVal) return true; // was linked in DB
+        if (val === CREATE_REMOTE) {
+          // Check if this is a new "create remote" that wasn't a default
+        }
+      }
+    }
+    // Check for DB pairings removed
+    for (const lid of Object.keys(dbPairings)) {
+      const cur = localMappings[lid];
+      if (!cur || cur === CREATE_REMOTE || cur === DO_NOT_SYNC) return true;
+      if (cur !== dbPairings[lid]) return true;
+    }
+    // Check remote excludes
+    for (const uid of remoteExcludes) {
+      if (!dbExcludes.has(uid)) return true;
+    }
+    for (const uid of dbExcludes) {
+      if (!remoteExcludes.has(uid)) return true;
+    }
+    // Check for create_local (remote people not linked and not excluded, not in DB)
+    const linkedRemoteUids = new Set(
+      Object.values(localMappings).filter((v) => v !== CREATE_REMOTE && v !== DO_NOT_SYNC)
+    );
+    for (const rp of remotePeople) {
+      if (!linkedRemoteUids.has(rp.person_uid) && !remoteExcludes.has(rp.person_uid)) {
+        // This remote person would be "create local" — check if it was also unlinked in DB
+        if (dbPairings && Object.values(dbPairings).includes(rp.person_uid)) return true;
+      }
+    }
+    return false;
+  }, [localMappings, remoteExcludes, dbPairings, dbExcludes, remotePeople]);
+
+  // ── Activate mapping ──────────────────────────────────────────
+  const handleActivate = async () => {
+    setApplying(true);
     try {
-      const { data, error } = await supabase.functions.invoke("sync-list-remote-people", {
+      const session = await getSession();
+      if (!session) return;
+
+      // Compute actions from diff
+      const actions: Array<{
+        action: string;
+        local_person_id?: string;
+        remote_person_uid?: string;
+        remote_name?: string;
+        remote_relationship_label?: string | null;
+      }> = [];
+
+      const linkedRemoteUids = new Set(
+        Object.values(localMappings).filter((v) => v !== CREATE_REMOTE && v !== DO_NOT_SYNC)
+      );
+
+      // Process local mappings
+      for (const [lid, val] of Object.entries(localMappings)) {
+        if (val !== CREATE_REMOTE && val !== DO_NOT_SYNC) {
+          // Link action (only if different from DB)
+          if (dbPairings[lid] !== val) {
+            actions.push({ action: "link", local_person_id: lid, remote_person_uid: val });
+          }
+        } else if (val === CREATE_REMOTE) {
+          // Only create if not already linked in DB
+          if (!dbPairings[lid]) {
+            actions.push({ action: "create_remote", local_person_id: lid });
+          }
+        }
+      }
+
+      // Process remote people: create_local
+      for (const rp of remotePeople) {
+        if (!linkedRemoteUids.has(rp.person_uid) && !remoteExcludes.has(rp.person_uid)) {
+          // Not linked to any local person and not excluded → create locally
+          if (!Object.values(dbPairings).includes(rp.person_uid)) {
+            actions.push({
+              action: "create_local",
+              remote_person_uid: rp.person_uid,
+              remote_name: rp.name,
+              remote_relationship_label: rp.relationship_label,
+            });
+          }
+        }
+      }
+
+      // Process excludes
+      for (const uid of remoteExcludes) {
+        if (!dbExcludes.has(uid)) {
+          actions.push({ action: "exclude", remote_person_uid: uid });
+        }
+      }
+
+      if (actions.length === 0) {
+        toast.info("No changes to apply");
+        setApplying(false);
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("sync-apply-mapping", {
         headers: { Authorization: `Bearer ${session.access_token}` },
-        body: { force_refresh: forceRefresh },
+        body: { connection_id: connectionId, actions },
       });
 
       if (error) throw error;
 
-      setSuggestedMatches(data.suggested_matches || []);
-      setSuggestedCreateRemote(data.suggested_create_remote || []);
-      setSuggestedCreateLocal(data.suggested_create_local || []);
-      setLinks(data.links || []);
-      setFetchedAt(data.fetched_at || null);
+      if (data?.failed > 0) {
+        toast.warning(`Mapping activated with ${data.failed} issue(s). ${data.succeeded} succeeded.`);
+      } else {
+        toast.success("Mapping activated!");
+      }
+
+      // Reload data
+      setLoading(true);
+      await loadData(true);
     } catch (e) {
-      console.error("Failed to fetch suggestions:", e);
-      // Don't toast on initial load failure — just show empty state
+      console.error("Activate mapping error:", e);
+      toast.error("Failed to activate mapping");
+    } finally {
+      setApplying(false);
     }
-  }, []);
+  };
 
-  const loadConflicts = useCallback(async () => {
-    const [conflictsRes, partnersRes] = await Promise.all([
-      supabase.from("sync_conflicts").select("*").eq("connection_id", connectionId).is("resolved_at", null).order("created_at", { ascending: false }),
-      supabase.from("partners").select("id, name, person_uid").eq("archived", false).order("name"),
-    ]);
-    setConflicts((conflictsRes.data || []) as unknown as SyncConflict[]);
-    setPartners(partnersRes.data || []);
-  }, [connectionId]);
-
-  // Auto-fetch on mount
-  useEffect(() => {
-    let mounted = true;
-    const init = async () => {
-      await Promise.all([fetchSuggestions(), loadConflicts()]);
-      if (mounted) setLoading(false);
-    };
-    init();
-    return () => { mounted = false; };
-  }, [fetchSuggestions, loadConflicts]);
+  const handleReset = () => {
+    // Reload from scratch
+    setLoading(true);
+    loadData();
+  };
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([fetchSuggestions(true), loadConflicts()]);
+    await loadData(true);
     setRefreshing(false);
     toast.success("Refreshed from Temerio");
   };
 
-  // ── Actions ───────────────────────────────────────────────────
-
-  const handleLinkPerson = async (remoteUid: string, localId: string) => {
-    setActionLoading(remoteUid);
-    try {
-      const session = await getSession();
-      if (!session) return;
-      const { error } = await supabase.functions.invoke("sync-link-person", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: { local_person_id: localId, remote_person_uid: remoteUid, connection_id: connectionId },
+  // ── Filtered & sorted lists ───────────────────────────────────
+  const filteredLocal = useMemo(() => {
+    let list = [...localPeople].sort((a, b) => a.name.localeCompare(b.name));
+    if (localSearch) {
+      const q = localSearch.toLowerCase();
+      list = list.filter((p) => p.name.toLowerCase().includes(q));
+    }
+    if (localFilter !== "all") {
+      list = list.filter((p) => {
+        const action = getLocalAction(p.id);
+        if (localFilter === "linked") return action !== CREATE_REMOTE && action !== DO_NOT_SYNC;
+        if (localFilter === "create") return action === CREATE_REMOTE;
+        if (localFilter === "dns") return action === DO_NOT_SYNC;
+        return true;
       });
-      if (error) throw error;
-      toast.success("Person linked!");
-      await Promise.all([fetchSuggestions(true), loadConflicts()]);
-    } catch {
-      toast.error("Failed to link person");
-    } finally {
-      setActionLoading(null);
     }
-  };
+    return list;
+  }, [localPeople, localSearch, localFilter, getLocalAction]);
 
-  const handleExclude = async (remoteUid: string) => {
-    setActionLoading(remoteUid);
-    try {
-      const session = await getSession();
-      if (!session) return;
-      const { error } = await supabase.functions.invoke("sync-exclude-person", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: { remote_person_uid: remoteUid, connection_id: connectionId },
+  const filteredRemote = useMemo(() => {
+    let list = [...remotePeople].sort((a, b) => a.name.localeCompare(b.name));
+    if (remoteSearch) {
+      const q = remoteSearch.toLowerCase();
+      list = list.filter((r) => r.name.toLowerCase().includes(q));
+    }
+    if (remoteFilter !== "all") {
+      list = list.filter((r) => {
+        const action = getRemoteAction(r.person_uid);
+        if (remoteFilter === "linked") return action !== CREATE_LOCAL && action !== DO_NOT_SYNC;
+        if (remoteFilter === "create") return action === CREATE_LOCAL;
+        if (remoteFilter === "dns") return action === DO_NOT_SYNC;
+        return true;
       });
-      if (error) throw error;
-      toast.success("Person excluded from sync");
-      await Promise.all([fetchSuggestions(true), loadConflicts()]);
-    } catch {
-      toast.error("Failed to exclude person");
-    } finally {
-      setActionLoading(null);
     }
+    return list;
+  }, [remotePeople, remoteSearch, remoteFilter, getRemoteAction]);
+
+  // ── Status badge helper ───────────────────────────────────────
+  const statusBadge = (action: string, isLocal: boolean, id: string) => {
+    if (action === DO_NOT_SYNC) return <Badge variant="secondary" className="text-xs shrink-0">Do Not Sync</Badge>;
+    if (isLocal && action === CREATE_REMOTE) return <Badge className="text-xs bg-amber-500/20 text-amber-700 border-amber-500/30 shrink-0">Create</Badge>;
+    if (!isLocal && action === CREATE_LOCAL) return <Badge className="text-xs bg-amber-500/20 text-amber-700 border-amber-500/30 shrink-0">Create</Badge>;
+    // Linked
+    const isSuggested = isLocal && suggestedIds.has(id);
+    return (
+      <div className="flex items-center gap-1 shrink-0">
+        <Badge className="text-xs bg-green-500/20 text-green-700 border-green-500/30">Linked</Badge>
+        {isSuggested && <Badge variant="outline" className="text-xs text-primary/70 border-primary/30 italic">Suggested</Badge>}
+      </div>
+    );
   };
-
-  const handleCreateRemote = async (localPersonId: string) => {
-    setActionLoading(localPersonId);
-    try {
-      const session = await getSession();
-      if (!session) return;
-      const { error } = await supabase.functions.invoke("sync-create-remote-person", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: { local_person_id: localPersonId },
-      });
-      if (error) throw error;
-      toast.success("Person created in Temerio and linked!");
-      await Promise.all([fetchSuggestions(true), loadConflicts()]);
-    } catch {
-      toast.error("Failed to create remote person");
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleCreateLocal = async (remoteUid: string, remoteName: string, remoteLabel: string | null) => {
-    setActionLoading(remoteUid);
-    try {
-      const session = await getSession();
-      if (!session) return;
-      const { error } = await supabase.functions.invoke("sync-create-local-person", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: {
-          remote_person_uid: remoteUid,
-          remote_name: remoteName,
-          remote_relationship_label: remoteLabel,
-          connection_id: connectionId,
-        },
-      });
-      if (error) throw error;
-      toast.success(`"${remoteName}" created in Cherishly and linked!`);
-      await Promise.all([fetchSuggestions(true), loadConflicts()]);
-    } catch {
-      toast.error("Failed to create local person");
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleResolveConflict = async (conflictId: string, resolution: string, remoteUid?: string, localId?: string) => {
-    setActionLoading(conflictId);
-    try {
-      if (resolution === "link_existing" && remoteUid && localId) {
-        await handleLinkPerson(remoteUid, localId);
-      } else if (resolution === "create_new" && remoteUid) {
-        const conflict = conflicts.find(c => c.id === conflictId);
-        if (conflict?.remote_payload) {
-          const session = await getSession();
-          if (!session) return;
-          const { data: newPartner, error: insertErr } = await supabase.from("partners").insert({
-            user_id: session.user.id,
-            person_uid: remoteUid,
-            name: (conflict.remote_payload.name as string) || "Unknown",
-            relationship_type: (conflict.remote_payload.relationship_label as string) || null,
-          }).select("id").single();
-          if (insertErr) throw insertErr;
-          if (newPartner) await handleLinkPerson(remoteUid, newPartner.id);
-        }
-      }
-      await supabase.from("sync_conflicts")
-        .update({ resolution, resolved_at: new Date().toISOString() })
-        .eq("id", conflictId);
-      await loadConflicts();
-    } catch {
-      toast.error("Failed to resolve conflict");
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  // ── Picker helpers ────────────────────────────────────────────
-
-  const openPickRemote = (localId: string, localName: string) => {
-    setLinkDialogMode("remote");
-    setLinkLocalId(localId);
-    setLinkLocalName(localName);
-    setLinkRemoteUid("");
-    setLinkDialogOpen(true);
-  };
-
-  const openPickLocal = (remoteUid: string, remoteName: string) => {
-    setLinkDialogMode("local");
-    setLinkRemoteUid(remoteUid);
-    setLinkRemoteName(remoteName);
-    setLinkLocalId("");
-    setLinkDialogOpen(true);
-  };
-
-  // ── Accept All ────────────────────────────────────────────────
-
-  const handleAcceptAll = async () => {
-    setActionLoading("accept-all");
-    try {
-      const session = await getSession();
-      if (!session) return;
-
-      // 1) Accept all suggested matches (link them)
-      for (const m of suggestedMatches) {
-        await supabase.functions.invoke("sync-link-person", {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-          body: { remote_person_uid: m.remote_person_uid, local_person_id: m.local_person_id },
-        });
-      }
-
-      // 2) Create all missing people in Temerio
-      for (const p of suggestedCreateRemote) {
-        await supabase.functions.invoke("sync-create-remote-person", {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-          body: { local_person_id: p.local_person_id },
-        });
-      }
-
-      // 3) Create all missing people in Cherishly
-      for (const rp of suggestedCreateLocal) {
-        await supabase.functions.invoke("sync-create-local-person", {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-          body: {
-            remote_person_uid: rp.remote_person_uid,
-            remote_name: rp.remote_name,
-            remote_relationship_label: rp.remote_relationship_label,
-            connection_id: connectionId,
-          },
-        });
-      }
-
-      toast.success("All suggestions accepted!");
-      await Promise.all([fetchSuggestions(true), loadConflicts()]);
-    } catch {
-      toast.error("Some actions failed. Please review remaining items.");
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  // ── Derived state ─────────────────────────────────────────────
-
-  const partnerName = (id: string) => partners.find(p => p.id === id)?.name || "Unknown";
-  const linkedLinks = links.filter(l => l.link_status === "linked");
-  const excludedLinks = links.filter(l => l.link_status === "excluded");
-  const personConflicts = conflicts.filter(c => c.entity_type === "person");
-  const momentConflicts = conflicts.filter(c => c.entity_type === "moment" && c.conflict_type === "missing_mapping");
-  const dataConflicts = conflicts.filter(c => c.entity_type === "moment" && c.conflict_type !== "missing_mapping");
-
-  const totalSuggestions = suggestedMatches.length + suggestedCreateRemote.length + suggestedCreateLocal.length;
-  const totalConflicts = personConflicts.length + momentConflicts.length + dataConflicts.length;
-
-  // Remote people UIDs from the cache for the "pick remote" dialog
-  // We pull from suggestedCreateLocal + suggestedMatches (unlinked remote people)
-  const availableRemotePeople = [
-    ...suggestedCreateLocal.map(r => ({ uid: r.remote_person_uid, name: r.remote_name })),
-    ...suggestedMatches.map(r => ({ uid: r.remote_person_uid, name: r.remote_name })),
-  ];
 
   // ── Render ────────────────────────────────────────────────────
-
   if (loading) {
     return (
       <div className="py-8 text-center space-y-2">
         <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Fetching people from Temerio…</p>
+        <p className="text-sm text-muted-foreground">Loading people mapping…</p>
+      </div>
+    );
+  }
+
+  if (localPeople.length === 0 && remotePeople.length === 0) {
+    return (
+      <div className="text-center py-6 text-sm text-muted-foreground">
+        No people found. Add people in Cherishly or Temerio first.
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header with refresh */}
+    <div className="space-y-5">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="text-xs text-muted-foreground">
-          {fetchedAt && `Last synced: ${new Date(fetchedAt).toLocaleTimeString()}`}
+        <div>
+          <h3 className="text-base font-semibold flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" />
+            People Mapping
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Review how people are connected between Cherishly and Temerio. You stay in control.
+          </p>
         </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={handleRefresh}
-          disabled={refreshing}
+          disabled={refreshing || applying}
           className="text-xs"
         >
           <RefreshCw className={`w-3 h-3 mr-1 ${refreshing ? "animate-spin" : ""}`} />
@@ -393,431 +585,241 @@ export function SyncPeopleMapping({ connectionId }: Props) {
         </Button>
       </div>
 
-      {/* Conflict Inbox */}
-      {totalConflicts > 0 && (
-        <div className="space-y-3">
-          <h4 className="font-medium text-sm flex items-center gap-2 text-destructive">
-            <AlertTriangle className="w-4 h-4" />
-            Conflicts ({totalConflicts})
-          </h4>
-          {personConflicts.map(c => (
-            <ConflictCard
-              key={c.id}
-              conflict={c}
-              actionLoading={actionLoading}
-              onResolve={handleResolveConflict}
-              onExclude={handleExclude}
-            />
-          ))}
-          {momentConflicts.map(c => (
-            <div key={c.id} className="rounded-lg border border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20 p-3 space-y-2">
-              <Badge variant="outline" className="text-amber-600 border-amber-500/50">
-                Moment Queued — Missing Person Mapping
-              </Badge>
-              <p className="text-xs text-muted-foreground">
-                A moment for "{(c.remote_payload?.person_uid as string)?.slice(0, 8)}…" is waiting.
-              </p>
-            </div>
-          ))}
-          {dataConflicts.map(c => (
-            <div key={c.id} className="rounded-lg border border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20 p-3 space-y-2">
-              <Badge variant="outline" className="text-amber-600 border-amber-500/50">Data Conflict</Badge>
-              <p className="text-xs text-muted-foreground">
-                Moment "{(c.remote_payload?.title as string) || c.entity_uid}" has conflicting edits.
-              </p>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => handleResolveConflict(c.id, "keep_local")} disabled={!!actionLoading}>
-                  Keep Local
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => handleResolveConflict(c.id, "keep_remote")} disabled={!!actionLoading}>
-                  Keep Remote
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Summary Panel */}
+      <div className="flex flex-wrap gap-3 text-xs bg-muted/50 rounded-lg px-4 py-2.5 border">
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-green-500" />
+          Linked: <strong>{summary.linked}</strong>
+        </span>
+        <span className="text-muted-foreground">·</span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-amber-500" />
+          Create in Temerio: <strong>{summary.createRemote}</strong>
+        </span>
+        <span className="text-muted-foreground">·</span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-amber-500" />
+          Create in Cherishly: <strong>{summary.createLocal}</strong>
+        </span>
+        <span className="text-muted-foreground">·</span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-muted-foreground" />
+          Do Not Sync: <strong>{summary.doNotSync}</strong>
+        </span>
+      </div>
 
-      {/* ── Suggested Actions ──────────────────────────────────── */}
-      {totalSuggestions > 0 ? (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="font-medium text-sm flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
-              Suggested Actions
-              <Badge variant="secondary" className="text-xs">{totalSuggestions}</Badge>
-            </h4>
-            <Button
-              size="sm"
-              onClick={handleAcceptAll}
-              disabled={!!actionLoading}
-            >
-              {actionLoading === "accept-all" ? (
-                <Loader2 className="w-3 h-3 animate-spin mr-1" />
-              ) : (
-                <Check className="w-3 h-3 mr-1" />
-              )}
-              Accept All
-            </Button>
+      {/* Table 1: Cherished (Local → Remote) */}
+      <MappingTable
+        title="Cherished"
+        subtitle={`${localPeople.length} people`}
+        search={localSearch}
+        onSearchChange={setLocalSearch}
+        filter={localFilter}
+        onFilterChange={setLocalFilter}
+        disabled={applying}
+      >
+        {filteredLocal.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={3} className="text-center text-muted-foreground text-sm py-4">
+              No people match your filter.
+            </TableCell>
+          </TableRow>
+        ) : (
+          filteredLocal.map((person) => {
+            const action = getLocalAction(person.id);
+            return (
+              <TableRow key={person.id}>
+                <TableCell className="font-medium text-sm py-2">{person.name}</TableCell>
+                <TableCell className="py-2">{statusBadge(action, true, person.id)}</TableCell>
+                <TableCell className="py-2">
+                  <Select
+                    value={action}
+                    onValueChange={(v) => handleLocalChange(person.id, v)}
+                    disabled={applying}
+                  >
+                    <SelectTrigger className="h-8 text-xs w-full max-w-[220px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {remotePeople.map((rp) => (
+                        <SelectItem key={rp.person_uid} value={rp.person_uid}>
+                          Sync with {rp.name}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value={CREATE_REMOTE}>Create in Temerio</SelectItem>
+                      <SelectItem value={DO_NOT_SYNC}>Do Not Sync</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+              </TableRow>
+            );
+          })
+        )}
+      </MappingTable>
+
+      {/* Table 2: Temerio People (Remote → Local) */}
+      <MappingTable
+        title="Temerio People"
+        subtitle={`${remotePeople.length} people`}
+        search={remoteSearch}
+        onSearchChange={setRemoteSearch}
+        filter={remoteFilter}
+        onFilterChange={setRemoteFilter}
+        disabled={applying}
+      >
+        {filteredRemote.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={3} className="text-center text-muted-foreground text-sm py-4">
+              No people match your filter.
+            </TableCell>
+          </TableRow>
+        ) : (
+          filteredRemote.map((person) => {
+            const action = getRemoteAction(person.person_uid);
+            return (
+              <TableRow key={person.person_uid}>
+                <TableCell className="font-medium text-sm py-2">{person.name}</TableCell>
+                <TableCell className="py-2">{statusBadge(action, false, person.person_uid)}</TableCell>
+                <TableCell className="py-2">
+                  <Select
+                    value={action}
+                    onValueChange={(v) => handleRemoteChange(person.person_uid, v)}
+                    disabled={applying}
+                  >
+                    <SelectTrigger className="h-8 text-xs w-full max-w-[220px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {localPeople.map((lp) => (
+                        <SelectItem key={lp.id} value={lp.id}>
+                          Sync with {lp.name}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value={CREATE_LOCAL}>Create in Cherishly</SelectItem>
+                      <SelectItem value={DO_NOT_SYNC}>Do Not Sync</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+              </TableRow>
+            );
+          })
+        )}
+      </MappingTable>
+
+      {/* Action buttons */}
+      <div className="flex items-center justify-between pt-2 border-t">
+        <p className="text-xs text-muted-foreground">
+          Changes are applied when you click Activate Mapping.
+        </p>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleReset} disabled={applying}>
+            <RotateCcw className="w-3 h-3 mr-1" />
+            Reset Changes
+          </Button>
+          <Button size="sm" onClick={handleActivate} disabled={applying || !hasChanges}>
+            {applying ? (
+              <Loader2 className="w-3 h-3 animate-spin mr-1" />
+            ) : (
+              <Check className="w-3 h-3 mr-1" />
+            )}
+            Activate Mapping
+          </Button>
+        </div>
+      </div>
+
+      {/* Advanced section */}
+      <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground w-full justify-start">
+            <AlertTriangle className="w-3 h-3 mr-1" />
+            Advanced
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-2 space-y-2">
+          <div className="text-xs text-muted-foreground">
+            {fetchedAt && (
+              <p>Last fetched: {new Date(fetchedAt).toLocaleString()}</p>
+            )}
+            <p>Local people: {localPeople.length} · Remote people: {remotePeople.length}</p>
           </div>
-
-          {/* A) Suggested Matches */}
-          {suggestedMatches.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Suggested Matches</p>
-              {suggestedMatches.map(m => (
-                <div key={m.remote_person_uid} className="rounded-lg border p-3 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {m.local_name} <span className="text-muted-foreground">↔</span> {m.remote_name}
-                      </p>
-                      <span className="text-xs text-muted-foreground mt-0.5">{m.reasons.join(", ")}</span>
-                    </div>
-                    {actionLoading === m.remote_person_uid && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => handleLinkPerson(m.remote_person_uid, m.local_person_id)}
-                      disabled={!!actionLoading}
-                    >
-                      <Check className="w-3 h-3 mr-1" />
-                      Accept Link
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openPickLocal(m.remote_person_uid, m.remote_name)}
-                      disabled={!!actionLoading}
-                    >
-                      <Pencil className="w-3 h-3 mr-1" />
-                      Choose Different
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleExclude(m.remote_person_uid)}
-                      disabled={!!actionLoading}
-                    >
-                      <X className="w-3 h-3 mr-1" />
-                      Reject
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* B) Suggested Creations (missing on remote) */}
-          {suggestedCreateRemote.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Create in Temerio</p>
-              {suggestedCreateRemote.map(p => (
-                <div key={p.local_person_id} className="rounded-lg border p-3 flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      <Upload className="w-3 h-3 inline mr-1 text-muted-foreground" />
-                      Create "{p.local_name}" in Temerio
-                    </p>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button
-                      size="sm"
-                      onClick={() => handleCreateRemote(p.local_person_id)}
-                      disabled={!!actionLoading}
-                    >
-                      {actionLoading === p.local_person_id ? (
-                        <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                      ) : (
-                        <Check className="w-3 h-3 mr-1" />
-                      )}
-                      Create & Link
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openPickRemote(p.local_person_id, p.local_name)}
-                      disabled={!!actionLoading}
-                    >
-                      <Link2 className="w-3 h-3 mr-1" />
-                      Link Existing
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        // Just remove from local suggestions (no backend call needed)
-                        setSuggestedCreateRemote(prev => prev.filter(x => x.local_person_id !== p.local_person_id));
-                      }}
-                      disabled={!!actionLoading}
-                    >
-                      <EyeOff className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* C) Suggested Imports (missing locally) */}
-          {suggestedCreateLocal.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Create in Cherishly</p>
-              {suggestedCreateLocal.map(rp => (
-                <div key={rp.remote_person_uid} className="rounded-lg border p-3 flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      <Download className="w-3 h-3 inline mr-1 text-muted-foreground" />
-                      Create "{rp.remote_name}" in Cherishly
-                    </p>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button
-                      size="sm"
-                      onClick={() => handleCreateLocal(rp.remote_person_uid, rp.remote_name, rp.remote_relationship_label)}
-                      disabled={!!actionLoading}
-                    >
-                      {actionLoading === rp.remote_person_uid ? (
-                        <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                      ) : (
-                        <Check className="w-3 h-3 mr-1" />
-                      )}
-                      Create & Link
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openPickLocal(rp.remote_person_uid, rp.remote_name)}
-                      disabled={!!actionLoading}
-                    >
-                      <Link2 className="w-3 h-3 mr-1" />
-                      Link Existing
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleExclude(rp.remote_person_uid)}
-                      disabled={!!actionLoading}
-                    >
-                      <EyeOff className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : totalConflicts === 0 && linkedLinks.length > 0 ? (
-        <div className="text-center py-4 text-sm text-muted-foreground">
-          <Check className="w-5 h-5 mx-auto mb-1 text-green-500" />
-          No suggestions. You're fully mapped!
-        </div>
-      ) : totalConflicts === 0 && linkedLinks.length === 0 ? (
-        <div className="text-center py-4 text-sm text-muted-foreground">
-          No people found. Add people in Cherishly or Temerio first.
-        </div>
-      ) : null}
-
-      {/* ── Linked People ──────────────────────────────────────── */}
-      {linkedLinks.length > 0 && (
-        <Collapsible>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="sm" className="w-full justify-between text-sm font-medium">
-              <span className="flex items-center gap-2">
-                <Link2 className="w-4 h-4" />
-                Linked People ({linkedLinks.length})
-              </span>
-              <ChevronDown className="w-4 h-4" />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-1 mt-2">
-            {linkedLinks.map(l => (
-              <div key={l.id} className="flex items-center justify-between py-2 px-3 rounded hover:bg-muted/30">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-green-600 border-green-600/50 text-xs">Linked</Badge>
-                  <span className="text-sm">{partnerName(l.local_person_id)}</span>
-                  <span className="text-xs text-muted-foreground">↔ {l.remote_person_uid.slice(0, 8)}…</span>
-                </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleExclude(l.remote_person_uid)}
-                  disabled={!!actionLoading}
-                  className="text-muted-foreground hover:text-destructive"
-                >
-                  <Unlink className="w-3 h-3" />
-                </Button>
-              </div>
-            ))}
-          </CollapsibleContent>
-        </Collapsible>
-      )}
-
-      {/* ── Excluded (collapsed) ───────────────────────────────── */}
-      {excludedLinks.length > 0 && (
-        <Collapsible>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="sm" className="w-full justify-between text-sm text-muted-foreground">
-              <span className="flex items-center gap-2">
-                <EyeOff className="w-4 h-4" />
-                Excluded ({excludedLinks.length})
-              </span>
-              <ChevronDown className="w-4 h-4" />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-1 mt-2">
-            {excludedLinks.map(l => (
-              <div key={l.id} className="flex items-center justify-between py-2 px-3 rounded opacity-60">
-                <span className="text-sm text-muted-foreground">{l.remote_person_uid.slice(0, 8)}…</span>
-                <Badge variant="secondary" className="text-xs">Excluded</Badge>
-              </div>
-            ))}
-          </CollapsibleContent>
-        </Collapsible>
-      )}
-
-      {/* ── Picker Dialog ──────────────────────────────────────── */}
-      <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {linkDialogMode === "local"
-                ? `Link "${linkRemoteName}" to a local person`
-                : `Link "${linkLocalName}" to a remote person`}
-            </DialogTitle>
-            <DialogDescription>
-              {linkDialogMode === "local"
-                ? "Choose which local person to link to this remote person."
-                : "Choose which remote person to link to this local person."}
-            </DialogDescription>
-          </DialogHeader>
-
-          {linkDialogMode === "local" ? (
-            <Select value={linkLocalId} onValueChange={setLinkLocalId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a person..." />
-              </SelectTrigger>
-              <SelectContent>
-                {partners.map(p => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <Select value={linkRemoteUid} onValueChange={setLinkRemoteUid}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a remote person..." />
-              </SelectTrigger>
-              <SelectContent>
-                {availableRemotePeople.map(rp => (
-                  <SelectItem key={rp.uid} value={rp.uid}>{rp.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setLinkDialogOpen(false)}>Cancel</Button>
-            <Button
-              onClick={() => {
-                if (linkDialogMode === "local" && linkLocalId && linkRemoteUid) {
-                  handleLinkPerson(linkRemoteUid, linkLocalId);
-                } else if (linkDialogMode === "remote" && linkLocalId && linkRemoteUid) {
-                  handleLinkPerson(linkRemoteUid, linkLocalId);
-                }
-                setLinkDialogOpen(false);
-                setLinkLocalId("");
-                setLinkRemoteUid("");
-              }}
-              disabled={
-                (linkDialogMode === "local" && !linkLocalId) ||
-                (linkDialogMode === "remote" && !linkRemoteUid) ||
-                !!actionLoading
-              }
-            >
-              Link
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="text-xs"
+          >
+            <RefreshCw className={`w-3 h-3 mr-1 ${refreshing ? "animate-spin" : ""}`} />
+            Force Refresh from Temerio
+          </Button>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }
 
-// ── Sub-components ─────────────────────────────────────────────────
-
-function ConfidenceBadge({ confidence }: { confidence: number }) {
-  const pct = Math.round(confidence * 100);
-  const variant = confidence >= 0.9 ? "default" : confidence >= 0.7 ? "secondary" : "outline";
-  return (
-    <Badge variant={variant} className="text-xs">
-      {pct}% match
-    </Badge>
-  );
-}
-
-function ConflictCard({
-  conflict,
-  actionLoading,
-  onResolve,
-  onExclude,
+// ── Sub-component: MappingTable wrapper ─────────────────────────
+function MappingTable({
+  title,
+  subtitle,
+  search,
+  onSearchChange,
+  filter,
+  onFilterChange,
+  disabled,
+  children,
 }: {
-  conflict: SyncConflict;
-  actionLoading: string | null;
-  onResolve: (id: string, resolution: string, uid?: string, localId?: string) => void;
-  onExclude: (uid: string) => void;
+  title: string;
+  subtitle: string;
+  search: string;
+  onSearchChange: (v: string) => void;
+  filter: string;
+  onFilterChange: (v: string) => void;
+  disabled: boolean;
+  children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
-      <div className="flex items-start justify-between gap-2">
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
         <div>
-          <Badge variant="outline" className="text-destructive border-destructive/50 mb-1">
-            {conflict.conflict_type === "duplicate_detected" ? "Duplicate Detected" : "Missing Mapping"}
-          </Badge>
-          <p className="text-sm font-medium">
-            Remote: "{(conflict.remote_payload?.name as string) || conflict.entity_uid}"
-          </p>
-          {conflict.suggested_resolution && (
-            <p className="text-xs text-muted-foreground">{conflict.suggested_resolution}</p>
-          )}
+          <h4 className="text-sm font-medium">{title}</h4>
+          <p className="text-xs text-muted-foreground">{subtitle}</p>
         </div>
-        {actionLoading === conflict.id && <Loader2 className="w-4 h-4 animate-spin" />}
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Search…"
+              className="h-7 text-xs pl-7 w-[140px]"
+              disabled={disabled}
+            />
+          </div>
+          <Select value={filter} onValueChange={onFilterChange} disabled={disabled}>
+            <SelectTrigger className="h-7 text-xs w-[110px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="linked">Linked</SelectItem>
+              <SelectItem value="create">Create</SelectItem>
+              <SelectItem value="dns">Do Not Sync</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {conflict.conflict_type === "duplicate_detected" && conflict.local_payload?.id && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onResolve(conflict.id, "link_existing", conflict.entity_uid, conflict.local_payload.id as string)}
-            disabled={!!actionLoading}
-          >
-            <Link2 className="w-3 h-3 mr-1" />
-            Link to "{(conflict.local_payload?.name as string)}"
-          </Button>
-        )}
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => onResolve(conflict.id, "create_new", conflict.entity_uid)}
-          disabled={!!actionLoading}
-        >
-          <Users className="w-3 h-3 mr-1" />
-          Create New
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => {
-            onExclude(conflict.entity_uid);
-            // Also mark conflict as resolved — fire and forget
-            supabase.from("sync_conflicts").update({ resolution: "excluded", resolved_at: new Date().toISOString() }).eq("id", conflict.id);
-          }}
-          disabled={!!actionLoading}
-        >
-          <EyeOff className="w-3 h-3 mr-1" />
-          Exclude
-        </Button>
+      <div className="border rounded-lg overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-xs h-8">Name</TableHead>
+              <TableHead className="text-xs h-8 w-[120px]">Status</TableHead>
+              <TableHead className="text-xs h-8 w-[240px]">Mapping</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>{children}</TableBody>
+        </Table>
       </div>
     </div>
   );

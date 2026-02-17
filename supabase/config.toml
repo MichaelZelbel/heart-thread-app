@@ -89,3 +89,6 @@ verify_jwt = false
 
 [functions.sync-suggest-person-matches]
 verify_jwt = false
+
+[functions.sync-apply-mapping]
+verify_jwt = false
