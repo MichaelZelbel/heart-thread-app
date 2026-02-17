@@ -88,10 +88,10 @@ serve(async (req) => {
         });
       }
 
-      const body = JSON.stringify({ list_people: true });
+      const body = JSON.stringify({});
       const signature = await computeHmac(conn.shared_secret_hash, body);
 
-      const resp = await fetch(`${remoteUrl}/functions/v1/sync-pull`, {
+      const resp = await fetch(`${remoteUrl}/functions/v1/sync-list-people`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
