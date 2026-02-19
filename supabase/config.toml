@@ -92,3 +92,6 @@ verify_jwt = false
 
 [functions.sync-apply-mapping]
 verify_jwt = false
+
+[functions.sync-run]
+verify_jwt = false
