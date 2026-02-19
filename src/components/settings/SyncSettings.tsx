@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Clock,
   ArrowDownUp,
+  History,
 } from "lucide-react";
 import { SyncPeopleMapping } from "./SyncPeopleMapping";
 
@@ -33,6 +34,7 @@ export function SyncSettings() {
   const [generating, setGenerating] = useState(false);
   const [accepting, setAccepting] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
 
   const loadData = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -174,6 +176,36 @@ export function SyncSettings() {
     }
   };
 
+  const handleBackfill = async (connId: string) => {
+    setBackfilling(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data, error } = await supabase.functions.invoke("sync-backfill", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { connection_id: connId },
+      });
+
+      if (error) throw error;
+
+      const { queued_moments, queued_people } = data as { queued_moments: number; queued_people: number };
+      const total = queued_moments + queued_people;
+      if (total === 0) {
+        toast.info("All existing moments are already queued — press Sync Now to push them.");
+      } else {
+        toast.success(
+          `Queued ${queued_moments} moment(s) and ${queued_people} person(s) for sync. Press "Sync Now" to push them.`
+        );
+      }
+    } catch (e) {
+      toast.error("Backfill failed. Please try again.");
+      console.error("sync-backfill error:", e);
+    } finally {
+      setBackfilling(false);
+    }
+  };
+
   const copyCode = () => {
     if (pairingCode) {
       navigator.clipboard.writeText(pairingCode);
@@ -275,8 +307,20 @@ export function SyncSettings() {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => handleBackfill(activeConnection.id)}
+                  disabled={backfilling || syncing}
+                  title="Queue all existing moments so they can be sent to Temerio"
+                >
+                  {backfilling
+                    ? <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                    : <History className="w-4 h-4 mr-1" />}
+                  {backfilling ? "Queuing…" : "Sync History"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => handleSyncNow(activeConnection.id)}
-                  disabled={syncing}
+                  disabled={syncing || backfilling}
                 >
                   {syncing
                     ? <Loader2 className="w-4 h-4 animate-spin mr-1" />
