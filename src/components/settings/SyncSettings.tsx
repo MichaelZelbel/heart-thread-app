@@ -12,6 +12,7 @@ import {
   Loader2,
   CheckCircle2,
   Clock,
+  ArrowDownUp,
 } from "lucide-react";
 import { SyncPeopleMapping } from "./SyncPeopleMapping";
 
@@ -31,6 +32,7 @@ export function SyncSettings() {
   const [enterCode, setEnterCode] = useState("");
   const [generating, setGenerating] = useState(false);
   const [accepting, setAccepting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const loadData = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -143,6 +145,35 @@ export function SyncSettings() {
     }
   };
 
+  const handleSyncNow = async (connId: string) => {
+    setSyncing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data, error } = await supabase.functions.invoke("sync-run", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { connection_id: connId },
+      });
+
+      if (error) throw error;
+
+      const { pulled, applied, conflicts } = data as { pulled: number; applied: number; conflicts: number };
+      if (pulled === 0) {
+        toast.info("Already up to date — no new events from Temerio.");
+      } else if (conflicts > 0) {
+        toast.warning(`Synced ${applied} events from Temerio. ${conflicts} conflict(s) need review.`);
+      } else {
+        toast.success(`Synced ${applied} event(s) from Temerio.`);
+      }
+    } catch (e) {
+      toast.error("Sync failed. Please try again.");
+      console.error("sync-run error:", e);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const copyCode = () => {
     if (pairingCode) {
       navigator.clipboard.writeText(pairingCode);
@@ -240,10 +271,23 @@ export function SyncSettings() {
                   </p>
                 </div>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => handleRevoke(activeConnection.id)} className="text-destructive hover:text-destructive">
-                <Unlink className="w-4 h-4 mr-1" />
-                Disconnect
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSyncNow(activeConnection.id)}
+                  disabled={syncing}
+                >
+                  {syncing
+                    ? <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                    : <ArrowDownUp className="w-4 h-4 mr-1" />}
+                  {syncing ? "Syncing…" : "Sync Now"}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => handleRevoke(activeConnection.id)} className="text-destructive hover:text-destructive">
+                  <Unlink className="w-4 h-4 mr-1" />
+                  Disconnect
+                </Button>
+              </div>
             </div>
 
             <SyncPeopleMapping connectionId={activeConnection.id} />
