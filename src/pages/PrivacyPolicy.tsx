@@ -17,6 +17,7 @@ const PrivacyPolicy = () => {
   const sections = [
     { id: "interpretation", title: "Interpretation and Definitions" },
     { id: "collecting", title: "Collecting and Using Your Personal Data" },
+    { id: "processors", title: "Third-Party Data Processors" },
     { id: "children", title: "Children's Privacy" },
     { id: "links", title: "Links to Other Websites" },
     { id: "changes", title: "Changes to this Privacy Policy" },
@@ -303,6 +304,51 @@ const PrivacyPolicy = () => {
 
               <p>
                 The security of Your Personal Data is important to Us, but remember that no method of transmission over the Internet, or method of electronic storage is 100% secure. While We strive to use commercially acceptable means to protect Your Personal Data, We cannot guarantee its absolute security.
+              </p>
+
+              <h2 id="processors">Third-Party Data Processing / Data Processors</h2>
+
+              <p>
+                In order to provide, maintain, and improve Our Service, We engage a limited number of third-party service providers ("Data Processors") who process Personal Data on Our behalf. In accordance with Article 28 of the General Data Protection Regulation (GDPR), We have entered into Data Processing Agreements (DPAs) or equivalent contractual arrangements with each of these processors to ensure that Your Personal Data is handled securely, lawfully, and only for the purposes We specify.
+              </p>
+
+              <p>The following is a list of the Data Processors We currently use:</p>
+
+              <ul>
+                <li>
+                  <strong>Microsoft Azure (including Azure OpenAI Service)</strong><br />
+                  <em>Role:</em> Cloud infrastructure and AI inference services. Microsoft Azure hosts certain backend components and provides AI model deployments (via Azure OpenAI) used to power intelligent features within the Service.<br />
+                  <em>DPA:</em> <a href="https://www.microsoft.com/licensing/docs/view/Microsoft-Products-and-Services-Data-Protection-Addendum-DPA" target="_blank" rel="noopener noreferrer">Microsoft Products and Services Data Protection Addendum</a><br />
+                  Microsoft acts as a Data Processor under GDPR Article 28, processing Personal Data solely in accordance with Our documented instructions and the terms of their Data Protection Addendum.
+                </li>
+                <li>
+                  <strong>Supabase, Inc.</strong><br />
+                  <em>Role:</em> Backend-as-a-service provider. Supabase provides database hosting, user authentication, real-time data synchronisation, and serverless function execution for the Service.<br />
+                  <em>DPA:</em> <a href="https://supabase.com/legal/dpa" target="_blank" rel="noopener noreferrer">Supabase GDPR Data Processing Addendum</a><br />
+                  Supabase acts as a Data Processor under GDPR Article 28, processing Personal Data on Our behalf within the scope of the services they provide to Us.
+                </li>
+                <li>
+                  <strong>Lovable (GPT Engineer GmbH)</strong><br />
+                  <em>Role:</em> Website hosting and development platform. Lovable provides the hosting infrastructure and deployment pipeline for the Service's web application.<br />
+                  <em>DPA:</em> <a href="https://lovable.dev/privacy-policy" target="_blank" rel="noopener noreferrer">Lovable Privacy Policy</a><br />
+                  Lovable acts as a Data Processor under GDPR Article 28, processing Personal Data only as necessary to host and deliver the Service on Our behalf.
+                </li>
+                <li>
+                  <strong>Resend, Inc.</strong><br />
+                  <em>Role:</em> Transactional email delivery. Resend is used to send account-related emails such as verification messages, password resets, and event reminders.<br />
+                  <em>DPA:</em> <a href="https://resend.com/legal/dpa" target="_blank" rel="noopener noreferrer">Resend Data Processing Agreement</a><br />
+                  Resend acts as a Data Processor under GDPR Article 28, processing Personal Data (specifically email addresses and message content) solely for the purpose of delivering emails on Our behalf.
+                </li>
+                <li>
+                  <strong>OpenAI, Inc.</strong><br />
+                  <em>Role:</em> AI model provider (fallback). OpenAI may be used as an alternative AI inference provider for certain intelligent features within the Service when primary providers are unavailable.<br />
+                  <em>DPA:</em> <a href="https://openai.com/policies/data-processing-addendum" target="_blank" rel="noopener noreferrer">OpenAI Data Processing Addendum</a><br />
+                  OpenAI acts as a Data Processor under GDPR Article 28, processing Personal Data in accordance with Our instructions and the terms of their Data Processing Addendum.
+                </li>
+              </ul>
+
+              <p>
+                We regularly review our relationships with Data Processors to ensure ongoing compliance with applicable data protection legislation. We do not permit any Data Processor to use Your Personal Data for their own purposes or to disclose it to other third parties, except as necessary to perform the services on Our behalf or as required by law.
               </p>
 
               <h2 id="children">Children's Privacy</h2>
