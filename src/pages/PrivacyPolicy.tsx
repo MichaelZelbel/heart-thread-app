@@ -330,8 +330,14 @@ const PrivacyPolicy = () => {
                 <li>
                   <strong>Lovable (GPT Engineer GmbH)</strong><br />
                   <em>Role:</em> Website hosting and development platform. Lovable provides the hosting infrastructure and deployment pipeline for the Service's web application.<br />
-                  <em>DPA:</em> <a href="https://lovable.dev/privacy-policy" target="_blank" rel="noopener noreferrer">Lovable Privacy Policy</a><br />
+                  <em>DPA:</em> <a href="https://lovable.dev/data-processing-agreement" target="_blank" rel="noopener noreferrer">Lovable Data Processing Agreement</a><br />
                   Lovable acts as a Data Processor under GDPR Article 28, processing Personal Data only as necessary to host and deliver the Service on Our behalf.
+                </li>
+                <li>
+                  <strong>Hostinger International Ltd.</strong><br />
+                  <em>Role:</em> Domain registration and DNS management. Hostinger provides domain name services and DNS infrastructure used to route traffic to the Service.<br />
+                  <em>DPA:</em> <a href="https://www.hostinger.com/legal/dpa" target="_blank" rel="noopener noreferrer">Hostinger Data Processing Agreement</a><br />
+                  Hostinger acts as a Data Processor under GDPR Article 28, processing Personal Data only as necessary to provide domain and DNS services on Our behalf.
                 </li>
                 <li>
                   <strong>Resend, Inc.</strong><br />
