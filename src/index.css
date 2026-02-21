@@ -119,3 +119,57 @@ All colors MUST be HSL.
     @apply min-w-[40px] min-h-[40px] flex items-center justify-center;
   }
 }
+
+/* Legal page prose styling — readable typography with clear link styling */
+.legal-prose {
+  @apply text-foreground leading-relaxed;
+}
+
+.legal-prose h2 {
+  @apply text-2xl font-bold mt-10 mb-4 text-foreground scroll-mt-8;
+}
+
+.legal-prose h3 {
+  @apply text-xl font-semibold mt-8 mb-3 text-foreground;
+}
+
+.legal-prose h4 {
+  @apply text-lg font-semibold mt-6 mb-2 text-foreground;
+}
+
+.legal-prose p {
+  @apply mb-4 text-muted-foreground leading-7;
+}
+
+.legal-prose ul {
+  @apply mb-4 ml-6 list-disc space-y-2;
+}
+
+.legal-prose li {
+  @apply text-muted-foreground leading-7;
+}
+
+.legal-prose li strong {
+  @apply text-foreground;
+}
+
+.legal-prose a {
+  @apply text-primary underline underline-offset-2 hover:text-primary/80 transition-colors;
+}
+
+/* Card-style blocks for data processor entries */
+.legal-prose .processor-card {
+  @apply rounded-xl border border-border bg-card p-5 mb-4;
+}
+
+.legal-prose .processor-card h4 {
+  @apply text-lg font-semibold mt-0 mb-2 text-foreground;
+}
+
+.legal-prose .processor-card p {
+  @apply mb-2 text-sm text-muted-foreground leading-6;
+}
+
+.legal-prose .processor-card .processor-label {
+  @apply font-semibold text-foreground;
+}
